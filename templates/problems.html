@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}公開題目{% endblock %}
+
+{% block main %}
+<h1>Problems: </h1>
+<div class="list-group">
+    {% for k, v in problems.items() %}
+    <a href="/problem/{{ k }}" class="list-group-item list-group-item-action" aria-current="true">
+        {{k}}: {{v}}
+    </a>
+    {% endfor %}
+</div>
+{% endblock %}

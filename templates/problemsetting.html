@@ -1,0 +1,433 @@
+{% extends "base.html" %}
+
+{% block title %}出題 - {{ dat["name"] }}{% endblock %}
+
+{% block main %}
+<ul class="nav nav-tabs">
+    <li class="nav-item" role="presentation">
+        <a class="nav-link active" id="general_info_tab" data-bs-toggle="tab" data-bs-target="#general_info"
+           type="button" role="tab" aria-controls="general_info" aria-selected="true">基本訊息</a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link" id="statement_tab" data-bs-toggle="tab" data-bs-target="#statement" type="button" role="tab"
+           aria-controls="statement" aria-selected="false">題敘</a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link" id="files_tab" data-bs-toggle="tab" data-bs-target="#files" type="button" role="tab"
+           aria-controls="files" aria-selected="false">檔案</a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link" id="judge_tab" data-bs-toggle="tab" data-bs-target="#judge" type="button" role="tab"
+           aria-controls="judge" aria-selected="false">裁判</a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link" id="tests_tab" data-bs-toggle="tab" data-bs-target="#tests" type="button" role="tab"
+           aria-controls="tests" aria-selected="false">測資</a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link" id="versions_tab" data-bs-toggle="tab" data-bs-target="#versions" type="button" role="tab"
+           aria-controls="versions" aria-selected="false">版本控制</a>
+    </li>
+</ul>
+<div class="tab-content">
+    <div id="general_info" class="tab-pane fade show active">
+        <h3>基本訊息</h3>
+        <div class="edit-detector"></div>
+        <div class="container-fluid">
+            <div class="mb-3">
+                <label for="title_input" class="form-label">題目名稱</label>
+                <input type="text" class="form-control" id="title_input" value="{{ dat['name'] }}">
+            </div>
+            <div class="mb-3">
+                <label for="time_input" class="form-label">時間限制</label>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" id="time_input" value="{{ dat['timelimit'] }}">
+                    <span class="input-group-text">ms</span>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label for="memory_input" class="form-label">記憶體限制</label>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" id="memory_input" value="{{ dat['memorylimit'] }}">
+                    <span class="input-group-text">MB</span>
+                </div>
+            </div>
+            <button class="btn btn-primary data-saver" id="save_general_info">儲存</button>
+        </div>
+    </div>
+    <div id="statement" class="tab-pane fade">
+        <h3>題敘</h3>
+        <div class="edit-detector"></div>
+        <a href="/problemsetting_preview?pid={{ pid }}&type=statement" class="btn btn-primary"
+           target="_blank">預覽已儲存內容</a>
+        <div class="container-fluid">
+            <div class="mb-3">
+                <label for="statement_main_area" class="form-label">題目敘述</label>
+                <textarea class="form-control" id="statement_main_area"
+                          rows="5">{{ dat['statement']['main'] }}</textarea>
+            </div>
+            <div class="mb-3">
+                <label for="statement_input_area" class="form-label">輸入說明</label>
+                <textarea class="form-control" id="statement_input_area"
+                          rows="3">{{ dat['statement']['input'] }}</textarea>
+            </div>
+            <div class="mb-3">
+                <label for="statement_output_area" class="form-label">輸出說明</label>
+                <textarea class="form-control" id="statement_output_area"
+                          rows="3">{{ dat['statement']['output'] }}</textarea>
+            </div>
+            <button class="btn btn-primary data-saver" id="save_statement">儲存</button>
+        </div>
+    </div>
+    <div id="files" class="tab-pane fade">
+        <h3>檔案</h3>
+        <div class="container-fluid">
+            <h4>公開檔案</h4>
+            <form the_action="upload_public_file">
+                <div class="mb-3">
+                    <input type="file" class="form-control" accept="application/pdf,image/*" name="files" multiple
+                           required>
+                </div>
+                <div class="mb-3">
+                    <button class="btn btn-primary" type="submit">上傳檔案</button>
+                </div>
+            </form>
+            <table class="table table-hover">
+                <thead>
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">檔名</th>
+                    <th scope="col">刪除</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for i, file in enumerate(public_files)%}
+                <tr>
+                    <th scope="row">{{ i }}</th>
+                    <td>
+                        <a href="/problemsetting_preview?pid={{ pid }}&type=public_file&name={{ file }}"
+                           target="_blank">{{ file }}</a>
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-danger remove_public_file">刪除</button>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="container-fluid">
+            <h4>程式檔案</h4>
+            <div class="card card-body">
+                <form the_action="upload_file">
+                    <div class="mb-3">
+                        <input type="file" class="form-control" name="files" multiple required>
+                    </div>
+                    <div class="mb-3">
+                        <button class="btn btn-primary" type="submit">上傳檔案</button>
+                    </div>
+                </form>
+            </div>
+            <br>
+            <div class="card card-body">
+                <form the_action="create_file">
+                    <div class="row g-3">
+                        <div class="col-auto">
+                            <label for="create_file_input" class="visually-hidden">檔名</label>
+                            <input type="text" class="form-control" id="create_file_input" placeholder="檔名"
+                                   name="filename" required>
+                        </div>
+                        <div class="col-auto">
+                            <button class="btn btn-primary mb-3" id="create_file" type="submit">
+                                建立檔案
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <table class="table table-hover">
+                <thead>
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">檔名</th>
+                    <th scope="col">類型</th>
+                    <th scope="col">編輯</th>
+                    <th scope="col">刪除</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for i, file in enumerate(dat["files"])%}
+                <tr>
+                    <th scope="row">{{ i }}</th>
+                    <td>
+                        <a href="/problemsetting_preview?pid={{ pid }}&type=file&name={{ file['name'] }}"
+                           target="_blank">{{ file['name'] }}</a>
+                    </td>
+                    <td class="file_type">{{ file['type'] }}</td>
+                    <td>
+                        <button type="button" class="btn btn-primary" data-bs-toggle="collapse"
+                                data-bs-target="#collapse_file_edit_{{ i }}" aria-expanded="false"
+                                aria-controls="collapse_file_edit_{{ i }}">編輯
+                        </button>
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-danger remove_file">刪除</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="5">
+                        <div class="collapse collapse_file_edit" id="collapse_file_edit_{{ i }}">
+                            <div class="card card-body">
+                                <select class="form-select" aria-label="Default select example">
+                                    {% for lang in langs %}
+                                    <option value="{{ lang }}">{{ lang }}</option>
+                                    {% endfor %}
+                                </select>
+                                <textarea class="form-control" rows="3"></textarea>
+                                <button class="btn btn-primary">儲存</button>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div id="judge" class="tab-pane fade">
+        <h3>裁判</h3>
+        <div class="container-fluid">
+            <h4>評分</h4>
+            <p>目前：{{ dat['checker_source'][1] }}{{"(內建)" if dat['checker_source'][0]=="default" else ""}}</p>
+            <form the_action="choose_checker" id="choose_checker">
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="checker_type" id="checker_type1" value="default"
+                           checked>
+                    <label class="form-check-label" for="checker_type1">
+                        內建評分程式
+                    </label>
+                </div>
+                <select class="form-select" aria-label="Default select example" name="default_checker">
+                    <option selected>選擇檔案</option>
+                    {% for checker in default_checkers %}
+                    <option value="{{ checker }}">{{ checker }}</option>
+                    {% endfor %}
+                </select>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="checker_type" id="checker_type2" value="my">
+                    <label class="form-check-label" for="checker_type2">
+                        自訂評分程式
+                    </label>
+                </div>
+                <select class="form-select" aria-label="Default select example" name="my_checker">
+                    <option selected>選擇檔案</option>
+                    {% for file in dat["files"] %}
+                    <option value="{{ file['name'] }}">{{ file['name'] }}</option>
+                    {% endfor %}
+                </select>
+                <button class="btn btn-primary" type="submit">更換</button>
+            </form>
+        </div>
+    </div>
+    <div id="tests" class="tab-pane fade">
+        <h3>測資</h3>
+        <div class="card card-body">
+            <form the_action="upload_zip">
+                <h4>快速新增</h4>
+                <div class="mb-3">
+                    <input type="file" class="form-control" accept=".zip" name="zip_file" required>
+                </div>
+                <div class="mb-3">
+                    <div class="row">
+                        <div class="col">
+                            <input name="input_ext" placeholder="輸入檔名後綴" required>
+                        </div>
+                        <div class="col">
+                            <input name="output_ext" placeholder="輸出檔名後綴" required>
+                        </div>
+                        <div class="col"></div>
+                        <div class="col"></div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <button class="btn btn-primary" id="upload_zipfile">
+                    <span class="visually-hidden spinner-border spinner-border-sm" role="status"
+                          aria-hidden="true"></span>
+                        上傳zip檔
+                    </button>
+                </div>
+            </form>
+        </div>
+        <div class="container-fluid">
+            <h4>一般測資</h4>
+            <div class="edit-detector"></div>
+            <div class="update-checker" hidden></div>
+            <table class="table table-hover">
+                <thead>
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">輸入檔</th>
+                    <th scope="col">輸出檔</th>
+                    <th scope="col">Group</th>
+                    <th scope="col">範測</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for i, testcase in enumerate(dat['testcases'])%}
+                <tr class="testcase testcase-normal">
+                    <th scope="row">{{ i }}</th>
+                    <td><a href="/problemsetting_preview?pid={{ pid }}&type=testcases&name={{ testcase['in'] }}"
+                           target="_blank">{{ testcase['in'] }}</a></td>
+                    <td><a href="/problemsetting_preview?pid={{ pid }}&type=testcases&name={{ testcase['out'] }}"
+                           target="_blank">{{ testcase['out'] }}</a></td>
+                    <td>{{ testcase['group'] if "group" in testcase else "default" }}</td>
+                    <td>
+                        <input class="form-check-input" type="checkbox" name="sample_{{ i }}" value="yes"
+                               data-checked="{{testcase['sample']}}">
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            <div class="mb-3">
+                <button class="btn btn-primary data-saver" id="save_testcase">儲存</button>
+            </div>
+        </div>
+        <div class="container-fluid">
+            <h4>生成測資</h4>
+            <div class="edit-detector"></div>
+            <div class="card card-body">
+                {% if "gen_msg" in dat %}
+                <div>目前生成器：{{ dat["gen_msg"]["generator"] }}</div>
+                <div>目前官解：{{ dat["gen_msg"]["solution"] }}</div>
+                {% for k,v in dat["gen_msg"]["counts"].items() %}
+                <div>Group "{{ k }}": {{ v }}個測資</div>
+                {% endfor %}
+                {% else %}
+                <div>目前生成器：無</div>
+                {% endif %}
+            </div>
+            <div class="card card-body">
+                <form the_action="set_generator">
+                    <div class="col">
+                        <label class="form-label" for="generator_select">生成器</label>
+                        <select class="form-select" name="generator"
+                                id="generator_select" required>
+                            <option value="" selected>選擇檔案</option>
+                            {% for file in dat["files"] %}
+                            <option value="{{ file['name'] }}">{{ file['name'] }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col">
+                        <label class="form-label" for="solution_select">官解</label>
+                        <select class="form-select" aria-label="Default select example" name="solution"
+                                id="solution_select" required>
+                            <option value="" selected>選擇檔案</option>
+                            {% for file in dat["files"] %}
+                            <option value="{{ file['name'] }}">{{ file['name'] }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col">
+                        <label class="form-label" for="generator_seed">隨機種子</label>
+                        <input class="form-control" name="seed" id="generator_seed" value="0" required>
+                    </div>
+                    {% for k in dat["groups"].keys() %}
+                    <br>
+                    <div class="input-group mb-3">
+                        <span class="input-group-text">Group "{{ k }}"</span>
+                        <input type="number" class="form-control" placeholder="數目" aria-label="數目"
+                               name="count_{{ k }}" min="0" value="0" required>
+                    </div>
+                    {% endfor %}
+                    <button class="btn btn-primary" type="submit">變更</button>
+                </form>
+            </div>
+            {% if 'testcases_gen' in dat %}
+            <table class="table table-hover">
+                <thead>
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">輸入檔</th>
+                    <th scope="col">輸出檔</th>
+                    <th scope="col">Group</th>
+                    <th scope="col">範測</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for i, testcase in enumerate(dat['testcases_gen'])%}
+                <tr class="testcase testcase-gen">
+                    <th scope="row">{{ i }}</th>
+                    <td><a href="/problemsetting_preview?pid={{ pid }}&type=testcases_gen&name={{ testcase['in'] }}"
+                           target="_blank">{{ testcase['in'] }}</a></td>
+                    <td><a href="/problemsetting_preview?pid={{ pid }}&type=testcases_gen&name={{ testcase['out'] }}"
+                           target="_blank">{{ testcase['out'] }}</a></td>
+                    <td>{{ testcase['group'] if "group" in testcase else "default" }}</td>
+                    <td>
+                        <input class="form-check-input" type="checkbox" name="sample_{{ i }}" value="yes"
+                               data-checked="{{testcase['sample']}}">
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+            <div class="mb-3">
+                <button class="btn btn-primary data-saver" id="save_testcase_gen">儲存</button>
+            </div>
+        </div>
+    </div>
+    <div id="versions" class="tab-pane fade">
+        <h3>版本控制</h3>
+        <div class="row g-3">
+            <div class="col-auto">
+                <label for="version_name_input" class="visually-hidden">描述</label>
+                <input type="text" class="form-control" id="version_name_input" placeholder="描述">
+            </div>
+            <div class="col-auto">
+                <button class="btn btn-primary mb-3" id="create_version">
+                    <span class="visually-hidden spinner-border spinner-border-sm" role="status"
+                          aria-hidden="true"></span>
+                    建立版本
+                </button>
+            </div>
+        </div>
+        <table class="table table-hover">
+            <thead>
+            <tr>
+                <th scope="col">#</th>
+                <th scope="col">描述</th>
+                <th scope="col">時間</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for version in versions%}
+            <tr>
+                <th scope="row">{{ version['id'] }}</th>
+                <td>{{ version['message'] }}</td>
+                <td class="date-string">{{ version['date'] }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+<div class="modal fade" id="myModal" tabindex="-1" aria-labelledby="myModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="myModalTitle">Modal title</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="myModalText">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="/static/problemsetting.js"></script>
+<input id="pid" value="{{ pid }}" hidden>
+{% endblock %}

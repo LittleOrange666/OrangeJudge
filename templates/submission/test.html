@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}結果{% endblock %}
+
+{% block main %}
+<div class="test-case">Simple Testing</div>
+<div class="test-case">Lang: {{ lang }}</div>
+<div class="test-case">
+    <div>Source:</div>
+    {{ source|safe }}
+</div>
+<div class="test-case">
+    <div>Input:</div>
+    <pre>{{ inp }}</pre>
+</div>
+{% if completed %}
+    {% if result["CE"] %}
+        <div class="test-case">
+            <div>Compilation Error</div>
+        {% if ce_msg %}
+            <pre>{{ ce_msg }}</pre>
+        {% endif %}
+            </div>
+    {% else %}
+<div class="test-case">
+    <div>Output:</div>
+    <pre>{{ out }}</pre>
+</div>
+<div class="test-case">
+    <div>Result:</div>
+    <pre>{{ result }}</pre>
+</div>
+    {% endif %}
+{% else %}
+    {% if pos == 0 %}
+    <div class="test-case">Judging</div>
+    {% else %}
+    <div class="test-case">In queue ({{ pos }})</div>
+    {% endif %}
+    <meta http-equiv="refresh" content="5">
+{% endif %}
+{% endblock %}

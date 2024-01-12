@@ -1,0 +1,8 @@
+flask
+flask_login
+pygments
+pyzipper
+markdown
+python-markdown-math
+regex
+infix

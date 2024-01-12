@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}測試{% endblock %}
+
+{% block main %}
+<form action="/test" method="post" target="_self">
+    <select class="form-select" aria-label="Default select example" name="lang">
+        {% for lang in langs %}
+        <option value="{{ lang }}">{{ lang }}</option>
+        {% endfor %}
+    </select>
+    <div class="mb-3">
+        <label for="exampleFormControlTextarea1" class="form-label">Code</label>
+        <textarea class="form-control" name="code" id="exampleFormControlTextarea1" rows="3"></textarea>
+    </div>
+    <div class="mb-3">
+        <label for="exampleFormControlTextarea2" class="form-label">Input</label>
+        <textarea class="form-control" name="input" id="exampleFormControlTextarea2" rows="3"></textarea>
+    </div>
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary mb-3">Submit</button>
+    </div>
+</form>
+{% endblock %}

@@ -1,0 +1,19 @@
+{
+  "name": "Python",
+  "require_compile": true,
+  "source_ext": ".py",
+  "exec_name": "__pycache__/{0}.{ext}.pyc",
+  "compile_cmd": ["{arg}", "-m","py_compile", "{0}"],
+  "exec_cmd": ["{arg}","{0}"],
+  "branches": {
+    "Python3": {
+      "arg": "python3",
+      "ext": "cpython-310"
+    },
+    "PyPy3": {
+      "arg": "pypy3",
+      "ext": "pypy38"
+    }
+  },
+  "default_branch": "PyPy3"
+}

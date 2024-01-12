@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}My submissions{% endblock %}
+
+{% block main %}
+<h1>My submissions: </h1>
+<table class="table table-hover table-striped">
+    <thead>
+    <tr>
+        <th scope="col">解題編號</th>
+        <th scope="col">來源</th>
+        <th scope="col">結果</th>
+        <th scope="col">時間</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for submission in submissions %}
+    <tr>
+        <th scope="row"><a href="/submission/{{ submission['name'] }}">{{ submission['name'] }}</a></th>
+        <td><a href="{{ submission['source'] }}">{{ submission["source_name"] }}</a></td>
+        <td>{{ submission["result"] }}</td>
+        <td>{{ submission["time"] }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

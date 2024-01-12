@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}問題{% if preview %}(預覽){% endif %} - {{ dat["name"] }}{% endblock %}
+
+{% block main %}
+<h1 class="test-center">{{ dat["name"] }}</h1>
+{{ statement|safe }}
+<div class="container test-case">
+    {% for i,sample in samples %}
+    <div class="row">
+        <div class="col"><h3>範例輸入 #{{ i+1 }}</h3></div>
+        <div class="col"><h3>範例輸出 #{{ i+1 }}</h3></div>
+    </div>
+    <div class="row">
+        <div class="col">
+            <pre>{{ sample[0] }}</pre>
+        </div>
+        <div class="col">
+            <pre>{{ sample[1] }}</pre>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% if current_user.is_authenticated and not preview %}
+<br>
+<form action="/submit" method="post" target="_self">
+    <input name="pid" value="{{ pid }}" hidden>
+    <select class="form-select" aria-label="Default select example" name="lang" id="langoption">
+        {% for lang in langs %}
+        <option value="{{ lang }}">{{ lang }}</option>
+        {% endfor %}
+    </select>
+    <div class="mb-3">
+        <label for="codeTextarea" class="form-label">Code:</label>
+        <input class="form-control" type="file" id="uploadfile"/>
+        <textarea class="form-control" name="code" id="codeTextarea" rows="3"></textarea>
+    </div>
+
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary mb-3">Submit</button>
+    </div>
+    <script>
+        $("#uploadfile").on("change",function() {
+            let files = $(this).prop("files");
+            if (!files.length) {
+                return false;
+            }
+            let file = files[0];
+            let reader = new FileReader();
+            let target = $(this);
+            reader.onload = function () {
+                $("#codeTextarea").text(this.result);
+                target.val(null);
+            };
+            reader.readAsText(file);
+        });
+        const lang_exts = {{ lang_exts|safe }};
+        $("#uploadfile").prop("accept",lang_exts[$("#langoption").val()]);
+        $("#langoption").on("change",function(){
+            $("#uploadfile").prop("accept",lang_exts[$("#langoption").val()]);
+        });
+    </script>
+</form>
+{% endif %}
+{% if preview %}
+<script>
+    $("*[inner_embed]").each(function(){
+        let s = $(this).attr("src");
+        let l = s.split("/")
+        let link = "/problemsetting_preview?pid="+l[2]+"&type=public_file&name="+l[3];
+        $(this).attr("src",link);
+    });
+</script>
+{% endif %}
+{% endblock %}

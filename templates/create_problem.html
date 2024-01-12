@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}新建題目{% endblock %}
+
+{% block main %}
+<form action="/problemsetting_new" method="post" target="_self">
+    <div class="mb-3">
+        <label for="name_input" class="form-label">題目名稱</label>
+        <input type="text" class="form-control" id="name_input" name="name">
+    </div>
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary mb-3">建立</button>
+    </div>
+</form>
+{% endblock %}

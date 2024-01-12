@@ -1,0 +1,67 @@
+#top_area {
+    position: fixed;
+    left: 0px;
+    right: 0px;
+    z-index: 100;
+}
+
+#main_area {
+    position: relative;
+    margin-left: 10%;
+    margin-right: 10%;
+    margin-top: 76px;
+    font-family: "Lato, Helvetica, Arial, sans-serif";
+    float: left;
+    width: 80%;
+}
+
+.copy_btn {
+    background-color: rgba(255, 255, 255, 0.2);
+    position: absolute;
+    right: 0px;
+    top: 0px;
+    font-size: 10px;
+    padding: 0px;
+    margin: 0px;
+    border: 0px;
+}
+
+.auto_nl{
+    white-space: pre-line;
+}
+
+.test-case {
+    font-size: 1.1rem;
+}
+.test-case pre {
+    border: 1px solid #aaa;
+    background-color: #eee;
+    font-size: 0.9rem;
+}
+
+.test-center {
+    text-align: center;
+}
+
+pdf-file {
+    position: relative;
+}
+
+pdf-file:after{
+    content: "";
+    display: block;
+    padding-bottom: 100%;
+}
+
+pdf-file > embed{
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+textarea{
+    resize:none;
+    tab-size: 4;
+}

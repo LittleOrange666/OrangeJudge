@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}My problems{% endblock %}
+
+{% block main %}
+<h1>My problems: </h1>
+<table class="table table-hover table-striped">
+    <thead>
+    <tr>
+        <th scope="col">題目編號</th>
+        <th scope="col">題目名稱</th>
+        <th scope="col">修改時間</th>
+        <th scope="col">版本</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for problem in problems %}
+    <tr>
+        <th scope="row"><a href="/problemsetting/{{ problem['pid'] }}">{{ problem['pid'] }}</a></th>
+        <td><a href="/problemsetting/{{ problem['pid'] }}">{{ problem['name'] }}</a></td>
+        <td>{{ problem["time"] }}</td>
+        <td>{{ problem["version"] }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+<div class="mb-3">
+    <a class="btn btn-primary" href="/problemsetting_new" role="button">新建題目</a>
+</div>
+{% endblock %}

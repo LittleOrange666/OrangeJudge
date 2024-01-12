@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block title %}Please wait{% endblock %}
+{% block head %}
+<meta http-equiv="refresh" content="5">{% endblock %}
+{% block main %}
+<p>請等待以下操作完成以前往該頁面：</p>
+<p class="alert alert-primary" role="alert">{{ action }}</p>
+<p>本頁面會自動重新整理，您也可以手動重新整理</p>
+{% endblock %}

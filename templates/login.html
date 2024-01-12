@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}登入{% endblock %}
+
+{% block main %}
+<form method="post" action="/login">
+    <div class="form-group row">
+        <label for="user_id" class="col-2 offset-1 col-form-label">user_id:</label>
+        <div class="col-3">
+            <input type="text" class="form-control" id="user_id" name="user_id" placeholder="user_id">
+        </div>
+    </div>
+    <div class="form-group row">
+        <label for="password" class="col-2 offset-1 col-form-label">password:</label>
+        <div class="col-3">
+            <input type="password" class="form-control" id="password" name="password" placeholder="password">
+        </div>
+    </div>
+    <div class="form-group row">
+        <div class="col-2 offset-3">
+            <button type="submit" class="btn btn-primary">登入</button>
+        </div>
+    </div>
+    <input type="text" name="next" id="next" hidden>
+</form>
+{% endblock %}
+
+{% block script %}
+next.value = new URL(document.location).searchParams.get("next");
+{% endblock %}

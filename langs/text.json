@@ -1,0 +1,11 @@
+{
+  "name": "PlainText",
+  "require_compile": false,
+  "source_ext": ".txt",
+  "exec_name": "{0}.txt",
+  "exec_cmd": ["cat","{0}"],
+  "branches": {
+    "PlainText": {}
+  },
+  "default_branch": "PlainText"
+}
