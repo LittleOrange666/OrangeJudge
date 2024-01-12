@@ -89,7 +89,7 @@
                            required>
                 </div>
                 <div class="mb-3">
-                    <button class="btn btn-primary" type="submit">上傳檔案</button>
+                    <button class="btn btn-primary submitter" data-msg-409="檔案已存在">上傳檔案</button>
                 </div>
             </form>
             <table class="table table-hover">
@@ -124,7 +124,7 @@
                         <input type="file" class="form-control" name="files" multiple required>
                     </div>
                     <div class="mb-3">
-                        <button class="btn btn-primary" type="submit">上傳檔案</button>
+                        <button class="btn btn-primary submitter" data-msg-409="檔案已存在">上傳檔案</button>
                     </div>
                 </form>
             </div>
@@ -138,14 +138,14 @@
                                    name="filename" required>
                         </div>
                         <div class="col-auto">
-                            <button class="btn btn-primary mb-3" id="create_file" type="submit">
+                            <button class="btn btn-primary mb-3 submitter" data-msg-409="檔案已存在">
                                 建立檔案
                             </button>
                         </div>
                     </div>
                 </form>
             </div>
-            <table class="table table-hover">
+            <table class="table">
                 <thead>
                 <tr>
                     <th scope="col">#</th>
@@ -174,18 +174,16 @@
                         <button type="button" class="btn btn-danger remove_file">刪除</button>
                     </td>
                 </tr>
-                <tr>
+                <tr class="collapse collapse_file_edit" id="collapse_file_edit_{{ i }}">
                     <td colspan="5">
-                        <div class="collapse collapse_file_edit" id="collapse_file_edit_{{ i }}">
-                            <div class="card card-body">
-                                <select class="form-select" aria-label="Default select example">
-                                    {% for lang in langs %}
-                                    <option value="{{ lang }}">{{ lang }}</option>
-                                    {% endfor %}
-                                </select>
-                                <textarea class="form-control" rows="3"></textarea>
-                                <button class="btn btn-primary">儲存</button>
-                            </div>
+                        <div class="card card-body">
+                            <select class="form-select" aria-label="Default select example">
+                                {% for lang in langs %}
+                                <option value="{{ lang }}">{{ lang }}</option>
+                                {% endfor %}
+                            </select>
+                            <textarea class="form-control" rows="3"></textarea>
+                            <button class="btn btn-primary">儲存</button>
                         </div>
                     </td>
                 </tr>
@@ -225,7 +223,7 @@
                     <option value="{{ file['name'] }}">{{ file['name'] }}</option>
                     {% endfor %}
                 </select>
-                <button class="btn btn-primary" type="submit">更換</button>
+                <button class="btn btn-primary submitter">更換評分程式</button>
             </form>
         </div>
     </div>
@@ -390,7 +388,7 @@
                                name="count_{{ k }}" min="0" value="0" required>
                     </div>
                     {% endfor %}
-                    <button class="btn btn-primary" type="submit">變更</button>
+                    <button class="btn btn-primary submitter">變更生成指示</button>
                 </form>
             </div>
             {% if 'testcases_gen' in dat %}

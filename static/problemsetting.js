@@ -22,6 +22,20 @@ $(function() {
             body: new FormData(form[0])
         });
     }
+    function post(url, data, callback){
+        $.ajax({
+            url: url,
+            method: "POST",
+            contentType: "application/x-www-form-urlencoded",
+            data: data,
+            error: function(xhr, status, content){
+                callback(content, status, xhr)
+            },
+            success: function(content, status, xhr){
+                callback(content, status, xhr)
+            }
+        });
+    }
     function show_modal(title, text, refresh){
         $("#myModalTitle").text(title);
         $("#myModalText").text(text);
@@ -107,6 +121,22 @@ $(function() {
             $("#version_checker").text("正在檢測版本是否有更新，請稍候...");
         });
     });
+    $(".submitter").click(function(e){
+        e.preventDefault();
+        let $this = $(this);
+        let action_name = $this.text().trim();
+        fetching($this.parents("form").first()).then(function (response) {
+            console.log(response);
+            if(response.ok) {
+                show_modal("成功","成功"+action_name, !$this.data("no-refresh"));
+                $("#save_general_info").trigger("saved_data");
+            }else {
+                let msg = $this.data("msg-"+response.status);
+                show_modal("失敗",msg?msg:"Error Code: " + response.status);
+                $("#create_version").prop("disabled", false);
+            }
+        });
+    });
     // general info
     $("#save_general_info").click(function(){
         $("#save_general_info").prop("disabled", true);
@@ -130,7 +160,7 @@ $(function() {
             show_modal("空間限制格式錯誤","空間限制需在4至1024之間");
             return;
         }
-        $.post("/problemsetting_action", {
+        post("/problemsetting_action", {
             "action": "save_general_info",
             "pid": pid,
             "title": title,
@@ -154,7 +184,7 @@ $(function() {
         let main = $("#statement_main_area").val();
         let input = $("#statement_input_area").val();
         let output = $("#statement_output_area").val();
-        $.post("/problemsetting_action", {
+        post("/problemsetting_action", {
             "action": "save_statement",
             "pid": pid,
             "statement_main": main,
@@ -176,7 +206,7 @@ $(function() {
         let filename = $(this).parent().parent().find("a").text();
         $("#create_version").prop("disabled", true);
         $(this).prop("disabled",true);
-        $.post("/problemsetting_action", {
+        post("/problemsetting_action", {
             "action": "remove_public_file",
             "pid": pid,
             "filename": filename
@@ -193,7 +223,7 @@ $(function() {
         let filename = $(this).parent().parent().find("a").text();
         $("#create_version").prop("disabled", true);
         $(this).prop("disabled",true);
-        $.post("/problemsetting_action", {
+        post("/problemsetting_action", {
             "action": "remove_file",
             "pid": pid,
             "filename": filename
@@ -217,7 +247,7 @@ $(function() {
             $btn.prop("disabled", true);
             let content = $this.find("textarea").val();
             let filename = $this.data("filename");
-            $.post("/problemsetting_action", {
+            post("/problemsetting_action", {
                 "action": "save_file_content",
                 "pid": pid,
                 "filename": filename,
@@ -281,7 +311,7 @@ $(function() {
         let dat = $("tr.testcase-normal").toArray().map(function(o){
             return [+$(o).find("th").text(),$(o).find("input[type='checkbox']").prop("checked")];
         });
-        $.post("/problemsetting_action", {
+        post("/problemsetting_action", {
             "action": "save_testcase",
             "pid": pid,
             "modify": JSON.stringify(dat)
@@ -305,7 +335,7 @@ $(function() {
         let dat = $("tr.testcase-gen").toArray().map(function(o){
             return [+$(o).find("th").text(),$(o).find("input[type='checkbox']").prop("checked")];
         });
-        $.post("/problemsetting_action", {
+        post("/problemsetting_action", {
             "action": "save_testcase_gen",
             "pid": pid,
             "modify": JSON.stringify(dat)
@@ -332,7 +362,7 @@ $(function() {
         }
         $("#create_group").prop("disabled", true);
         $(this).find("span").removeClass("visually-hidden");
-        $.post("/problemsetting_action", {
+        post("/problemsetting_action", {
             "action": "create_group",
             "pid": pid,
             "name": content
@@ -350,7 +380,7 @@ $(function() {
     $(".remove_group").click(function(){
         let $this = $(this);
         $this.prop("disabled", true);
-        $.post("/problemsetting_action", {
+        post("/problemsetting_action", {
             "action": "remove_group",
             "pid": pid,
             "name": $this.data("gp")
@@ -373,7 +403,7 @@ $(function() {
         }
         $("#create_version").prop("disabled", true);
         $(this).find("span").removeClass("visually-hidden");
-        $.post("/problemsetting_action", {
+        post("/problemsetting_action", {
             "action": "create_version",
             "pid": pid,
             "description": content
