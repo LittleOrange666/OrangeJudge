@@ -231,6 +231,54 @@
     </div>
     <div id="tests" class="tab-pane fade">
         <h3>測資</h3>
+        <div class="container-fluid">
+            <h4>分組</h4>
+            <div class="row g-3">
+                <div class="col-auto">
+                    <label for="group_name_input" class="visually-hidden">名稱</label>
+                    <input type="text" class="form-control" id="group_name_input" placeholder="名稱">
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-primary mb-3" id="create_group">
+                        <span class="visually-hidden spinner-border spinner-border-sm" role="status"
+                              aria-hidden="true"></span>
+                        新增分組
+                    </button>
+                </div>
+            </div>
+            <table class="table table-hover">
+                <thead>
+                <tr>
+                    <th scope="col">名稱</th>
+                    <th scope="col">相依性</th>
+                    <th scope="col">配分</th>
+                    <th scope="col">刪除</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for k, group in dat['groups'].items()%}
+                <tr>
+                    <th scope="row">{{ k }}</th>
+                    <td>
+                        {% if "dependency" in group%}
+                        {% for parent in group["dependency"] %}
+                        {{ parent }}
+                        {% endfor %}
+                        {% endif %}
+                    </td>
+                    <td>
+                        <input type="number" min="1" max="100" value="100" name="score_{{ k }}" class="form-control">
+                    </td>
+                    <td>
+                        {% if "default" != k %}
+                        <button type="button" class="btn btn-danger remove_group" data-gp="{{ k }}">刪除</button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
         <div class="card card-body">
             <form the_action="upload_zip">
                 <h4>快速新增</h4>
@@ -300,6 +348,7 @@
                 {% if "gen_msg" in dat %}
                 <div>目前生成器：{{ dat["gen_msg"]["generator"] }}</div>
                 <div>目前官解：{{ dat["gen_msg"]["solution"] }}</div>
+                <div>目前隨機種子：{{ dat["gen_msg"]["seed"] }}</div>
                 {% for k,v in dat["gen_msg"]["counts"].items() %}
                 <div>Group "{{ k }}": {{ v }}個測資</div>
                 {% endfor %}

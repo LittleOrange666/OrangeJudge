@@ -240,10 +240,13 @@ $(function() {
     });
     $(".collapse_file_edit").on("show.bs.collapse",function(){
         let $this = $(this);
-        $.get('/problemsetting_preview?pid='+pid+'&type=file&name='+$(this).data("filename"),function(data,status){
+        $.get('/problemsetting_preview?pid='+pid+'&type=file&name='+$this.data("filename"),function(data,status){
             $this.find("textarea").val(data);
             $this.find("textarea").trigger("input");
         });
+    });
+    $(".collapse_file_edit").on("shown.bs.collapse",function(){
+        $('html, body').scrollTop($(this).offset().top);
     });
     // judge
     $("#choose_checker").submit(function(){
@@ -318,6 +321,46 @@ $(function() {
             else {
                 show_modal("失敗","Error Code: " + xhr.status);
                 $("#create_version").prop("disabled", false);
+            }
+        });
+    });
+    $("#create_group").click(function(){
+        let content = $("#group_name_input").val();
+        if (!content){
+            show_modal("錯誤","名稱不可為空");
+            return;
+        }
+        $("#create_group").prop("disabled", true);
+        $(this).find("span").removeClass("visually-hidden");
+        $.post("/problemsetting_action", {
+            "action": "create_group",
+            "pid": pid,
+            "name": content
+        }, function(data,status,xhr){
+            $(this).find("span").addClass("visually-hidden");
+            $("#create_group").prop("disabled", false);
+            if(status == "success") {
+                show_modal("成功","建立成功", true);
+            }
+            else {
+                show_modal("失敗","Error Code: " + xhr.status);
+            }
+        });
+    });
+    $(".remove_group").click(function(){
+        let $this = $(this);
+        $this.prop("disabled", true);
+        $.post("/problemsetting_action", {
+            "action": "remove_group",
+            "pid": pid,
+            "name": $this.data("gp")
+        }, function(data,status,xhr){
+            $this.prop("disabled", false);
+            if(status == "success") {
+                show_modal("成功","刪除成功", true);
+            }
+            else {
+                show_modal("失敗","Error Code: " + xhr.status);
             }
         });
     });

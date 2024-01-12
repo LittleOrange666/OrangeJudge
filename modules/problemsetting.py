@@ -4,15 +4,14 @@ import shutil
 import subprocess
 import time
 import uuid
-from time import sleep
 
-from flask import Response, abort, jsonify, render_template, request, redirect, send_file
+from flask import Response, abort, render_template, request, redirect, send_file
 from pyzipper.zipfile_aes import AESZipInfo
 from werkzeug.datastructures import ImmutableMultiDict, MultiDict
 from werkzeug.utils import secure_filename
 
 from modules import executing, tools
-from modules.locks import locks
+from modules.locks import locks, Locker
 from modules.createhtml import run_markdown, parse
 from multiprocessing import Queue, Process
 from pyzipper import AESZipFile
@@ -52,11 +51,9 @@ def getout(s, cwd: str) -> str:
 
 def create_problem(name, user):
     with locks["create_problem"]:
-        with open("data/problem_count") as f:
-            pid = int(f.read())
+        pid = int(tools.read("data/problem_count"))
         pid = str(pid + 1)
-        with open("data/problem_count", "w") as f:
-            f.write(pid)
+        tools.write(pid, "data/problem_count")
     os.mkdir("preparing_problems/" + pid)
     worker_queue.put({"action": "init_problem", "pid": pid, "name": name, "user": user})
     return pid
@@ -64,8 +61,7 @@ def create_problem(name, user):
 
 def making_dir(path: str):
     os.makedirs(path, exist_ok=True)
-    with open(os.path.join(path, ".gitkeep"), "w"):
-        pass
+    tools.create(path, ".gitkeep")
 
 
 @background_actions.bind
@@ -85,20 +81,11 @@ def init_problem(pid, name, user):
         making_dir(path + "/public_file")
     except FileExistsError:
         pass
-    # print(creater)
-    # cmd = creater.format(pid=pid)
-    # system(cmd)
     info = {"name": name, "timelimit": "1000", "memorylimit": "256", "testcases": [], "users": [user], "statement":
-        {"main": "", "input": "", "output": "", "score": ""}, "files": [], "checker_source": ["default", "wcmp.cpp"]}
+        {"main": "", "input": "", "output": "", "score": ""}, "files": [], "checker_source": ["default", "unknow"],
+            "groups": {"default": {"score": 100}}}
     tools.write_json(info, path + "/info.json")
     shutil.copy("testlib/checkers/wcmp", path)
-    # system("git init", path)
-    # system("git add -A", path)
-    # system("git commit -m '初始版本'", path)
-    # system("git branch -m main", path)
-    # system(f"git clone {os.path.abspath(path)} {pid}", os.path.abspath("problems"))
-    # system_orange(f'git remote add origin git@orangejudge-github:OrangeJudgeOrg/Problem-{pid}.git')
-    # system_orange(f'git push --set-upstream origin main')
     try:
         os.remove(path + "/waiting")
     except FileNotFoundError:
@@ -135,7 +122,9 @@ def generate_testcase(pid):
     dat = tools.read_json(path, "info.json")
     env = executing.Environment()
     if "gen_msg" not in dat:
+        print("generater info not found")
         return
+    print(dat["gen_msg"])
     filepath = path + "/file/" + dat["gen_msg"]["generator"]
     gen_lang = executing.langs[next(o["type"] for o in dat["files"] if o["name"] == dat["gen_msg"]["generator"])]
     sol_lang = executing.langs[next(o["type"] for o in dat["files"] if o["name"] == dat["gen_msg"]["solution"])]
@@ -143,10 +132,12 @@ def generate_testcase(pid):
     env.send_file("testlib/testlib.h")
     outfile, ce_msg = gen_lang.compile(file, env)
     if ce_msg:
+        print("generater CE")
         return
     sol_file = env.send_file(path + "/file/" + dat["gen_msg"]["solution"])
     sol_exec, ce_msg = sol_lang.compile(sol_file, env)
     if ce_msg:
+        print("solution CE")
         return
     i = 1
     tests = []
@@ -164,15 +155,15 @@ def generate_testcase(pid):
         in_file = os.path.abspath(path + "/testcases_gen/" + test[0] + ".in")
         out_file = os.path.abspath(path + "/testcases_gen/" + test[0] + ".out")
         gen_out = env.safe_run(exec_cmd + test[1])
-        print(gen_out[1])
         tools.write(gen_out[0], in_file)
         out = env.runwithshell(sol_cmd, env.send_file(in_file), env.filepath(out_file), tl, ml, sol_lang.base_exec_cmd)
-        print(out[1])
         result = {o[0]: o[1] for o in (s.split("=") for s in out[0].split("\n")) if len(o) == 2}
         if "1" == result.get("WIFSIGNALED", None) or "0" != result.get("WEXITSTATUS", "0"):
+            print("solution RE")
             return
         env.get_file(out_file)
-    dat["testcases_gen"] = [{"in": test[0] + ".in", "out": test[0] + ".out", "sample": False} for test in tests]
+    dat["testcases_gen"] = [{"in": test[0] + ".in", "out": test[0] + ".out", "sample": False, "group": test[1][1]} \
+                            for test in tests]
     tools.write_json(dat, path, "info.json")
 
 
@@ -194,7 +185,10 @@ def runner():
         action_data = worker_queue.get()
         try:
             print(f"{action_data=}")
-            background_actions.call(action_data["action"], **action_data)
+            action_name = action_data["action"]
+            del action_data["action"]
+            # time.sleep(1)
+            background_actions.call(action_name, **action_data)
         except Exception as e:
             print(e)
         os.chdir(root_folder)
@@ -202,6 +196,11 @@ def runner():
 
 def add_background_action(obj):
     worker_queue.put(obj)
+    dat = tools.read_json(f"preparing_problems/{obj['pid']}/info.json")
+    if "background_actions" not in dat:
+        dat["background_actions"] = []
+    dat["background_actions"].append(obj)
+    tools.write_json(dat, f"preparing_problems/{obj['pid']}/info.json")
 
 
 @actions.default
@@ -221,9 +220,6 @@ def save_general_info(form, pid, path, dat):
 @actions.bind
 def create_version(form, pid, path, dat):
     description = form["description"]
-    # system("git add -A", f"preparing_problems/{pid}/")
-    # system(f'git commit -m {description!r}', f"preparing_problems/{pid}/")
-    # system(f'git pull', f"problems/{pid}/")
     add_background_action({"action": "creating_version", "pid": pid, "description": description})
     return "versions"
 
@@ -233,15 +229,12 @@ def save_statement(form, pid, path, dat):
     dat["statement"]["main"] = form["statement_main"]
     dat["statement"]["input"] = form["statement_input"]
     dat["statement"]["output"] = form["statement_output"]
-    with open(f"preparing_problems/{pid}/info.json", "w") as f:
-        json.dump(dat, f, indent=2)
+    tools.write_json(dat, f"preparing_problems/{pid}/info.json")
     full = "# Statement\n" + form["statement_main"] + "\n## Input\n" + form[
         "statement_input"] + "\n## Output\n" + form["statement_output"]
-    with open(f"preparing_problems/{pid}/statement.md", "w") as f:
-        f.write(full)
-    with open(f"preparing_problems/{pid}/statement.html", "w") as f:
-        parse.dirname = pid
-        f.write(run_markdown(full))
+    tools.write(full, f"preparing_problems/{pid}/statement.md")
+    parse.dirname = pid
+    tools.write(run_markdown(full), f"preparing_problems/{pid}/statement.html")
     return "statement"
 
 
@@ -280,9 +273,14 @@ def upload_zip(form, pid, path, dat):
 def upload_public_file(form, pid, path, dat):
     get_files = request.files.getlist("files")
     for file in get_files:
-        if secure_filename(file.filename) == "":
+        fn = secure_filename(file.filename)
+        if fn == "":
             abort(400)
-        file.save(path + "/public_file/" + secure_filename(file.filename))
+        if tools.exists(path, "public_file", fn):
+            abort(409)
+    for file in get_files:
+        fn = secure_filename(file.filename)
+        file.save(path + "/public_file/" + fn)
     return "files"
 
 
@@ -293,7 +291,7 @@ def remove_public_file(form, pid, path, dat):
     if os.path.exists(filepath):
         os.remove(filepath)
     else:
-        abort(400)
+        abort(404)
     return "files"
 
 
@@ -303,8 +301,8 @@ def upload_file(form, pid, path, dat):
     for file in get_files:
         if secure_filename(file.filename) == "":
             abort(400)
-        if os.path.exists(path + "/file/" + secure_filename(file.filename)):
-            abort(400)
+        if tools.exists(path, "file/", secure_filename(file.filename)):
+            abort(409)
         file.save(path + "/file/" + secure_filename(file.filename))
         dat["files"].append({"name": secure_filename(file.filename), "type": "C++17"})
     tools.write_json(dat, path, "info.json")
@@ -314,6 +312,8 @@ def upload_file(form, pid, path, dat):
 @actions.bind
 def create_file(form, pid, path, dat):
     filename = secure_filename(form["filename"])
+    if tools.exists(path, "file", filename):
+        abort(409)
     tools.create(path, "file", filename)
     dat["files"].append({"name": filename, "type": "C++17"})
     tools.write_json(dat, path, "info.json")
@@ -419,12 +419,31 @@ def set_generator(form, pid, path, dat):
     return "tests"
 
 
+@actions.bind
+def create_group(form, pid, path, dat):
+    name = secure_filename(form["name"])
+    if name in dat["groups"]:
+        abort(409)
+    dat["groups"][name] = {"score": 100}
+    tools.write_json(dat, path, "info.json")
+
+
+@actions.bind
+def remove_group(form, pid, path, dat):
+    name = secure_filename(form["name"])
+    if name not in dat["groups"]:
+        abort(404)
+    del dat["groups"][name]
+    tools.write_json(dat, path, "info.json")
+
+
 def action(form: ImmutableMultiDict[str, str]) -> Response:
     pid = secure_filename(form["pid"])
     path = f"preparing_problems/{pid}"
-    dat = tools.read_json(path, "info.json")
-    tp = actions.call(dat["action"], form, pid, path, dat)
-    return redirect(f"/problemsetting/{pid}#{tp}")
+    with Locker(os.path.join(path, "info.json")):
+        dat = tools.read_json(path, "info.json")
+        tp = actions.call(form["action"], form, pid, path, dat)
+        return redirect(f"/problemsetting/{pid}#{tp}")
 
 
 def preview(args: MultiDict[str, str]) -> Response:
@@ -432,10 +451,8 @@ def preview(args: MultiDict[str, str]) -> Response:
     path = f"preparing_problems/{pid}"
     match args["type"]:
         case "statement":
-            with open(path + "/info.json") as f:
-                dat = json.load(f)
-            with open(path + "/statement.html") as f:
-                statement = f.read()
+            dat = tools.read_json(path + "/info.json")
+            statement = tools.read(path + "/statement.html")
             lang_exts = json.dumps({k: v.data["source_ext"] for k, v in executing.langs.items()})
             samples = [[tools.read(path, k, o["in"]), tools.read(path, k, o["out"])]
                        for k in ("testcases", "testcases_gen") for o in dat.get(k, []) if o.get("sample", False)]
@@ -456,7 +473,6 @@ def preview(args: MultiDict[str, str]) -> Response:
 
 def query_versions(pid):
     path = f"preparing_problems/{pid}/"
-    # dat = getout('git log --pretty=format:"%H - %cd - %s"', path)
     out = []
     info = tools.read_json(path, "info.json")
     for o in info.get("versions", []):

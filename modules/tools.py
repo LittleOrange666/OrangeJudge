@@ -1,10 +1,12 @@
 import json
 import os
+from datetime import datetime
 from functools import partial
 from typing import Callable
 
 import infix
-from datetime import datetime
+
+from modules.locks import Locker
 
 
 def create_truncated(source: str, target: str) -> str:
@@ -43,24 +45,32 @@ def remove(*filename: str) -> None:
 
 
 def read(*filename: str, n: int = -1) -> str:
-    with open(os.path.join(*filename)) as f:
-        return f.read(n)
+    with Locker(os.path.join(*filename)):
+        with open(os.path.join(*filename)) as f:
+            return f.read(n)
 
 
 def write(content: str, *filename: str) -> str:
-    with open(os.path.join(*filename), "w") as f:
-        f.write(content)
+    with Locker(os.path.join(*filename)):
+        with open(os.path.join(*filename), "w") as f:
+            f.write(content)
     return content
 
 
 def read_json(*filename: str):
-    with open(os.path.join(*filename)) as f:
-        return json.load(f)
+    with Locker(os.path.join(*filename)):
+        with open(os.path.join(*filename)) as f:
+            return json.load(f)
 
 
 def write_json(obj, *filename: str):
-    with open(os.path.join(*filename), "w") as f:
-        json.dump(obj, f, indent=2)
+    with Locker(os.path.join(*filename)):
+        with open(os.path.join(*filename), "w") as f:
+            json.dump(obj, f, indent=2)
+
+
+def exists(*filename: str) -> bool:
+    return os.path.exists(os.path.join(*filename))
 
 
 def get_timestring() -> str:

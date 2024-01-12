@@ -98,7 +98,7 @@ class Environment:
             main = ["sudo", os.path.abspath("/judge/shell"), str(math.ceil(tl)), str(ml * 1024 * 1024),
                     str(100 * 1024 * 1024), repr(" ".join(base_cmd)),
                     repr(" ".join(cmd)), in_file, out_file]
-            return call(self.prefix + main, timeout=tl+1)
+            return call(self.prefix + main, timeout=tl + 1)
         except subprocess.TimeoutExpired:
             return "TLE", "TLE", 777777
 

@@ -49,24 +49,21 @@ def run_problem(idx, dat):
     groups = {}
     simple_result = "AC"
     if ce_msg:
-        print(ce_msg)
         tools.write(f"submissions/{idx}/ce_msg.txt", ce_msg)
         out_info["CE"] = True
         simple_result = "CE"
     else:
         tl = float(problem_info["timelimit"]) / 1000
         ml = int(problem_info["memorylimit"])
-        print("HAHA")
-        print(problem_path,problem_info)
         checker = env.send_file(problem_path + problem_info["checker"][0])
-        print(checker)
         env.executable(checker)
         checker_cmd = executing.langs[problem_info["checker"][1]].get_execmd(checker)
         exec_cmd = lang.get_execmd(filename)
         os.mkdir(f"submissions/{idx}/testcases")
         if "groups" in problem_info:
             groups = problem_info["groups"]
-        groups["default"] = {}
+        if "default" not in groups:
+            groups["default"] = {}
         for o in groups.values():
             o |= {"result": "OK", "time": 0, "mem": 0}
         exist_gp = set()
@@ -74,9 +71,8 @@ def run_problem(idx, dat):
         if "testcases_gen" in problem_info:
             testcases.extend([o | {"gen": True} for o in problem_info["testcases_gen"]])
         for i, testcase in enumerate(testcases):
-            print(testcase)
             gp = "default"
-            if "group" in testcase:
+            if "group" in testcase and testcase["group"] in groups:
                 gp = testcase["group"]
             exist_gp.add(gp)
             if "dependency" in groups[gp]:
@@ -101,7 +97,6 @@ def run_problem(idx, dat):
                 ret = ["TLE", "執行時間過長"]
             else:
                 result = {o[0]: o[1] for o in (s.split("=") for s in out[0].split("\n")) if len(o) == 2}
-                print(result)
                 exit_code = result.get("WEXITSTATUS", "0")
                 if "1" == result.get("WIFSIGNALED", None):
                     ret = ["RE", "您的程式無法正常執行"]
@@ -133,8 +128,6 @@ def run_problem(idx, dat):
                         env.get_file(out_file)
                         tools.create_truncated(out_file, out_file)
                         ret = [constants.judge_exit_codes.get(checker_out[2], "UNKNOW_ERROR"), checker_out[1]]
-                        if ret[0] == "UNKNOW_ERROR":
-                            print("UNKNOW ERROR:", checker_out[1])
             if ret[0] == "TLE":
                 timeusage = tl * 1000
             results.append({"time": timeusage, "mem": memusage, "result": ret[0], "info": ret[1],
@@ -170,6 +163,7 @@ def runner():
                     run_problem(idx, dat)
         except Exception as e:
             print("An exception occurred:", e)
+
 
 def init():
     Process(target=runner).start()

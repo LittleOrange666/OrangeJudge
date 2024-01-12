@@ -14,14 +14,14 @@
     <pre>{{ inp }}</pre>
 </div>
 {% if completed %}
-    {% if result["CE"] %}
-        <div class="test-case">
-            <div>Compilation Error</div>
-        {% if ce_msg %}
-            <pre>{{ ce_msg }}</pre>
-        {% endif %}
-            </div>
-    {% else %}
+{% if result["CE"] %}
+<div class="test-case">
+    <div>Compilation Error</div>
+    {% if ce_msg %}
+    <pre>{{ ce_msg }}</pre>
+    {% endif %}
+</div>
+{% else %}
 <div class="test-case">
     <div>Output:</div>
     <pre>{{ out }}</pre>
@@ -30,13 +30,13 @@
     <div>Result:</div>
     <pre>{{ result }}</pre>
 </div>
-    {% endif %}
+{% endif %}
 {% else %}
-    {% if pos == 0 %}
-    <div class="test-case">Judging</div>
-    {% else %}
-    <div class="test-case">In queue ({{ pos }})</div>
-    {% endif %}
-    <meta http-equiv="refresh" content="5">
+{% if pos == 0 %}
+<div class="test-case">Judging</div>
+{% else %}
+<div class="test-case">In queue ({{ pos }})</div>
+{% endif %}
+<meta http-equiv="refresh" content="5">
 {% endif %}
 {% endblock %}
