@@ -1,7 +1,7 @@
 import os
 import subprocess
 
-base = "boot dev etc home judge media mnt opt root run srv tmp var sbin lib32 libx32".split()
+base = "boot dev etc home media mnt opt root run srv tmp var sbin lib32 libx32".split()
 for s in base:
     os.system("sudo lxc-attach -n lxc-test -- chmod 750 -R /"+s)
 keys = "python pypy".split()

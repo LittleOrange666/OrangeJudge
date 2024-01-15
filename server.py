@@ -6,7 +6,7 @@ from flask import Flask, render_template, request, redirect, session, abort, sen
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.utils import secure_filename
 
-from modules import executing, tasks, tools, problemsetting
+from modules import executing, tasks, tools, problemsetting, constants
 from modules.login import try_login, init_login
 from modules.constants import result_class, lxc_name
 
@@ -257,7 +257,8 @@ def my_problems():
         problem_list = f.read().split()
     problems_dat = []
     for idx in reversed(problem_list):
-        if os.path.isfile(f"preparing_problems/{idx}.img") and not os.path.isfile(f"preparing_problems/{idx}/info.json"):
+        if os.path.isfile(f"preparing_problems/{idx}.img") and not os.path.isfile(
+                f"preparing_problems/{idx}/info.json"):
             problemsetting.system(f"sudo mount -o loop {idx}.img ./{idx}", "preparing_problems")
         with open(f"preparing_problems/{idx}/info.json") as f:
             dat = json.load(f)
@@ -287,7 +288,7 @@ def my_problem_page(idx):
     idx = secure_filename(idx)
     if not current_user.has("make_problems"):
         abort(403)
-    if not os.path.isdir("preparing_problems/" + idx) or not os.path.isfile("preparing_problems/" + idx+".img"):
+    if not os.path.isdir("preparing_problems/" + idx) or not os.path.isfile("preparing_problems/" + idx + ".img"):
         abort(404)
     if len(os.listdir("preparing_problems/" + idx)) == 0:
         problemsetting.system(f"sudo mount -o loop {idx}.img ./{idx}", "preparing_problems")
@@ -303,6 +304,7 @@ def my_problem_page(idx):
     except ValueError:
         pass
     default_checkers = [s for s in os.listdir("testlib/checkers") if s.endswith(".cpp")]
+    default_interactors = [s for s in os.listdir("testlib/interactors") if s.endswith(".cpp")]
     if "groups" not in dat or "default" not in dat["groups"]:
         if "groups" not in dat:
             dat["groups"] = {}
@@ -310,10 +312,10 @@ def my_problem_page(idx):
             dat["groups"]["default"] = {}
         with open("preparing_problems/" + idx + "/info.json", "w") as f:
             json.dump(dat, f, indent=2)
-    return render_template("problemsetting.html", dat=dat, pid=idx,
+    return render_template("problemsetting.html", dat=constants.default_problem_info | dat, pid=idx,
                            versions=problemsetting.query_versions(idx), enumerate=enumerate,
                            public_files=public_files, default_checkers=default_checkers,
-                           langs=executing.langs.keys())
+                           langs=executing.langs.keys(), default_interactors=default_interactors)
 
 
 @app.route("/problemsetting_action", methods=['POST'])
@@ -325,6 +327,8 @@ def problem_action():
     idx = secure_filename(idx)
     if not os.path.isfile(f"preparing_problems/{idx}/info.json"):
         abort(404)
+    if os.path.isfile("preparing_problems/" + idx + "/waiting"):
+        abort(503)
     with open(f"preparing_problems/{idx}/info.json") as f:
         dat = json.load(f)
     if not current_user.has("admin") and current_user.id not in dat["users"]:
@@ -339,6 +343,8 @@ def problem_preview():
         abort(403)
     idx = request.args["pid"]
     idx = secure_filename(idx)
+    if os.path.isfile("preparing_problems/" + idx + "/waiting"):
+        return render_template("pleasewait.html", action=open("preparing_problems/" + idx + "/waiting").read())
     with open(f"preparing_problems/{idx}/info.json") as f:
         dat = json.load(f)
     if not current_user.has("admin") and current_user.id not in dat["users"]:

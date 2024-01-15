@@ -10,7 +10,7 @@ from pyzipper.zipfile_aes import AESZipInfo
 from werkzeug.datastructures import ImmutableMultiDict, MultiDict
 from werkzeug.utils import secure_filename
 
-from modules import executing, tools
+from modules import executing, tools, constants
 from modules.locks import locks, Locker
 from modules.createhtml import run_markdown, parse
 from multiprocessing import Queue, Process
@@ -81,9 +81,7 @@ def init_problem(pid, name, user):
         making_dir(path + "/public_file")
     except FileExistsError:
         pass
-    info = {"name": name, "timelimit": "1000", "memorylimit": "256", "testcases": [], "users": [user], "statement":
-        {"main": "", "input": "", "output": "", "score": ""}, "files": [], "checker_source": ["default", "unknow"],
-            "groups": {"default": {"score": 100}}}
+    info = constants.default_problem_info | {"name": name, "users": [user]}
     tools.write_json(info, path + "/info.json")
     shutil.copy("testlib/checkers/wcmp", path)
     try:
@@ -112,7 +110,31 @@ def compile_checker(pid):
         return
     outpath = path | J | os.path.basename(outfile)
     env.get_file(outpath)
-    dat["checker"] = [os.path.basename(outfile), "C++17"]
+    dat["checker"] = [os.path.basename(outfile), lang_type]
+    tools.write_json(dat, path, "info.json")
+
+
+@background_actions.bind
+def compile_interactor(pid):
+    path = "preparing_problems" | J | pid
+    env = executing.Environment()
+    dat = tools.read_json(path, "info.json")
+    filepath = ("testlib/interactors" if dat["interactor_source"][0] == "default" else f"{path}/file") | J | \
+               dat["interactor_source"][1]
+    file = env.send_file(filepath)
+    env.send_file("testlib/testlib.h")
+    lang_type = "C++17"
+    if dat["interactor_source"][0] == "my":
+        for o in dat["files"]:
+            if o["name"] == dat["interactor_source"][1]:
+                lang_type = o["type"]
+    lang = executing.langs[lang_type]
+    outfile, ce_msg = lang.compile(file, env)
+    if ce_msg:
+        return
+    outpath = path | J | os.path.basename(outfile)
+    env.get_file(outpath)
+    dat["interactor"] = [os.path.basename(outfile), lang_type]
     tools.write_json(dat, path, "info.json")
 
 
@@ -139,6 +161,12 @@ def generate_testcase(pid):
     if ce_msg:
         print("solution CE")
         return
+    int_exec = []
+    if dat["is_interact"]:
+        int_file = env.send_file(path + "/" + dat["interactor"][0])
+        int_lang = executing.langs[dat["interactor"][1]]
+        int_exec = int_lang.get_execmd(int_file)
+        env.executable(int_file)
     i = 1
     tests = []
     seed = dat["gen_msg"]["seed"]
@@ -156,10 +184,17 @@ def generate_testcase(pid):
         out_file = os.path.abspath(path + "/testcases_gen/" + test[0] + ".out")
         gen_out = env.safe_run(exec_cmd + test[1])
         tools.write(gen_out[0], in_file)
-        out = env.runwithshell(sol_cmd, env.send_file(in_file), env.filepath(out_file), tl, ml, sol_lang.base_exec_cmd)
+        env.readable(env.filepath(in_file))
+        env.writeable(env.filepath(out_file))
+        if dat["is_interact"]:
+            out = env.runwithinteractshell(sol_cmd, int_exec, env.send_file(in_file), env.filepath(out_file), tl, ml, sol_lang.base_exec_cmd)
+        else:
+            out = env.runwithshell(sol_cmd, env.send_file(in_file), env.filepath(out_file), tl, ml, sol_lang.base_exec_cmd)
         result = {o[0]: o[1] for o in (s.split("=") for s in out[0].split("\n")) if len(o) == 2}
+        print(out[0])
         if "1" == result.get("WIFSIGNALED", None) or "0" != result.get("WEXITSTATUS", "0"):
             print("solution RE")
+            print(out[1])
             return
         env.get_file(out_file)
     dat["testcases_gen"] = [{"in": test[0] + ".in", "out": test[0] + ".out", "sample": False, "group": test[1][1]} \
@@ -230,8 +265,8 @@ def save_statement(form, pid, path, dat):
     dat["statement"]["input"] = form["statement_input"]
     dat["statement"]["output"] = form["statement_output"]
     tools.write_json(dat, f"preparing_problems/{pid}/info.json")
-    full = "# Statement\n" + form["statement_main"] + "\n## Input\n" + form[
-        "statement_input"] + "\n## Output\n" + form["statement_output"]
+    full = "# 題目敘述\n" + form["statement_main"] + "\n## 輸入說明\n" + form[
+        "statement_input"] + "\n## 輸出說明\n" + form["statement_output"]
     tools.write(full, f"preparing_problems/{pid}/statement.md")
     parse.dirname = pid
     tools.write(run_markdown(full), f"preparing_problems/{pid}/statement.html")
@@ -367,6 +402,21 @@ def choose_checker(form, pid, path, dat):
         abort(400)
     dat["checker_source"] = [tp, name]
     add_background_action({"action": "compile_checker", "pid": pid})
+    tools.write_json(dat, path, "info.json")
+    return "judge"
+
+
+@actions.bind
+def choose_interactor(form, pid, path, dat):
+    tp = form["interactor_type"]
+    name = form[tp + "_interactor"]
+    use = form.get("enable_interactor","off") == "on"
+    filepath = ("testlib/interactors/" if tp == "default" else path + "/file/") + name
+    if not os.path.isfile(filepath):
+        abort(400)
+    dat["interactor_source"] = [tp, name]
+    dat["is_interact"] = use
+    add_background_action({"action": "compile_interactor", "pid": pid})
     tools.write_json(dat, path, "info.json")
     return "judge"
 

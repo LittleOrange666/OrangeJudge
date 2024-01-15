@@ -21,7 +21,7 @@ def TLE(result):
 
 
 class Environment:
-    __slots__ = ("lxc_name", "dirname", "prefix", "safe")
+    __slots__ = ("lxc_name", "dirname", "prefix", "safe", "judge")
 
     def __init__(self, lxc_name: str = constants.lxc_name):
         self.lxc_name: str = lxc_name
@@ -30,6 +30,7 @@ class Environment:
         call(mkdir)
         self.prefix: list[str] = ["sudo", "lxc-attach", "-n", self.lxc_name, "--"]
         self.safe: list[str] = ["sudo", "-u", "nobody"]
+        self.judge: list[str] = ["sudo", "-u", "judge"]
         # call(self.prefix + ["chmod", "750", "/" + self.dirname])
 
     def send_file(self, filepath: str) -> str:
@@ -75,7 +76,8 @@ class Environment:
             if not self.exist(filename):
                 tools.create(self.fullfilepath(filename))
             filepath = self.filepath(filename)
-            call(self.prefix + ["chmod", "777", filepath])
+            call(self.prefix + ["chgrp", "judge", filepath])
+            call(self.prefix + ["chmod", "770", filepath])
 
     def executable(self, *filenames: str):
         for filename in filenames:
@@ -98,6 +100,16 @@ class Environment:
             main = ["sudo", os.path.abspath("/judge/shell"), str(math.ceil(tl)), str(ml * 1024 * 1024),
                     str(100 * 1024 * 1024), repr(" ".join(base_cmd)),
                     repr(" ".join(cmd)), in_file, out_file]
+            return call(self.prefix + main, timeout=tl + 1)
+        except subprocess.TimeoutExpired:
+            return "TLE", "TLE", 777777
+
+    def runwithinteractshell(self, cmd: list[str], interact_cmd: list[str], in_file: str, out_file: str, tl: float, ml: int, base_cmd: list[str]) \
+            -> tuple[str, str, int]:
+        try:
+            main = ["sudo", os.path.abspath("/judge/interact_shell"), str(math.ceil(tl)), str(ml * 1024 * 1024),
+                    str(100 * 1024 * 1024), repr(" ".join(base_cmd)),
+                    repr(" ".join(cmd)), repr(" ".join(interact_cmd)), in_file, out_file]
             return call(self.prefix + main, timeout=tl + 1)
         except subprocess.TimeoutExpired:
             return "TLE", "TLE", 777777

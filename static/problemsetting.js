@@ -238,7 +238,7 @@ $(function() {
     });
     $(".collapse_file_edit").each(function(){
         let $this = $(this);
-        let $line = $this.parent().parent().prev();
+        let $line = $this.prev();
         $this.data("filename",$line.find("a").text());
         let $btn = $this.find("button");
         let $select = $this.find("select");
@@ -285,6 +285,9 @@ $(function() {
         if(!ret)
             show_modal("錯誤","請選擇一個檔案");
         return ret;
+    });
+    $(".alternative_fileselect").change(function(){
+        $(this).prev().find("input").click();
     });
     // tests
     $("#upload_zipfile").click(function(){

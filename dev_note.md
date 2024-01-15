@@ -1,9 +1,13 @@
 ## 已知問題
 + 出題缺少基本的validation
 + 許多Internal server error 沒有反饋給前端
-+ $.post沒有處理 failed的情況
-+ 許多空白的處理不知道是不是OK的
++ 許多空白&斜線的處理不知道是不是OK的
 + 測資不能刪
++ 可偷用python
++ 缺少server端資料驗證
++ 前端缺少題目資訊
++ (出題)許多修改不應重新整理
++ checker/interactor 不會自動重編譯
 
 ## 潛在威脅
 + judge 拿著root執行system call
@@ -16,4 +20,9 @@
 + interactor
 + custom languages
 + sign up
-+ ans_genartor
++ ans generator
++ background action log
++ better editer(自動縮排&空格縮排)
++ 出題小組
++ 手動添加sample
++ admin UI

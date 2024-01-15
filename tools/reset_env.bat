@@ -1,2 +1,2 @@
-wsl -e sudo reset_env.sh
+wsl -e sudo ./reset_env.sh
 pause
