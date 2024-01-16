@@ -263,10 +263,14 @@ def runner():
             with Problem(current_pid) as problem:
                 background_actions.call(action_name, **action_data)
             end(True)
-        except StopActionException as e:
+        except StopActionException:
             print("Stop Action")
         except Exception as e:
             traceback.print_exception(e)
+            try:
+                end(False)
+            except StopActionException:
+                pass
         os.chdir(root_folder)
 
 
@@ -301,9 +305,14 @@ def action_not_found():
 @actions.bind
 def save_general_info(form, pid, path, dat):
     dat["name"] = form["title"]
+    ml = form["memorylimit"]
+    tl = form["timelimit"]
+    if not ml.isdigit() or not tl.isdigit():
+        abort(400)
+    if not (10000 >= int(ml) >= 250 and 1024 >= int(tl) >= 4):
+        abort(400)
     dat["memorylimit"] = form["memorylimit"]
     dat["timelimit"] = form["timelimit"]
-    tools.write_json(dat, path, "info.json")
     return "general_info"
 
 
@@ -319,7 +328,6 @@ def save_statement(form, pid, path, dat):
     dat["statement"]["main"] = form["statement_main"]
     dat["statement"]["input"] = form["statement_input"]
     dat["statement"]["output"] = form["statement_output"]
-    tools.write_json(dat, f"preparing_problems/{pid}/info.json")
     full = "# 題目敘述\n" + form["statement_main"] + "\n## 輸入說明\n" + form[
         "statement_input"] + "\n## 輸出說明\n" + form["statement_output"]
     tools.write(full, f"preparing_problems/{pid}/statement.md")
@@ -354,7 +362,6 @@ def upload_zip(form, pid, path, dat):
             f.write(zip_file.read(o[1]))
         dat["testcases"].append({"in": secure_filename(o[0].filename), "out": secure_filename(o[1].filename),
                                  "sample": "sample" in secure_filename(o[0].filename)})
-    tools.write_json(dat, path, "info.json")
     os.remove(filename)
     return "tests"
 
@@ -410,12 +417,8 @@ def create_file(form, pid, path, dat):
 
 @actions.bind
 def remove_file(form, pid, path, dat):
-    filename = form["filename"]
-    filepath = path + "/file/" + secure_filename(filename)
-    if os.path.exists(filepath):
-        os.remove(filepath)
-    else:
-        abort(400)
+    filename = secure_filename(form["filename"])
+    filepath = path + "/file/" + filename
     target = None
     for o in dat["files"]:
         if o["name"] == filename:
@@ -423,6 +426,10 @@ def remove_file(form, pid, path, dat):
             break
     if target is None:
         abort(404)
+    if os.path.exists(filepath):
+        os.remove(filepath)
+    else:
+        abort(400)
     dat["files"].remove(target)
     return "files"
 
@@ -430,8 +437,11 @@ def remove_file(form, pid, path, dat):
 @actions.bind
 def save_file_content(form, pid, path, dat):
     filename = form["filename"]
+    filename = secure_filename(filename)
     content = form["content"]
-    filepath = path + "/file/" + secure_filename(filename)
+    if form["type"] not in executing.langs:
+        abort(400)
+    filepath = path + "/file/" + filename
     target = None
     for o in dat["files"]:
         if o["name"] == filename:
@@ -447,37 +457,41 @@ def save_file_content(form, pid, path, dat):
 @actions.bind
 def choose_checker(form, pid, path, dat):
     tp = form["checker_type"]
-    name = form[tp + "_checker"]
+    if tp not in ("my", "default"):
+        abort(400)
+    name = secure_filename(form[tp + "_checker"])
     filepath = ("testlib/checkers/" if tp == "default" else path + "/file/") + name
     if not os.path.isfile(filepath):
         abort(400)
     dat["checker_source"] = [tp, name]
-    # add_background_action({"action": "compile_checker", "pid": pid})
     return "judge"
 
 
 @actions.bind
 def choose_interactor(form, pid, path, dat):
     tp = "my"
-    name = form[tp + "_interactor"]
+    name = secure_filename(form[tp + "_interactor"])
     use = form.get("enable_interactor", "off") == "on"
-    filepath = path + "/file/" + name
-    if not os.path.isfile(filepath):
-        abort(400)
+    if not any(o["name"] == name for o in dat["files"]):
+        abort(404)
     dat["interactor_source"] = name
     dat["is_interact"] = use
-    # add_background_action({"action": "compile_interactor", "pid": pid})
     return "judge"
 
 
 @actions.bind
 def save_testcase(form, pid, path, dat):
-    modify = json.loads(form["modify"])
+    try:
+        modify = json.loads(form["modify"])
+    except json.decoder.JSONDecodeError:
+        abort(400)
     testcases = dat["testcases"]
-    if len(modify) != len(testcases):
+    if type(modify) is not list or len(modify) != len(testcases):
         abort(400)
     new_testcases = []
     for o in modify:
+        if type(o[1]) is not bool or type(o[0]) is not int or not (len(testcases)>o[0]>=0):
+            abort(400)
         obj = testcases[o[0]]
         obj["sample"] = o[1]
         new_testcases.append(obj)
@@ -487,12 +501,17 @@ def save_testcase(form, pid, path, dat):
 
 @actions.bind
 def save_testcase_gen(form, pid, path, dat):
-    modify = json.loads(form["modify"])
+    try:
+        modify = json.loads(form["modify"])
+    except json.decoder.JSONDecodeError:
+        abort(400)
     testcases = dat["testcases_gen"]
-    if len(modify) != len(testcases):
+    if type(modify) is not list or len(modify) != len(testcases):
         abort(400)
     new_testcases = []
     for o in modify:
+        if type(o[1]) is not bool or type(o[0]) is not int or not (len(testcases)>o[0]>=0):
+            abort(400)
         obj = testcases[o[0]]
         obj["sample"] = o[1]
         new_testcases.append(obj)
@@ -504,6 +523,10 @@ def save_testcase_gen(form, pid, path, dat):
 def set_generator(form, pid, path, dat):
     generator = form["generator"]
     solution = form["solution"]
+    if not any(o["name"] == generator for o in dat["files"]):
+        abort(404)
+    if not any(o["name"] == solution for o in dat["files"]):
+        abort(404)
     seed = form["seed"]
     cnts = {}
     for k in dat["groups"].keys():
@@ -511,7 +534,6 @@ def set_generator(form, pid, path, dat):
         if not cnts[k].isdigit():
             abort(400)
     dat["gen_msg"] = {"generator": generator, "solution": solution, "seed": seed, "counts": cnts}
-    add_background_action({"action": "generate_testcase", "pid": pid})
     return "tests"
 
 

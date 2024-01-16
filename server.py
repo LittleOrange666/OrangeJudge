@@ -31,17 +31,17 @@ def index():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    next = request.form.get('next')
+    nxt = request.form.get('next')
     if request.method == 'GET':
         if current_user.is_authenticated:
-            return redirect(next or '/')
+            return redirect(nxt or '/')
         return render_template("login.html")
     name = request.form['user_id']
     user = try_login(name, request.form['password'])
     if user is not None:
         login_user(user)
         print(user)
-        return redirect(next or '/')
+        return redirect(nxt or '/')
     return redirect('/login')
 
 
@@ -93,6 +93,10 @@ def submit():
     code = request.form["code"].replace("\n\n", "\n")
     pid = request.form["pid"]
     pid = secure_filename(pid)
+    if not tools.exists("problems", pid, "info.json"):
+        abort(404)
+    if lang not in executing.langs:
+        abort(404)
     ext = executing.langs[lang].data["source_ext"]
     idx = tasks.create_submission()
     source = f"submissions/{idx}/a{ext}"
@@ -225,6 +229,8 @@ def my_submissions():
     out = []
     for idx in reversed(submission_list):
         o = {"name": idx, "time": "blank", "result": "blank"}
+        if not tools.exists(f"submissions/{idx}/info.json"):
+            continue
         with open(f"submissions/{idx}/info.json") as f:
             dat = json.load(f)
         if "time" in dat:
@@ -348,6 +354,8 @@ def problem_preview():
         abort(403)
     idx = request.args["pid"]
     idx = secure_filename(idx)
+    if not os.path.isfile(f"preparing_problems/{idx}/info.json"):
+        abort(404)
     if os.path.isfile("preparing_problems/" + idx + "/waiting"):
         return render_template("pleasewait.html", action=open("preparing_problems/" + idx + "/waiting").read())
     with open(f"preparing_problems/{idx}/info.json") as f:

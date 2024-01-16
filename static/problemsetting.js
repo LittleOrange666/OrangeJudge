@@ -125,6 +125,14 @@ $(function() {
         e.preventDefault();
         let $this = $(this);
         let action_name = $this.text().trim();
+        let ok = true;
+        $this.parents("form").find("input,select,textarea").each(function(){
+            if($(this).prop("required")&&!$(this).val()) ok = false;
+        });
+        if(!ok){
+            show_modal("錯誤","部分資訊未填寫");
+            return;
+        }
         fetching($this.parents("form").first()).then(function (response) {
             console.log(response);
             if(response.ok) {

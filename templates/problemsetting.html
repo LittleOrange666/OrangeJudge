@@ -407,13 +407,10 @@
                                name="count_{{ k }}" min="0" value="0" required>
                     </div>
                     {% endfor %}
-                    <div class="row">
-                        <button class="btn btn-primary submitter">變更生成指示</button>
-                        <form the_action="do_generate">
-                            <button class="btn btn-primary submitter">嘗試生成測資</button>
-                        </form>
-                    </div>
-
+                    <button class="btn btn-primary submitter">變更生成指示</button>
+                </form>
+                <form the_action="do_generate">
+                    <button class="btn btn-primary submitter">嘗試生成測資</button>
                 </form>
             </div>
             {% if 'testcases_gen' in dat %}
