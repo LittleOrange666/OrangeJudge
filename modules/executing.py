@@ -19,13 +19,15 @@ def call(cmd: list[str], stdin: str = "", timeout: float | None = None) -> tuple
 def TLE(result):
     return result == ("TLE", "TLE", 777777)
 
+def create_name():
+    return str(uuid.uuid4())
 
 class Environment:
     __slots__ = ("lxc_name", "dirname", "prefix", "safe", "judge")
 
     def __init__(self, lxc_name: str = constants.lxc_name):
         self.lxc_name: str = lxc_name
-        self.dirname: str = str(uuid.uuid4())
+        self.dirname: str = create_name()
         mkdir = ["sudo", "lxc-attach", "-n", self.lxc_name, "--", "mkdir", "/" + self.dirname]
         call(mkdir)
         self.prefix: list[str] = ["sudo", "lxc-attach", "-n", self.lxc_name, "--"]
@@ -89,6 +91,12 @@ class Environment:
             filepath = self.filepath(filename)
             call(self.prefix + ["chmod", "744", filepath])
 
+    def safe_readable(self, *filenames: str):
+        for filename in filenames:
+            filepath = self.filepath(filename)
+            call(self.prefix + ["chgrp", "judge", filepath])
+            call(self.prefix + ["chmod", "740", filepath])
+
     def protected(self, *filenames: str):
         for filename in filenames:
             filepath = self.filepath(filename)
@@ -109,7 +117,7 @@ class Environment:
         try:
             main = ["sudo", os.path.abspath("/judge/interact_shell"), str(math.ceil(tl)), str(ml * 1024 * 1024),
                     str(100 * 1024 * 1024), repr(" ".join(base_cmd)),
-                    repr(" ".join(cmd)), repr(" ".join(interact_cmd)), in_file, out_file]
+                    repr(" ".join(cmd)), repr(" ".join(interact_cmd)), in_file, out_file, self.filepath(create_name())]
             return call(self.prefix + main, timeout=tl + 1)
         except subprocess.TimeoutExpired:
             return "TLE", "TLE", 777777

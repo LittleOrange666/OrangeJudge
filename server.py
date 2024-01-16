@@ -288,7 +288,7 @@ def my_problem_page(idx):
     idx = secure_filename(idx)
     if not current_user.has("make_problems"):
         abort(403)
-    if not os.path.isdir("preparing_problems/" + idx) or not os.path.isfile("preparing_problems/" + idx + ".img"):
+    if not os.path.isdir("preparing_problems/" + idx) or not os.path.isfile("preparing_problems/" + idx + "/info.json"):
         abort(404)
     if len(os.listdir("preparing_problems/" + idx)) == 0:
         problemsetting.system(f"sudo mount -o loop {idx}.img ./{idx}", "preparing_problems")

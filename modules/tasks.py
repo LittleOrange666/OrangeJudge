@@ -55,6 +55,12 @@ def run_problem(idx, dat):
     else:
         tl = float(problem_info["timelimit"]) / 1000
         ml = int(problem_info["memorylimit"])
+        int_exec = []
+        if problem_info["is_interact"]:
+            int_file = env.send_file(problem_path + "/" + problem_info["interactor"][0])
+            int_lang = executing.langs[problem_info["interactor"][1]]
+            int_exec = int_lang.get_execmd(int_file)
+            env.executable(int_file)
         checker = env.send_file(problem_path + problem_info["checker"][0])
         env.executable(checker)
         checker_cmd = executing.langs[problem_info["checker"][1]].get_execmd(checker)
@@ -89,7 +95,14 @@ def run_problem(idx, dat):
             out_file = os.path.abspath(f"submissions/{idx}/testcases/{i}.out")
             tools.create_truncated(in_file, f"submissions/{idx}/testcases/{i}.in")
             tools.create_truncated(ans_file, f"submissions/{idx}/testcases/{i}.ans")
-            out = env.runwithshell(exec_cmd, env.send_file(in_file), env.filepath(out_file), tl, ml, lang.base_exec_cmd)
+            env.send_file(in_file)
+            env.writeable(out_file)
+            if problem_info["is_interact"]:
+                env.safe_readable(in_file)
+                out = env.runwithinteractshell(exec_cmd, int_exec, env.filepath(in_file), env.filepath(out_file), tl, ml, lang.base_exec_cmd)
+            else:
+                env.readable(in_file)
+                out = env.runwithshell(exec_cmd, env.filepath(in_file), env.filepath(out_file), tl, ml, lang.base_exec_cmd)
             timeusage = 0
             memusage = 0
             has_output = False

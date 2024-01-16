@@ -184,14 +184,17 @@ def generate_testcase(pid):
         out_file = os.path.abspath(path + "/testcases_gen/" + test[0] + ".out")
         gen_out = env.safe_run(exec_cmd + test[1])
         tools.write(gen_out[0], in_file)
-        env.readable(env.filepath(in_file))
-        env.writeable(env.filepath(out_file))
+        env.send_file(in_file)
+        env.writeable(out_file)
         if dat["is_interact"]:
-            out = env.runwithinteractshell(sol_cmd, int_exec, env.send_file(in_file), env.filepath(out_file), tl, ml, sol_lang.base_exec_cmd)
+            env.safe_readable(in_file)
+            out = env.runwithinteractshell(sol_cmd, int_exec, env.filepath(in_file), env.filepath(out_file), tl, ml, sol_lang.base_exec_cmd)
         else:
-            out = env.runwithshell(sol_cmd, env.send_file(in_file), env.filepath(out_file), tl, ml, sol_lang.base_exec_cmd)
+            env.readable(in_file)
+            out = env.runwithshell(sol_cmd, env.filepath(in_file), env.filepath(out_file), tl, ml, sol_lang.base_exec_cmd)
         result = {o[0]: o[1] for o in (s.split("=") for s in out[0].split("\n")) if len(o) == 2}
         print(out[0])
+        print(out[1])
         if "1" == result.get("WIFSIGNALED", None) or "0" != result.get("WEXITSTATUS", "0"):
             print("solution RE")
             print(out[1])
@@ -410,7 +413,7 @@ def choose_checker(form, pid, path, dat):
 def choose_interactor(form, pid, path, dat):
     tp = form["interactor_type"]
     name = form[tp + "_interactor"]
-    use = form.get("enable_interactor","off") == "on"
+    use = form.get("enable_interactor", "off") == "on"
     filepath = ("testlib/interactors/" if tp == "default" else path + "/file/") + name
     if not os.path.isfile(filepath):
         abort(400)

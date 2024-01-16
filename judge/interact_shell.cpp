@@ -13,6 +13,8 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 using namespace std;
 
@@ -26,7 +28,6 @@ int main(int argc, char *argv[]){
     string argv4 = argv[4];
     if (argv4[0]=='\"'||argv4[0]=='\'') argv4 = argv4.substr(1,argv4.size()-2);
     argv4 = "sudo -u nobody "s+argv4;
-    argv4 = "socat exec:'"s+argv4+"' exec:'"s+argv4+"'"s;
     string argv5 = argv[5];
     if (argv5[0]=='\"'||argv5[0]=='\'') argv5 = argv5.substr(1,argv5.size()-2);
     argv5 = "sudo -u nobody "s+argv5;
@@ -34,6 +35,9 @@ int main(int argc, char *argv[]){
     if (argv6[0]=='\"'||argv6[0]=='\'') argv6 = argv6.substr(1,argv6.size()-2);
     argv6 = "sudo -u judge "s+argv6;
 //    pid_t baseid = fork();
+    string fifoname = argv[9];
+    mkfifo((fifoname+"1"s).c_str(),0666);
+    mkfifo((fifoname+"2"s).c_str(),0666);
     if(fork()==0){
         rlimit timelimit, memorylimit;
         timelimit.rlim_cur = 1; // seconds
@@ -59,11 +63,20 @@ int main(int argc, char *argv[]){
         setrlimit(RLIMIT_CPU, &timelimit);
     setrlimit(RLIMIT_AS, &memorylimit);
     setrlimit(RLIMIT_FSIZE, &filelimit);
-    string cmd = argv6;
-    cmd += " "s + argv[7];
-    cmd += " "s + argv[8];
-    cmd = "socat exec:'"s+argv5+"' exec:'"s+cmd+"'"s;
+    string cmd = argv5;
+    cmd += " < "s + fifoname + "1"s;
+    cmd += " > "s + fifoname + "2"s;
+    string it = argv6;
+    it += " "s + argv[7];
+    it += " "s + argv[8];
+    it += " > "s + fifoname + "1"s;
+    it += " < "s + fifoname + "2"s;
     cout << "maincmd=" << cmd << endl;
+    cout << "interact_cmd=" << it << endl;
+    if (fork()==0){
+        system(it.c_str());
+        return 0;
+    }
         int childstatus = system(cmd.c_str());
     cout << "childstatus=" << childstatus << endl;
         cout << "WIFSIGNALED=" << WIFSIGNALED(childstatus) << endl; // 非零代表因某個 signal 沒有 catch 而結束
@@ -76,6 +89,8 @@ int main(int argc, char *argv[]){
         return 0;
     }
     wait3(&status, 0, &usage);
+    remove((fifoname+"1"s).c_str());
+    remove((fifoname+"2"s).c_str());
 
     double exectime = usage.ru_utime.tv_sec + usage.ru_stime.tv_sec + (double)(usage.ru_utime.tv_usec + 
 usage.ru_stime.tv_usec) / 1000000;

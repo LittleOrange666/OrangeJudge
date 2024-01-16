@@ -8,6 +8,7 @@
 + 前端缺少題目資訊
 + (出題)許多修改不應重新整理
 + checker/interactor 不會自動重編譯
++ python 版本不固定
 
 ## 潛在威脅
 + judge 拿著root執行system call
