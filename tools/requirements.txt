@@ -1,5 +1,6 @@
 flask
 flask_login
+flask_session
 pygments
 pyzipper
 markdown

@@ -4,6 +4,7 @@ import sys
 
 from flask import Flask, render_template, request, redirect, session, abort, send_file
 from flask_login import login_user, logout_user, login_required, current_user
+from flask_session import Session
 from werkzeug.utils import secure_filename
 
 from modules import executing, tasks, tools, problemsetting, constants
@@ -16,6 +17,10 @@ from pygments.formatters import HtmlFormatter
 prepares = {k: lexers.get_lexer_by_name(k) for lexer in lexers.get_all_lexers() for k in lexer[1]}
 app = Flask(__name__, static_url_path='/static', static_folder="static/", template_folder="templates/")
 app.secret_key = 'HP4xkCix2nf5qCmxSXV0sBwocE2CjECC5z2T9TKQmv8'
+app.config['SESSION_TYPE'] = "filesystem"
+app.config["SESSION_FILE_DIR"] = "sessions"
+app.config["SESSION_COOKIE_NAME"] = "OrangeJudgeSession"
+Session(app)
 init_login(app)
 
 
