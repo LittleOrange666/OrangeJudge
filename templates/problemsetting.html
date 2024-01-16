@@ -229,31 +229,12 @@
         <br>
         <div class="container-fluid">
             <h4>互動</h4>
-            <p>目前：{{ dat['interactor_source'][1] }}{{"(內建)" if dat['interactor_source'][0]=="default" else ""}}</p>
+            <p>目前：{{ dat['interactor_source'] }}</p>
             <form the_action="choose_interactor" id="choose_interactor">
                 <div class="form-check form-switch">
-                  <input class="form-check-input" type="checkbox" role="switch" id="enable_interactor"
-                         name="enable_interactor" data-checked="{{ dat['is_interact'] }}">
-                  <label class="form-check-label" for="enable_interactor">啟用互動</label>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="interactor_type" id="interactor_type1" value="default"
-                           checked>
-                    <label class="form-check-label" for="interactor_type1">
-                        內建互動程式
-                    </label>
-                </div>
-                <select class="form-select alternative_fileselect" name="default_interactor">
-                    <option selected>選擇檔案</option>
-                    {% for interactor in default_interactors %}
-                    <option value="{{ interactor }}">{{ interactor }}</option>
-                    {% endfor %}
-                </select>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="interactor_type" id="interactor_type2" value="my">
-                    <label class="form-check-label" for="interactor_type2">
-                        自訂互動程式
-                    </label>
+                    <input class="form-check-input" type="checkbox" role="switch" id="enable_interactor"
+                           name="enable_interactor" data-checked="{{ dat['is_interact'] }}">
+                    <label class="form-check-label" for="enable_interactor">啟用互動</label>
                 </div>
                 <select class="form-select alternative_fileselect" name="my_interactor">
                     <option selected>選擇檔案</option>
@@ -426,7 +407,13 @@
                                name="count_{{ k }}" min="0" value="0" required>
                     </div>
                     {% endfor %}
-                    <button class="btn btn-primary submitter">變更生成指示</button>
+                    <div class="row">
+                        <button class="btn btn-primary submitter">變更生成指示</button>
+                        <form the_action="do_generate">
+                            <button class="btn btn-primary submitter">嘗試生成測資</button>
+                        </form>
+                    </div>
+
                 </form>
             </div>
             {% if 'testcases_gen' in dat %}

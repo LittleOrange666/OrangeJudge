@@ -18,7 +18,6 @@
 + contests
 + problem set
 + exam
-+ interactor
 + custom languages
 + sign up
 + ans generator
@@ -27,3 +26,4 @@
 + 出題小組
 + 手動添加sample
 + admin UI
++ two steps

@@ -294,6 +294,9 @@ def my_problem_page(idx):
         problemsetting.system(f"sudo mount -o loop {idx}.img ./{idx}", "preparing_problems")
     if os.path.isfile("preparing_problems/" + idx + "/waiting"):
         return render_template("pleasewait.html", action=open("preparing_problems/" + idx + "/waiting").read())
+    o = problemsetting.check_background_action(idx)
+    if o is not None:
+        return render_template("pleasewaitlog.html", action=o[1], log=o[0])
     with open("preparing_problems/" + idx + "/info.json") as f:
         dat = json.load(f)
     if not current_user.has("admin") and current_user.id not in dat["users"]:
@@ -328,6 +331,8 @@ def problem_action():
     if not os.path.isfile(f"preparing_problems/{idx}/info.json"):
         abort(404)
     if os.path.isfile("preparing_problems/" + idx + "/waiting"):
+        abort(503)
+    if problemsetting.check_background_action(idx) is not None:
         abort(503)
     with open(f"preparing_problems/{idx}/info.json") as f:
         dat = json.load(f)

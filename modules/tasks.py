@@ -99,10 +99,12 @@ def run_problem(idx, dat):
             env.writeable(out_file)
             if problem_info["is_interact"]:
                 env.safe_readable(in_file)
-                out = env.runwithinteractshell(exec_cmd, int_exec, env.filepath(in_file), env.filepath(out_file), tl, ml, lang.base_exec_cmd)
+                out = env.runwithinteractshell(exec_cmd, int_exec, env.filepath(in_file), env.filepath(out_file), tl,
+                                               ml, lang.base_exec_cmd)
             else:
                 env.readable(in_file)
-                out = env.runwithshell(exec_cmd, env.filepath(in_file), env.filepath(out_file), tl, ml, lang.base_exec_cmd)
+                out = env.runwithshell(exec_cmd, env.filepath(in_file), env.filepath(out_file), tl, ml,
+                                       lang.base_exec_cmd)
             timeusage = 0
             memusage = 0
             has_output = False

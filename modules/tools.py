@@ -50,9 +50,24 @@ def read(*filename: str, n: int = -1) -> str:
             return f.read(n)
 
 
+def read_default(*filename: str, default: str = "") -> str:
+    if not exists(*filename):
+        return default
+    with Locker(os.path.join(*filename)):
+        with open(os.path.join(*filename)) as f:
+            return f.read()
+
+
 def write(content: str, *filename: str) -> str:
     with Locker(os.path.join(*filename)):
         with open(os.path.join(*filename), "w") as f:
+            f.write(content)
+    return content
+
+
+def append(content: str, *filename: str) -> str:
+    with Locker(os.path.join(*filename)):
+        with open(os.path.join(*filename), "a") as f:
             f.write(content)
     return content
 
@@ -102,3 +117,21 @@ class Switcher:
 
     def call(self, key, *args, **kwargs):
         return self.table.get(key, self._default)(*args, **kwargs)
+
+
+class Json:
+    def __init__(self, *filename: str):
+        self.name = os.path.abspath(os.path.join(*filename))
+        self.lock = Locker(self.name)
+        self.dat = None
+
+    def __enter__(self):
+        self.lock.__enter__()
+        with open(self.name) as f:
+            self.dat = json.load(f)
+        return self.dat
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        with open(self.name, "w") as f:
+            json.dump(self.dat, f, indent=2)
+        self.lock.__exit__(exc_type, exc_val, exc_tb)

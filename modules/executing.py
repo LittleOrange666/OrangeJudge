@@ -19,8 +19,10 @@ def call(cmd: list[str], stdin: str = "", timeout: float | None = None) -> tuple
 def TLE(result):
     return result == ("TLE", "TLE", 777777)
 
+
 def create_name():
     return str(uuid.uuid4())
+
 
 class Environment:
     __slots__ = ("lxc_name", "dirname", "prefix", "safe", "judge")
@@ -112,7 +114,8 @@ class Environment:
         except subprocess.TimeoutExpired:
             return "TLE", "TLE", 777777
 
-    def runwithinteractshell(self, cmd: list[str], interact_cmd: list[str], in_file: str, out_file: str, tl: float, ml: int, base_cmd: list[str]) \
+    def runwithinteractshell(self, cmd: list[str], interact_cmd: list[str], in_file: str, out_file: str, tl: float,
+                             ml: int, base_cmd: list[str]) \
             -> tuple[str, str, int]:
         try:
             main = ["sudo", os.path.abspath("/judge/interact_shell"), str(math.ceil(tl)), str(ml * 1024 * 1024),
@@ -200,7 +203,7 @@ class Language:
             return f"OK: {timeusage}ms, {memusage}KB"
 
 
-langs = {}
+langs: dict[str, Language] = {}
 
 for lang in os.listdir("langs"):
     lang_name = os.path.splitext(lang)[0]

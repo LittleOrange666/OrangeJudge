@@ -3,6 +3,7 @@ import os
 import shutil
 import subprocess
 import time
+import traceback
 import uuid
 
 from flask import Response, abort, render_template, request, redirect, send_file
@@ -27,6 +28,63 @@ testcases_gen/"""
 root_folder = os.getcwd()
 background_actions = tools.Switcher()
 actions = tools.Switcher()
+current_pid = ""
+current_idx = 0
+
+
+class StopActionException(Exception):
+    pass
+
+
+def just_compile(path: str, name: str, lang: executing.Language, env: executing.Environment) -> str:
+    log(f"compile {name} ({os.path.basename(path)})")
+    file = env.send_file(path)
+    exec_file, ce_msg = lang.compile(file, env)
+    if ce_msg:
+        log(f"{name} CE")
+        log(ce_msg)
+        end(False)
+    return exec_file
+
+
+def do_compile(path: str, name: str, lang: executing.Language, env: executing.Environment) -> list[str]:
+    return lang.get_execmd(just_compile(path, name, lang, env))
+
+
+class Problem(tools.Json):
+    def __init__(self, pid: str):
+        self.pid = pid
+        self.path = "preparing_problems/" + pid
+        super().__init__("preparing_problems", pid, "info.json")
+
+    def __enter__(self):
+        super().__enter__()
+        return self
+
+    def __getitem__(self, item):
+        return self.dat[item]
+
+    def __setitem__(self, key, value):
+        self.dat[key] = value
+
+    def __contains__(self, item):
+        return item in self.dat
+
+    def lang(self, name) -> executing.Language:
+        return executing.langs[next(o["type"] for o in self.dat["files"] if o["name"] == name)]
+
+    def compile_inner(self, filename: str, name: str, env: executing.Environment) -> list[str]:
+        lang = self.lang(filename)
+        path = self.path + "/file/" + filename
+        return do_compile(path, name, lang, env)
+
+    def compile_dat(self, filedat: tuple[str, str], name: str, env: executing.Environment) -> str:
+        path = (f"testlib/{name}s" if filedat[0] == "default" else f"{self.path}/file") | J | filedat[1]
+        lang = "C++17" if filedat[0] == "default" else self.lang(filedat[1])
+        return just_compile(path, name, lang, env)
+
+
+problem: Problem | None = None
 
 
 def init():
@@ -64,16 +122,32 @@ def making_dir(path: str):
     tools.create(path, ".gitkeep")
 
 
+def log(s: str, success: bool | None = None):
+    print(s)
+    if not s.endswith("\n"):
+        s += "\n"
+    tools.append(s, f"preparing_problems/{current_pid}/actions/{current_idx}.log")
+    if type(success) is bool:
+        end(success)
+
+
+def end(success: bool):
+    with tools.Json(f"preparing_problems/{current_pid}/actions/{current_idx}.json") as dat:
+        dat["success"] = success
+        dat["completed"] = True
+    raise StopActionException()
+
+
 @background_actions.bind
 def init_problem(pid, name, user):
     path = "preparing_problems/" + pid
-    system(f"sudo dd if=/dev/zero of={pid}.img bs=1G count=1", "preparing_problems")
-    system(f"sudo mkfs.ext4 {pid}.img", "preparing_problems")
+    # system(f"sudo dd if=/dev/zero of={pid}.img bs=1G count=1", "preparing_problems")
+    # system(f"sudo mkfs.ext4 {pid}.img", "preparing_problems")
     try:
         os.remove(path + "/waiting")
     except FileNotFoundError:
         pass
-    system(f"sudo mount -o loop {pid}.img ./{pid}", "preparing_problems")
+    # system(f"sudo mount -o loop {pid}.img ./{pid}", "preparing_problems")
     tools.write("建立題目", path, "waiting")
     try:
         making_dir(path + "/testcases")
@@ -91,154 +165,132 @@ def init_problem(pid, name, user):
 
 
 @background_actions.bind
-def compile_checker(pid):
-    path = "preparing_problems" | J | pid
-    env = executing.Environment()
-    dat = tools.read_json(path, "info.json")
-    filepath = ("testlib/checkers" if dat["checker_source"][0] == "default" else f"{path}/file") | J | \
-               dat["checker_source"][1]
-    file = env.send_file(filepath)
-    env.send_file("testlib/testlib.h")
-    lang_type = "C++17"
-    if dat["checker_source"][0] == "my":
-        for o in dat["files"]:
-            if o["name"] == dat["checker_source"][1]:
-                lang_type = o["type"]
-    lang = executing.langs[lang_type]
-    outfile, ce_msg = lang.compile(file, env)
-    if ce_msg:
-        return
-    outpath = path | J | os.path.basename(outfile)
-    env.get_file(outpath)
-    dat["checker"] = [os.path.basename(outfile), lang_type]
-    tools.write_json(dat, path, "info.json")
-
-
-@background_actions.bind
-def compile_interactor(pid):
-    path = "preparing_problems" | J | pid
-    env = executing.Environment()
-    dat = tools.read_json(path, "info.json")
-    filepath = ("testlib/interactors" if dat["interactor_source"][0] == "default" else f"{path}/file") | J | \
-               dat["interactor_source"][1]
-    file = env.send_file(filepath)
-    env.send_file("testlib/testlib.h")
-    lang_type = "C++17"
-    if dat["interactor_source"][0] == "my":
-        for o in dat["files"]:
-            if o["name"] == dat["interactor_source"][1]:
-                lang_type = o["type"]
-    lang = executing.langs[lang_type]
-    outfile, ce_msg = lang.compile(file, env)
-    if ce_msg:
-        return
-    outpath = path | J | os.path.basename(outfile)
-    env.get_file(outpath)
-    dat["interactor"] = [os.path.basename(outfile), lang_type]
-    tools.write_json(dat, path, "info.json")
-
-
-@background_actions.bind
 def generate_testcase(pid):
+    log(f"generating testcase")
     path = "preparing_problems/" + pid
-    dat = tools.read_json(path, "info.json")
     env = executing.Environment()
-    if "gen_msg" not in dat:
-        print("generater info not found")
-        return
-    print(dat["gen_msg"])
-    filepath = path + "/file/" + dat["gen_msg"]["generator"]
-    gen_lang = executing.langs[next(o["type"] for o in dat["files"] if o["name"] == dat["gen_msg"]["generator"])]
-    sol_lang = executing.langs[next(o["type"] for o in dat["files"] if o["name"] == dat["gen_msg"]["solution"])]
-    file = env.send_file(filepath)
     env.send_file("testlib/testlib.h")
-    outfile, ce_msg = gen_lang.compile(file, env)
-    if ce_msg:
-        print("generater CE")
-        return
-    sol_file = env.send_file(path + "/file/" + dat["gen_msg"]["solution"])
-    sol_exec, ce_msg = sol_lang.compile(sol_file, env)
-    if ce_msg:
-        print("solution CE")
-        return
-    int_exec = []
-    if dat["is_interact"]:
-        int_file = env.send_file(path + "/" + dat["interactor"][0])
-        int_lang = executing.langs[dat["interactor"][1]]
-        int_exec = int_lang.get_execmd(int_file)
-        env.executable(int_file)
+    if "gen_msg" not in problem:
+        log("generater info not found")
+        end(False)
     i = 1
     tests = []
-    seed = dat["gen_msg"]["seed"]
-    for k, v in dat["gen_msg"]["counts"].items():
+    seed = problem["gen_msg"]["seed"]
+    for k, v in problem["gen_msg"]["counts"].items():
         for j in range(int(v)):
             tests.append((f"{k}_{j + 1}", [str(i), k, seed]))
             i += 1
-    exec_cmd = gen_lang.get_execmd(outfile)
-    sol_cmd = sol_lang.get_execmd(sol_exec)
-    tl = float(dat["timelimit"]) / 1000
-    ml = int(dat["memorylimit"])
+    exec_cmd = problem.compile_inner(problem["gen_msg"]["generator"], "generator", env)
+    sol_cmd = problem.compile_inner(problem["gen_msg"]["solution"], "solution", env)
+    sol_lang = problem.lang(problem["gen_msg"]["solution"])
+    int_cmd = []
+    if problem["is_interact"]:
+        int_cmd = problem.compile_inner(problem["interactor_source"], "interactor", env)
+    tl = float(problem["timelimit"]) / 1000
+    ml = int(problem["memorylimit"])
     os.makedirs(path + "/testcases_gen/", exist_ok=True)
     for test in tests:
         in_file = os.path.abspath(path + "/testcases_gen/" + test[0] + ".in")
         out_file = os.path.abspath(path + "/testcases_gen/" + test[0] + ".out")
+        log(f"generating testcase {test[0]!r}")
         gen_out = env.safe_run(exec_cmd + test[1])
+        if gen_out[2]:
+            log("generator RE")
+            log(gen_out[1])
+            end(False)
         tools.write(gen_out[0], in_file)
         env.send_file(in_file)
         env.writeable(out_file)
-        if dat["is_interact"]:
+        if problem["is_interact"]:
             env.safe_readable(in_file)
-            out = env.runwithinteractshell(sol_cmd, int_exec, env.filepath(in_file), env.filepath(out_file), tl, ml, sol_lang.base_exec_cmd)
+            out = env.runwithinteractshell(sol_cmd, int_cmd, env.filepath(in_file), env.filepath(out_file), tl, ml,
+                                           sol_lang.base_exec_cmd)
         else:
             env.readable(in_file)
-            out = env.runwithshell(sol_cmd, env.filepath(in_file), env.filepath(out_file), tl, ml, sol_lang.base_exec_cmd)
+            out = env.runwithshell(sol_cmd, env.filepath(in_file), env.filepath(out_file), tl, ml,
+                                   sol_lang.base_exec_cmd)
         result = {o[0]: o[1] for o in (s.split("=") for s in out[0].split("\n")) if len(o) == 2}
-        print(out[0])
-        print(out[1])
         if "1" == result.get("WIFSIGNALED", None) or "0" != result.get("WEXITSTATUS", "0"):
-            print("solution RE")
-            print(out[1])
-            return
+            log("solution RE")
+            log(out[1])
+            end(False)
         env.get_file(out_file)
-    dat["testcases_gen"] = [{"in": test[0] + ".in", "out": test[0] + ".out", "sample": False, "group": test[1][1]} \
-                            for test in tests]
-    tools.write_json(dat, path, "info.json")
+    log(f"generate complete")
+    problem["testcases_gen"] = [{"in": test[0] + ".in", "out": test[0] + ".out", "sample": False, "group": test[1][1]} \
+                                for test in tests]
 
 
 @background_actions.bind
 def creating_version(pid, description):
     path = "preparing_problems/" + pid
-    tools.write(f"建立版本 {description!r}", path, "waiting")
-    dat = tools.read_json(path, "info.json")
-    if "versions" not in dat:
-        dat["versions"] = []
-    dat["versions"].append({"description": description, "time": time.time()})
-    tools.write_json(dat, path, "info.json")
+    log(f"creating version {description!r}")
+    env = executing.Environment()
+    env.send_file("testlib/testlib.h")
+    if "checker_source" not in problem:
+        log("checker missing")
+        end(False)
+    file = problem.compile_dat(problem["checker_source"], "checker", env)
+    env.get_file(path, os.path.basename(file))
+    problem["checker"] = [file, problem.lang(problem["checker_source"][1]).name]
+    if problem["is_interact"]:
+        if "interactor_source" not in problem:
+            log("interactor missing")
+            end(False)
+        file = problem.compile_dat(("my", problem["interactor_source"]), "interactor", env)
+        env.get_file(path, file)
+        problem["interactor"] = [file, problem.lang(problem["interactor_source"]).name]
+    if "gen_msg" in problem:
+        generate_testcase(pid)
+    if "versions" not in problem:
+        problem["versions"] = []
+    problem["versions"].append({"description": description, "time": time.time()})
     shutil.copytree(path, "problems/" + pid, dirs_exist_ok=True)
-    tools.remove(path, "waiting")
 
 
 def runner():
+    global current_pid, current_idx, problem
     while True:
         action_data = worker_queue.get()
         try:
             print(f"{action_data=}")
-            action_name = action_data["action"]
-            del action_data["action"]
+            action_name = action_data.pop("action")
+            current_idx = -1
+            if "idx" in action_data:
+                current_idx = action_data.pop("idx")
+            current_pid = action_data["pid"]
             # time.sleep(1)
-            background_actions.call(action_name, **action_data)
+            log("start " + action_name)
+            with Problem(current_pid) as problem:
+                background_actions.call(action_name, **action_data)
+            end(True)
+        except StopActionException as e:
+            print("Stop Action")
         except Exception as e:
-            print(e)
+            traceback.print_exception(e)
         os.chdir(root_folder)
 
 
 def add_background_action(obj):
+    folder = f"preparing_problems/{obj['pid']}/actions"
+    if not os.path.isdir(folder):
+        os.makedirs(folder, exist_ok=True)
+    cnt = int(tools.read_default(f"preparing_problems/{obj['pid']}/background_action_cnt", default="0"))
+    idx = cnt + 1
+    tools.write(str(idx), f"preparing_problems/{obj['pid']}/background_action_cnt")
+    obj["idx"] = idx
     worker_queue.put(obj)
-    dat = tools.read_json(f"preparing_problems/{obj['pid']}/info.json")
-    if "background_actions" not in dat:
-        dat["background_actions"] = []
-    dat["background_actions"].append(obj)
-    tools.write_json(dat, f"preparing_problems/{obj['pid']}/info.json")
+    cur = obj | {"completed": False}
+    tools.write_json(cur, f"preparing_problems/{obj['pid']}/actions/{idx}.json")
+
+
+def check_background_action(pid):
+    idx = tools.read_default(f"preparing_problems/{pid}/background_action_cnt", default="0")
+    if idx == "0":
+        return None
+    dat = tools.read_json(f"preparing_problems/{pid}/actions/{idx}.json")
+    if dat["completed"]:
+        return None
+    return tools.read(f"preparing_problems/{pid}/actions/{idx}.log"), dat["action"]
 
 
 @actions.default
@@ -343,7 +395,6 @@ def upload_file(form, pid, path, dat):
             abort(409)
         file.save(path + "/file/" + secure_filename(file.filename))
         dat["files"].append({"name": secure_filename(file.filename), "type": "C++17"})
-    tools.write_json(dat, path, "info.json")
     return "files"
 
 
@@ -354,7 +405,6 @@ def create_file(form, pid, path, dat):
         abort(409)
     tools.create(path, "file", filename)
     dat["files"].append({"name": filename, "type": "C++17"})
-    tools.write_json(dat, path, "info.json")
     return "files"
 
 
@@ -374,7 +424,6 @@ def remove_file(form, pid, path, dat):
     if target is None:
         abort(404)
     dat["files"].remove(target)
-    tools.write_json(dat, path, "info.json")
     return "files"
 
 
@@ -392,7 +441,6 @@ def save_file_content(form, pid, path, dat):
         abort(404)
     target["type"] = form["type"]
     tools.write(content, filepath)
-    tools.write_json(dat, path, "info.json")
     return "files"
 
 
@@ -404,23 +452,21 @@ def choose_checker(form, pid, path, dat):
     if not os.path.isfile(filepath):
         abort(400)
     dat["checker_source"] = [tp, name]
-    add_background_action({"action": "compile_checker", "pid": pid})
-    tools.write_json(dat, path, "info.json")
+    # add_background_action({"action": "compile_checker", "pid": pid})
     return "judge"
 
 
 @actions.bind
 def choose_interactor(form, pid, path, dat):
-    tp = form["interactor_type"]
+    tp = "my"
     name = form[tp + "_interactor"]
     use = form.get("enable_interactor", "off") == "on"
-    filepath = ("testlib/interactors/" if tp == "default" else path + "/file/") + name
+    filepath = path + "/file/" + name
     if not os.path.isfile(filepath):
         abort(400)
-    dat["interactor_source"] = [tp, name]
+    dat["interactor_source"] = name
     dat["is_interact"] = use
-    add_background_action({"action": "compile_interactor", "pid": pid})
-    tools.write_json(dat, path, "info.json")
+    # add_background_action({"action": "compile_interactor", "pid": pid})
     return "judge"
 
 
@@ -436,7 +482,6 @@ def save_testcase(form, pid, path, dat):
         obj["sample"] = o[1]
         new_testcases.append(obj)
     dat["testcases"] = new_testcases
-    tools.write_json(dat, path, "info.json")
     return "tests"
 
 
@@ -452,7 +497,6 @@ def save_testcase_gen(form, pid, path, dat):
         obj["sample"] = o[1]
         new_testcases.append(obj)
     dat["testcases_gen"] = new_testcases
-    tools.write_json(dat, path, "info.json")
     return "tests"
 
 
@@ -467,7 +511,12 @@ def set_generator(form, pid, path, dat):
         if not cnts[k].isdigit():
             abort(400)
     dat["gen_msg"] = {"generator": generator, "solution": solution, "seed": seed, "counts": cnts}
-    tools.write_json(dat, path, "info.json")
+    add_background_action({"action": "generate_testcase", "pid": pid})
+    return "tests"
+
+
+@actions.bind
+def do_generate(form, pid, path, dat):
     add_background_action({"action": "generate_testcase", "pid": pid})
     return "tests"
 
@@ -478,7 +527,6 @@ def create_group(form, pid, path, dat):
     if name in dat["groups"]:
         abort(409)
     dat["groups"][name] = {"score": 100}
-    tools.write_json(dat, path, "info.json")
 
 
 @actions.bind
@@ -487,14 +535,12 @@ def remove_group(form, pid, path, dat):
     if name not in dat["groups"]:
         abort(404)
     del dat["groups"][name]
-    tools.write_json(dat, path, "info.json")
 
 
 def action(form: ImmutableMultiDict[str, str]) -> Response:
     pid = secure_filename(form["pid"])
     path = f"preparing_problems/{pid}"
-    with Locker(os.path.join(path, "info.json")):
-        dat = tools.read_json(path, "info.json")
+    with tools.Json(path, "info.json") as dat:
         tp = actions.call(form["action"], form, pid, path, dat)
         return redirect(f"/problemsetting/{pid}#{tp}")
 
