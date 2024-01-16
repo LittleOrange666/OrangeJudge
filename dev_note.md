@@ -1,22 +1,21 @@
 ## 已知問題
 + 許多Internal server error 沒有反饋給前端
 + 許多空白&斜線的處理不知道是不是OK的
-+ 測資不能刪
 + 可偷用python
-+ 前端缺少題目資訊
 + (出題)許多修改不應重新整理
 + python 版本不固定
 
 ## 潛在威脅
-+ judge 拿著root執行system call
++ judge 拿著root執行system call (重要)
 + lxc中nobody可以執行真內建的system call
++ 出題者可能可以實行XSS attack
 
 ## 未實裝特性
-+ contests
++ contests (重要)
 + problem set
 + exam
 + custom languages
-+ sign up
++ sign up (重要)
 + ans generator
 + background action log
 + better editer(自動縮排&空格縮排)
@@ -24,5 +23,6 @@
 + 手動添加sample
 + admin UI
 + two steps
-+ protected testcase
-+ problem accessibility
++ protected testcase (重要)
++ problem accessibility (重要)
++ scoring

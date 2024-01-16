@@ -42,7 +42,7 @@ def run_problem(idx, dat):
     source = f"submissions/{idx}/" + dat["source"]
     pid = dat["pid"]
     problem_path = f"problems/{pid}/"
-    problem_info = tools.read_json(problem_path, "info.json")
+    problem_info = constants.default_problem_info | tools.read_json(problem_path, "info.json")
     filename, ce_msg = lang.compile(env.send_file(source), env)
     out_info = {"CE": False}
     results = []

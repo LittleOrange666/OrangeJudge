@@ -207,7 +207,7 @@ def problem(idx):
         statement = f.read()
     lang_exts = json.dumps({k: v.data["source_ext"] for k, v in executing.langs.items()})
     samples = [[tools.read(path, k, o["in"]), tools.read(path, k, o["out"])]
-               for k in ("testcases", "testcases_gen") for o in dat[k] if o.get("sample", False)]
+               for k in ("testcases", "testcases_gen") for o in dat.get(k,[]) if o.get("sample", False)]
     ret = render_template("problem.html", dat=dat, statement=statement,
                           langs=executing.langs.keys(), lang_exts=lang_exts, pid=idx,
                           preview=False, samples=enumerate(samples))

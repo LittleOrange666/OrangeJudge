@@ -30,6 +30,5 @@ lxc_name = "lxc-test"
 
 default_problem_info = {"name": "unknow", "timelimit": "1000", "memorylimit": "256", "testcases": [], "users": [],
                         "statement": {"main": "", "input": "", "output": "", "score": ""}, "files": [],
-                        "checker_source": ["default", "unknow"],
-                        "groups": {"default": {"score": 100}}, "interactor_source": ["default", "unknow"],
-                        "is_interact": False}
+                        "checker_source": ["default", "unknow"], "is_interact": False, "role": "private",
+                        "groups": {"default": {"score": 100}}, "interactor_source": ["default", "unknow"]}

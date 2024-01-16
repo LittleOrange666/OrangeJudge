@@ -188,6 +188,8 @@ def generate_testcase(pid):
         int_cmd = problem.compile_inner(problem["interactor_source"], "interactor", env)
     tl = float(problem["timelimit"]) / 1000
     ml = int(problem["memorylimit"])
+    if os.path.isdir(path + "/testcases_gen/"):
+        shutil.rmtree(path + "/testcases_gen/")
     os.makedirs(path + "/testcases_gen/", exist_ok=True)
     for test in tests:
         in_file = os.path.abspath(path + "/testcases_gen/" + test[0] + ".in")
@@ -354,6 +356,12 @@ def upload_zip(form, pid, path, dat):
     for o in filelist:
         if o.filename in mp:
             ps.append((mp[o.filename], o))
+    if len(ps) == 0:
+        abort(400)
+    dat["testcases"].clear()
+    if os.path.isdir(path + "/testcases/"):
+        shutil.rmtree(path + "/testcases/")
+        os.makedirs(path + "/testcases/", exist_ok=True)
     for o in ps:
         print(o[0].filename, o[1].filename)
         with open(path + "/testcases/" + secure_filename(o[0].filename), "wb") as f:
@@ -488,10 +496,14 @@ def save_testcase(form, pid, path, dat):
     testcases = dat["testcases"]
     if type(modify) is not list or len(modify) != len(testcases):
         abort(400)
+    s = set()
     new_testcases = []
     for o in modify:
         if type(o[1]) is not bool or type(o[0]) is not int or not (len(testcases)>o[0]>=0):
             abort(400)
+        if o[0] in s:
+            abort(400)
+        s.add(o[0])
         obj = testcases[o[0]]
         obj["sample"] = o[1]
         new_testcases.append(obj)
@@ -508,10 +520,14 @@ def save_testcase_gen(form, pid, path, dat):
     testcases = dat["testcases_gen"]
     if type(modify) is not list or len(modify) != len(testcases):
         abort(400)
+    s = set()
     new_testcases = []
     for o in modify:
         if type(o[1]) is not bool or type(o[0]) is not int or not (len(testcases)>o[0]>=0):
             abort(400)
+        if o[0] in s:
+            abort(400)
+        s.add(o[0])
         obj = testcases[o[0]]
         obj["sample"] = o[1]
         new_testcases.append(obj)

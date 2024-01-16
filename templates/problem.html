@@ -3,7 +3,9 @@
 {% block title %}問題{% if preview %}(預覽){% endif %} - {{ dat["name"] }}{% endblock %}
 
 {% block main %}
-<h1 class="test-center">{{ dat["name"] }}</h1>
+<h1 class="text-center">{{ dat["name"] }}</h1>
+<p class="text-center">Time Limit:{{ dat["timelimit"] }}ms</p>
+<p class="text-center">Memory Limit:{{ dat["memorylimit"] }}MB</p>
 {{ statement|safe }}
 <div class="container test-case">
     {% for i,sample in samples %}
