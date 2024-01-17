@@ -90,7 +90,10 @@ def exists(*filename: str) -> bool:
 
 
 def elapsed(*filename: str) -> float:
-    return time.time() - os.path.getmtime(os.path.join(*filename))
+    ret = time.time() - os.path.getmtime(os.path.join(*filename))
+    if ret < 0:
+        return 100
+    return ret
 
 
 def get_timestring() -> str:

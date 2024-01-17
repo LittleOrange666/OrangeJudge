@@ -20,6 +20,9 @@
     {% endif %}
 </div>
 {% else %}
+{% if "total_score" in result.keys() %}
+<div class="test-case">Total Score: {{ result["total_score"] }}</div>
+{% endif %}
 {% if group_results %}
 <table class="table table-hover">
     <thead>
@@ -28,6 +31,7 @@
         <th scope="col">result</th>
         <th scope="col">Time(ms)</th>
         <th scope="col">Memory(KB)</th>
+        <th scope="col">Score</th>
     </tr>
     </thead>
     <tbody>
@@ -37,6 +41,7 @@
         <td>{{ gp_result["result"] }}</td>
         <td>{{ gp_result["time"] }}</td>
         <td>{{ gp_result["mem"] }}</td>
+        <td>{{ gp_result["gainscore"] }}</td>
     </tr>
     {% endfor %}
     </tbody>

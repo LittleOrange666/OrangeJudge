@@ -47,9 +47,6 @@ $(function() {
         $this.prepend($('<input name="pid" value="'+pid+'" hidden>'));
         $this.prepend($('<input name="action" value="'+$(this).attr("the_action")+'" hidden>'));
     });
-    $("input[data-checked]").each(function(){
-        $(this).prop("checked",$(this).data("checked")==="True")
-    });
     $(".edit-detector").each(function(){
         let div = $(this);
         div.addClass("alert");

@@ -4,12 +4,13 @@
 + 可偷用python
 + (出題)許多修改不應重新整理
 + python 版本不固定
++ 登入狀態丟失?
 
 ## 潛在威脅
 + judge 拿著root執行system call (重要)
 + lxc中nobody可以執行真內建的system call
 + 出題者可能可以實行XSS attack
-+ 缺乏Dos防護
++ 缺乏Dos防護 (重要)
 
 ## 未實裝特性
 + contests (重要)
@@ -25,6 +26,6 @@
 + two steps
 + protected testcase (重要)
 + problem accessibility (重要)
-+ scoring (重要)
 + import from Codeforces Polygon
 + Pagination (重要)
++ Group Dependency

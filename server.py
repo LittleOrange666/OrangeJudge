@@ -23,6 +23,7 @@ app.secret_key = 'HP4xkCix2nf5qCmxSXV0sBwocE2CjECC5z2T9TKQmv8'
 app.config['SESSION_TYPE'] = "filesystem"
 app.config["SESSION_FILE_DIR"] = "sessions"
 app.config["SESSION_COOKIE_NAME"] = "OrangeJudgeSession"
+app.config["PERMANENT_SESSION_LIFETIME"] = 3000000
 Session(app)
 init_login(app)
 
@@ -195,7 +196,7 @@ def submission(idx):
             problem_info = tools.read_json(problem_path, "info.json")
             result = {}
             if completed:
-                result_data = tools.read_json(path, "result.json")
+                result_data = tools.read_json(path, "results.json")
                 result["CE"] = result_data["CE"]
                 results = result_data["results"]
                 for i in range(len(results)):
@@ -217,6 +218,8 @@ def submission(idx):
                         group_results = gpr
                         for o in group_results.values():
                             o["class"] = result_class.get(o["result"], "")
+                if "total_score" in result_data:
+                    result["total_score"] = result_data["total_score"]
             ret = render_template("submission/problem.html", lang=lang, source=source, completed=completed,
                                   pname=problem_info["name"], result=result, enumerate=enumerate,
                                   group_results=group_results, pid=pid, pos=tasks.get_queue_position(idx),
@@ -243,7 +246,7 @@ def problem(idx):
     ret = render_template("problem.html", dat=dat, statement=statement,
                           langs=executing.langs.keys(), lang_exts=lang_exts, pid=idx,
                           preview=False, samples=enumerate(samples))
-    tools.write(path, "rendered.html", ret)
+    tools.write(ret, path, "rendered.html")
     return ret
 
 

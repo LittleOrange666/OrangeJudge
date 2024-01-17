@@ -37,7 +37,7 @@ $("textarea").on('keydown', function(e) {
 
     // set textarea value to: text before caret + tab + text after caret
     this.value = this.value.substring(0, start) +
-      "\t" + this.value.substring(end);
+      "    " + this.value.substring(end);
 
     // put caret at right position again
     this.selectionStart =
@@ -58,3 +58,9 @@ function show_modal(title, text, refresh){
         });
     }
 }
+$("input[data-checked]").each(function(){
+    $(this).prop("checked",$(this).data("checked")==="True")
+});
+$("*[data-disabled]").each(function(){
+    $(this).prop("disabled",$(this).data("disabled")==="True")
+});

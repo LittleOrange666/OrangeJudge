@@ -263,39 +263,43 @@
                     </button>
                 </div>
             </div>
-            <table class="table table-hover">
-                <thead>
-                <tr>
-                    <th scope="col">名稱</th>
-                    <th scope="col">相依性</th>
-                    <th scope="col">配分</th>
-                    <th scope="col">刪除</th>
-                </tr>
-                </thead>
-                <tbody>
-                {% for k, group in dat['groups'].items()%}
-                <tr>
-                    <th scope="row">{{ k }}</th>
-                    <td>
-                        {% if "dependency" in group%}
-                        {% for parent in group["dependency"] %}
-                        {{ parent }}
-                        {% endfor %}
-                        {% endif %}
-                    </td>
-                    <td>
-                        <input type="number" min="1" max="100" value="100" name="score_{{ k }}" class="form-control">
-                    </td>
-                    <td>
-                        {% if "default" != k %}
-                        <button type="button" class="btn btn-danger remove_group" data-gp="{{ k }}">刪除</button>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-                </tbody>
-            </table>
+            <form the_action="save_groups">
+                <table class="table table-hover">
+                    <thead>
+                    <tr>
+                        <th scope="col">名稱</th>
+                        <th scope="col">相依性</th>
+                        <th scope="col">配分</th>
+                        <th scope="col">刪除</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for k, group in dat['groups'].items()%}
+                    <tr>
+                        <th scope="row">{{ k }}</th>
+                        <td>
+                            {% if "dependency" in group%}
+                            {% for parent in group["dependency"] %}
+                            {{ parent }}
+                            {% endfor %}
+                            {% endif %}
+                        </td>
+                        <td>
+                            <input type="number" min="1" max="100" value="{{ group['score'] }}" name="score_{{ k }}"
+                                   class="form-control">
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-danger remove_group" data-gp="{{ k }}"
+                                    data-disabled="{{ 'default' == k }}">刪除</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                <button type="button" class="btn btn-primary submitter" data-gp="{{ k }}">儲存</button>
+            </form>
         </div>
+        <br>
         <div class="card card-body">
             <form the_action="upload_zip">
                 <h4>快速新增</h4>
@@ -409,10 +413,10 @@
                     {% endfor %}
                     <button class="btn btn-primary submitter">變更生成指示</button>
                 </form>
-                <form the_action="do_generate">
-                    <button class="btn btn-primary submitter">嘗試生成測資</button>
-                </form>
             </div>
+            <form the_action="do_generate">
+                <button class="btn btn-primary submitter">嘗試生成測資</button>
+            </form>
             {% if 'testcases_gen' in dat %}
             <table class="table table-hover">
                 <thead>

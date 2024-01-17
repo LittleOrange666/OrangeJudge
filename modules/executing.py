@@ -1,4 +1,3 @@
-import json
 import math
 import os.path
 import subprocess
@@ -16,7 +15,7 @@ def call(cmd: list[str], stdin: str = "", timeout: float | None = None) -> tuple
     return ret[0].decode("utf8"), ret[1].decode("utf8"), process.returncode
 
 
-def TLE(result):
+def is_tle(result):
     return result == ("TLE", "TLE", 777777)
 
 
@@ -173,7 +172,7 @@ class Language:
         for stdin, stdout in tasks:
             tools.create(stdout)
             out = env.runwithshell(exec_cmd, env.send_file(stdin), env.send_file(stdout), 10, 1000, self.base_exec_cmd)
-            if TLE(out):
+            if is_tle(out):
                 return "TLE: Testing is limited by 10 seconds"
             result = {o[0]: o[1] for o in (s.split("=") for s in out[0].split("\n")) if len(o) == 2}
             print(result)

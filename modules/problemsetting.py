@@ -30,6 +30,7 @@ actions = tools.Switcher()
 current_pid = ""
 current_idx = 0
 
+
 class StopActionException(Exception):
     pass
 
@@ -49,7 +50,7 @@ def do_compile(path: str, name: str, lang: executing.Language, env: executing.En
     return lang.get_execmd(just_compile(path, name, lang, env))
 
 
-class Problem(tools.File):
+class Problem(tools.Json):
     def __init__(self, pid: str):
         self.pid = pid
         self.path = "preparing_problems/" + pid
@@ -60,6 +61,8 @@ class Problem(tools.File):
         return self
 
     def __getitem__(self, item):
+        if item not in self.dat and item in constants.default_problem_info:
+            return constants.default_problem_info[item]
         return self.dat[item]
 
     def __setitem__(self, key, value):
@@ -68,8 +71,26 @@ class Problem(tools.File):
     def __contains__(self, item):
         return item in self.dat
 
+    def get(self, item, value):
+        return self.dat.get(item, value)
+
     def lang(self, name) -> executing.Language:
-        return executing.langs[next(o["type"] for o in self.dat["files"] if o["name"] == name)]
+        fs = [o["type"] for o in self.dat["files"] if o["name"] == name]
+        if len(fs):
+            return executing.langs[fs[0]]
+        else:
+            log(f"file {name} not found")
+            end(False)
+
+    def lang_of(self, tp, name) -> executing.Language:
+        if tp == "default":
+            return executing.langs["C++17"]
+        fs = [o["type"] for o in self.dat["files"] if o["name"] == name]
+        if len(fs):
+            return executing.langs[fs[0]]
+        else:
+            log(f"file {name} not found")
+            end(False)
 
     def compile_inner(self, filename: str, name: str, env: executing.Environment) -> list[str]:
         lang = self.lang(filename)
@@ -78,7 +99,7 @@ class Problem(tools.File):
 
     def compile_dat(self, filedat: tuple[str, str], name: str, env: executing.Environment) -> str:
         path = (f"testlib/{name}s" if filedat[0] == "default" else f"{self.path}/file") | J | filedat[1]
-        lang = "C++17" if filedat[0] == "default" else self.lang(filedat[1])
+        lang = executing.langs["C++17"] if filedat[0] == "default" else self.lang(filedat[1])
         return just_compile(path, name, lang, env)
 
 
@@ -130,7 +151,7 @@ def log(s: str, success: bool | None = None):
 
 
 def end(success: bool):
-    with tools.File(f"preparing_problems/{current_pid}/actions/{current_idx}.json") as dat:
+    with tools.Json(f"preparing_problems/{current_pid}/actions/{current_idx}.json") as dat:
         dat["success"] = success
         dat["completed"] = True
     raise StopActionException()
@@ -231,20 +252,25 @@ def creating_version(pid, description):
         end(False)
     file = problem.compile_dat(problem["checker_source"], "checker", env)
     env.get_file(path, os.path.basename(file))
-    problem["checker"] = [file, problem.lang(problem["checker_source"][1]).name]
+    problem["checker"] = [os.path.basename(file), problem.lang_of(*problem["checker_source"]).branch]
     if problem["is_interact"]:
         if "interactor_source" not in problem:
             log("interactor missing")
             end(False)
         file = problem.compile_dat(("my", problem["interactor_source"]), "interactor", env)
         env.get_file(path, file)
-        problem["interactor"] = [file, problem.lang(problem["interactor_source"]).name]
+        problem["interactor"] = [os.path.basename(file), problem.lang(problem["interactor_source"]).branch]
     if "gen_msg" in problem:
         generate_testcase(pid)
     if "versions" not in problem:
         problem["versions"] = []
     problem["versions"].append({"description": description, "time": time.time()})
+    if os.path.exists("problems/" + pid):
+        log("remove old version")
+        shutil.rmtree("problems/" + pid)
+    log("copy overall folder")
     shutil.copytree(path, "problems/" + pid, dirs_exist_ok=True)
+    log("complete")
 
 
 def runner():
@@ -298,7 +324,7 @@ def check_background_action(pid):
 
 
 @actions.default
-def action_not_found():
+def action_not_found(*args):
     abort(404)
 
 
@@ -497,7 +523,7 @@ def save_testcase(form, pid, path, dat):
     s = set()
     new_testcases = []
     for o in modify:
-        if type(o[1]) is not bool or type(o[0]) is not int or not (len(testcases)>o[0]>=0):
+        if type(o[1]) is not bool or type(o[0]) is not int or not (len(testcases) > o[0] >= 0):
             abort(400)
         if o[0] in s:
             abort(400)
@@ -521,7 +547,7 @@ def save_testcase_gen(form, pid, path, dat):
     s = set()
     new_testcases = []
     for o in modify:
-        if type(o[1]) is not bool or type(o[0]) is not int or not (len(testcases)>o[0]>=0):
+        if type(o[1]) is not bool or type(o[0]) is not int or not (len(testcases) > o[0] >= 0):
             abort(400)
         if o[0] in s:
             abort(400)
@@ -563,6 +589,7 @@ def create_group(form, pid, path, dat):
     if name in dat["groups"]:
         abort(409)
     dat["groups"][name] = {"score": 100}
+    return "tests"
 
 
 @actions.bind
@@ -570,13 +597,27 @@ def remove_group(form, pid, path, dat):
     name = secure_filename(form["name"])
     if name not in dat["groups"]:
         abort(404)
+    if name == "default":
+        abort(400)
     del dat["groups"][name]
+    return "tests"
+
+
+@actions.bind
+def save_groups(form, pid, path, dat):
+    d = {}
+    for k in dat["groups"]:
+        d[k] = form["score_" + k]
+        if not d[k].isdigit():
+            abort(400)
+    for k in dat["groups"]:
+        dat["groups"][k]["score"] = int(d[k])
 
 
 def action(form: ImmutableMultiDict[str, str]) -> Response:
     pid = secure_filename(form["pid"])
     path = f"preparing_problems/{pid}"
-    with tools.File(path, "info.json") as dat:
+    with tools.Json(path, "info.json") as dat:
         tp = actions.call(form["action"], form, pid, path, dat)
         return redirect(f"/problemsetting/{pid}#{tp}")
 

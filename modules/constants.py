@@ -25,7 +25,9 @@ judge_exit_codes = {
     0: "OK",
     1: "WA",
     2: "PE",
-    3: "FAIL"
+    3: "FAIL",
+    4: "DIRT",
+    7: "POINTS"
 }
 
 lxc_name = "lxc-test"
@@ -33,7 +35,7 @@ lxc_name = "lxc-test"
 default_problem_info = {"name": "unknow", "timelimit": "1000", "memorylimit": "256", "testcases": [], "users": [],
                         "statement": {"main": "", "input": "", "output": "", "score": ""}, "files": [],
                         "checker_source": ["default", "unknow"], "is_interact": False, "role": "private",
-                        "groups": {"default": {"score": 100}}, "interactor_source": ["default", "unknow"]}
+                        "groups": {"default": {"score": 100, "rule": "min"}}, "interactor_source": ["default", "unknow"]}
 
 email_reg = re.compile("^[\\w\\-\\.]+@([\\w\\-]+\\.)+[\\w-]{2,4}$")
 
