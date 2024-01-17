@@ -12,7 +12,6 @@ $(function() {
     }
     const pid = $("#pid").val();
     const number_reg = /^\d+$/;
-    var myModal = new bootstrap.Modal(document.getElementById('myModal'));
     var version_checked = false;
     var version_changed = false;
     var version_checking = false;
@@ -35,16 +34,6 @@ $(function() {
                 callback(content, status, xhr)
             }
         });
-    }
-    function show_modal(title, text, refresh){
-        $("#myModalTitle").text(title);
-        $("#myModalText").text(text);
-        myModal.show();
-        if (refresh) {
-            $("#myModal").on("hidden.bs.modal", function(){
-                location.reload();
-            });
-        }
     }
     function is_changed(e){
         return $(e).data("old_value") != $(e).val();

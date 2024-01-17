@@ -12,7 +12,6 @@ from werkzeug.datastructures import ImmutableMultiDict, MultiDict
 from werkzeug.utils import secure_filename
 
 from modules import executing, tools, constants
-from modules.locks import locks, Locker
 from modules.createhtml import run_markdown, parse
 from multiprocessing import Queue, Process
 from pyzipper import AESZipFile
@@ -30,7 +29,6 @@ background_actions = tools.Switcher()
 actions = tools.Switcher()
 current_pid = ""
 current_idx = 0
-
 
 class StopActionException(Exception):
     pass
@@ -51,7 +49,7 @@ def do_compile(path: str, name: str, lang: executing.Language, env: executing.En
     return lang.get_execmd(just_compile(path, name, lang, env))
 
 
-class Problem(tools.Json):
+class Problem(tools.File):
     def __init__(self, pid: str):
         self.pid = pid
         self.path = "preparing_problems/" + pid
@@ -108,10 +106,10 @@ def getout(s, cwd: str) -> str:
 
 
 def create_problem(name, user):
-    with locks["create_problem"]:
-        pid = int(tools.read("data/problem_count"))
+    with tools.File("data/problem_count") as f:
+        pid = int(f.read())
         pid = str(pid + 1)
-        tools.write(pid, "data/problem_count")
+        f.write(pid)
     os.mkdir("preparing_problems/" + pid)
     worker_queue.put({"action": "init_problem", "pid": pid, "name": name, "user": user})
     return pid
@@ -132,7 +130,7 @@ def log(s: str, success: bool | None = None):
 
 
 def end(success: bool):
-    with tools.Json(f"preparing_problems/{current_pid}/actions/{current_idx}.json") as dat:
+    with tools.File(f"preparing_problems/{current_pid}/actions/{current_idx}.json") as dat:
         dat["success"] = success
         dat["completed"] = True
     raise StopActionException()
@@ -578,7 +576,7 @@ def remove_group(form, pid, path, dat):
 def action(form: ImmutableMultiDict[str, str]) -> Response:
     pid = secure_filename(form["pid"])
     path = f"preparing_problems/{pid}"
-    with tools.Json(path, "info.json") as dat:
+    with tools.File(path, "info.json") as dat:
         tp = actions.call(form["action"], form, pid, path, dat)
         return redirect(f"/problemsetting/{pid}#{tp}")
 

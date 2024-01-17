@@ -9,13 +9,13 @@
 + judge 拿著root執行system call (重要)
 + lxc中nobody可以執行真內建的system call
 + 出題者可能可以實行XSS attack
++ 缺乏Dos防護
 
 ## 未實裝特性
 + contests (重要)
 + problem set
 + exam
 + custom languages
-+ sign up (重要)
 + ans generator
 + background action log
 + better editer(自動縮排&空格縮排)
@@ -25,4 +25,6 @@
 + two steps
 + protected testcase (重要)
 + problem accessibility (重要)
-+ scoring
++ scoring (重要)
++ import from Codeforces Polygon
++ Pagination (重要)

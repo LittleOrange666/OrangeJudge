@@ -1,14 +1,17 @@
 import json
 import os.path
+import random
 import sys
+import time
 
-from flask import Flask, render_template, request, redirect, session, abort, send_file
+from flask import Flask, render_template, request, redirect, session, abort, send_file, Response
 from flask_login import login_user, logout_user, login_required, current_user
 from flask_session import Session
+from yarl import URL
 from werkzeug.utils import secure_filename
 
 from modules import executing, tasks, tools, problemsetting, constants
-from modules.login import try_login, init_login
+from modules.login import try_login, init_login, send_email, exist, create_account
 from modules.constants import result_class, lxc_name
 
 from pygments import highlight, lexers
@@ -36,18 +39,69 @@ def index():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    nxt = request.form.get('next')
     if request.method == 'GET':
         if current_user.is_authenticated:
-            return redirect(nxt or '/')
+            return redirect('/')
         return render_template("login.html")
+    nxt = request.form.get('next')
     name = request.form['user_id']
     user = try_login(name, request.form['password'])
     if user is not None:
         login_user(user)
-        print(user)
         return redirect(nxt or '/')
     return redirect('/login')
+
+
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if request.method == 'GET':
+        if current_user.is_authenticated:
+            return redirect('/')
+        return render_template("signup.html")
+    email = request.form["email"]
+    fn = "verify/" + secure_filename(email)
+    verify = request.form["verify"]
+    user_id = request.form["user_id"]
+    password = request.form["password"]
+    nxt = request.form.get('next')
+    url = URL(request.referrer)
+    err = ""
+    if len(verify) != 6 or not os.path.exists(fn) or os.path.getmtime(fn) < time.time() - 600 or not tools.read(
+            fn).startswith(verify):
+        err = "驗證碼錯誤"
+    elif constants.user_id_reg.match(user_id) is None:
+        err = "ID不合法"
+    elif exist(user_id):
+        err = "ID已被使用"
+    elif len(password) < 6:
+        err = "密碼應至少6個字元"
+    if err:
+        q = {"msg": err}
+        q.update(url.query)
+        return redirect(str(url.with_query(q)))
+    create_account(email, user_id, password)
+    user = try_login(user_id, password)
+    if user is None:
+        err = "註冊失敗"
+        q = {"msg": err}
+        q.update(url.query)
+        return redirect(str(url.with_query(q)))
+    login_user(user)
+    return redirect(nxt or '/')
+
+
+@app.route('/get_code', methods=['POST'])
+def get_code():
+    email = request.form["email"]
+    if constants.email_reg.match(email) is None:
+        abort(400)
+    sec_email = secure_filename(email)
+    if os.path.exists(f"verify/{sec_email}") and os.path.getmtime(f"verify/{sec_email}") > time.time() - 60:
+        abort(400)
+    idx = "".join(str(random.randint(0, 9)) for _ in range(6))
+    tools.write(idx, "verify", sec_email)
+    send_email(email, constants.email_content.format(idx))
+    return Response(status=200)
 
 
 @app.route('/logout')
@@ -59,7 +113,7 @@ def logout():
 
 @app.route('/problems', methods=['GET'])
 def problems():
-    return render_template("problems.html", problems=json.load(open("data/public_problems.json")))
+    return render_template("problems.html", problems=tools.read_json("data/public_problems.json"))
 
 
 @app.route('/test', methods=['GET', 'POST'])
@@ -75,18 +129,14 @@ def test():
             inp += "\n"
         ext = executing.langs[lang].data["source_ext"]
         idx = tasks.create_submission()
-        source = f"submissions/{idx}/a{ext}"
-        with open(source, "w") as f:
-            f.write(code)
-        infile = f"submissions/{idx}/in.txt"
-        with open(infile, "w") as f:
-            f.write(inp)
+        if tools.elapsed(current_user.folder, "submissions") < 5:
+            abort(429)
+        tools.append(idx + "\n", current_user.folder, "submissions")
+        tools.write(code, f"submissions/{idx}/a{ext}")
+        tools.write(inp, f"submissions/{idx}/in.txt")
         dat = {"type": "test", "source": "a" + ext, "infile": "in.txt", "outfile": "out.txt", "lang": lang,
                "user": current_user.id, "time": tools.get_timestring()}
-        with open(f"submissions/{idx}/info.json", "w", encoding="utf8") as f:
-            json.dump(dat, f)
-        with open(current_user.folder + "submissions", "a") as f:
-            f.write(idx + "\n")
+        tools.write_json(dat, f"submissions/{idx}/info.json")
         tasks.submissions_queue.put(idx)
         return redirect("/submission/" + idx)
 
@@ -104,15 +154,13 @@ def submit():
         abort(404)
     ext = executing.langs[lang].data["source_ext"]
     idx = tasks.create_submission()
-    source = f"submissions/{idx}/a{ext}"
-    with open(source, "w") as f:
-        f.write(code)
+    if tools.elapsed(current_user.folder, "submissions") < 5:
+        abort(429)
+    tools.append(idx + "\n", current_user.folder, "submissions")
+    tools.write(code, f"submissions/{idx}/a{ext}")
     dat = {"type": "problem", "source": "a" + ext, "lang": lang, "pid": pid, "user": current_user.id,
            "time": tools.get_timestring()}
-    with open(f"submissions/{idx}/info.json", "w", encoding="utf8") as f:
-        json.dump(dat, f)
-    with open(current_user.folder + "submissions", "a") as f:
-        f.write(idx + "\n")
+    tools.write_json(dat, f"submissions/{idx}/info.json")
     tasks.submissions_queue.put(idx)
     return redirect("/submission/" + idx)
 
@@ -124,31 +172,19 @@ def submission(idx):
     path = "submissions/" + idx
     if not os.path.isdir(path):
         abort(404)
-    with open(path + "/info.json") as f:
-        dat = json.load(f)
+    dat = tools.read_json(path, "info.json")
     if not current_user.has("admin") and dat["user"] != current_user.id:
         abort(403)
     lang = dat["lang"]
-    with open(path + "/" + dat["source"]) as f:
-        source = f.read()
+    source = tools.read(path, dat["source"])
     source = highlight(source, prepares[executing.langs[lang].name], HtmlFormatter())
     completed = os.path.exists(path + "/completed")
-    ce_msg = ""
-    if os.path.exists(path + "/ce_msg.txt"):
-        with open(path + "/ce_msg.txt") as f:
-            ce_msg = f.read()
+    ce_msg = tools.read_default(path, "ce_msg.txt")
     match dat["type"]:
         case "test":
-            with open(path + "/" + dat["infile"]) as f:
-                inp = f.read()
-            out = ""
-            result = ""
-            if os.path.exists(path + "/result"):
-                with open(path + "/result") as f:
-                    result = f.read()
-                if result.startswith("OK"):
-                    with open(path + "/" + dat["outfile"]) as f:
-                        out = f.read()
+            inp = tools.read(path, dat["infile"])
+            out = tools.read_default(path, dat["outfile"])
+            result = tools.read_default(path, "result")
             ret = render_template("submission/test.html", lang=lang, source=source, inp=inp,
                                   out=out, completed=completed, result=result, pos=tasks.get_queue_position(idx),
                                   ce_msg=ce_msg)
@@ -156,12 +192,10 @@ def submission(idx):
             pid = dat["pid"]
             problem_path = f"problems/{pid}/"
             group_results = {}
-            with open(problem_path + "info.json") as f:
-                problem_info = json.load(f)
+            problem_info = tools.read_json(problem_path, "info.json")
             result = {}
             if completed:
-                with open(path + "/results.json") as f:
-                    result_data = json.load(f)
+                result_data = tools.read_json(path, "result.json")
                 result["CE"] = result_data["CE"]
                 results = result_data["results"]
                 for i in range(len(results)):
@@ -200,19 +234,16 @@ def problem(idx):
         abort(404)
     if (os.path.isfile(path + "/rendered.html") and
             os.path.getmtime(path + "/rendered.html") >= os.path.getmtime(path + "/info.json")):
-        return open(path + "/rendered.html").read()
-    with open(path + "/info.json") as f:
-        dat = json.load(f)
-    with open(path + "/statement.html") as f:
-        statement = f.read()
+        return tools.read(path, "rendered.html")
+    dat = tools.read_json(path, "info.json")
+    statement = tools.read(path, "statement.html")
     lang_exts = json.dumps({k: v.data["source_ext"] for k, v in executing.langs.items()})
     samples = [[tools.read(path, k, o["in"]), tools.read(path, k, o["out"])]
-               for k in ("testcases", "testcases_gen") for o in dat.get(k,[]) if o.get("sample", False)]
+               for k in ("testcases", "testcases_gen") for o in dat.get(k, []) if o.get("sample", False)]
     ret = render_template("problem.html", dat=dat, statement=statement,
                           langs=executing.langs.keys(), lang_exts=lang_exts, pid=idx,
                           preview=False, samples=enumerate(samples))
-    with open(path + "/rendered.html", "w") as f:
-        f.write(ret)
+    tools.write(path, "rendered.html", ret)
     return ret
 
 
@@ -229,22 +260,19 @@ def problem_file(idx, filename):
 @app.route("/my_submissions", methods=['GET'])
 @login_required
 def my_submissions():
-    with open(current_user.folder + "submissions") as f:
-        submission_list = f.read().split()
+    submission_list = tools.read(current_user.folder, "submissions").split()
     out = []
     for idx in reversed(submission_list):
         o = {"name": idx, "time": "blank", "result": "blank"}
         if not tools.exists(f"submissions/{idx}/info.json"):
             continue
-        with open(f"submissions/{idx}/info.json") as f:
-            dat = json.load(f)
+        dat = tools.read_json(f"submissions/{idx}/info.json")
         if "time" in dat:
             o["time"] = dat["time"]
         if not os.path.isfile(f"submissions/{idx}/results.json"):
             o["result"] = "waiting"
         else:
-            with open(f"submissions/{idx}/results.json") as f:
-                result = json.load(f)
+            result = tools.read_json(f"submissions/{idx}/results.json")
             if "simple_result" in result:
                 o["result"] = result["simple_result"]
         if dat["type"] == "test":
@@ -252,8 +280,7 @@ def my_submissions():
             o["source_name"] = "Simple Testing"
         else:
             o["source"] = "/problem/" + dat["pid"]
-            with open(f"problems/{dat['pid']}/info.json") as f:
-                source_dat = json.load(f)
+            source_dat = tools.read_json(f"problems/{dat['pid']}/info.json")
             o["source_name"] = source_dat["name"]
         out.append(o)
     return render_template("my_submissions.html", submissions=out)
@@ -264,15 +291,13 @@ def my_submissions():
 def my_problems():
     if not current_user.has("make_problems"):
         abort(403)
-    with open(current_user.folder + "/problems") as f:
-        problem_list = f.read().split()
+    problem_list = tools.read(current_user.folder, "problems").split()
     problems_dat = []
     for idx in reversed(problem_list):
         if os.path.isfile(f"preparing_problems/{idx}.img") and not os.path.isfile(
                 f"preparing_problems/{idx}/info.json"):
             problemsetting.system(f"sudo mount -o loop {idx}.img ./{idx}", "preparing_problems")
-        with open(f"preparing_problems/{idx}/info.json") as f:
-            dat = json.load(f)
+        dat = tools.read_json(f"preparing_problems/{idx}/info.json")
         problems_dat.append({"pid": idx, "name": dat["name"]})
     return render_template("my_problems.html", problems=problems_dat)
 
@@ -286,10 +311,8 @@ def create_problem():
         return render_template("create_problem.html")
     else:
         idx = problemsetting.create_problem(request.form["name"], current_user.id)
-        with open("preparing_problems/" + idx + "/waiting", "w") as f:
-            f.write("建立題目")
-        with open(current_user.folder + "/problems", "a") as f:
-            f.write(idx + "\n")
+        tools.write("建立題目", "preparing_problems", idx, "waiting")
+        tools.append(idx + "\n", current_user.folder, "problems")
         return redirect("/problemsetting/" + idx)
 
 
@@ -304,12 +327,12 @@ def my_problem_page(idx):
     if len(os.listdir("preparing_problems/" + idx)) == 0:
         problemsetting.system(f"sudo mount -o loop {idx}.img ./{idx}", "preparing_problems")
     if os.path.isfile("preparing_problems/" + idx + "/waiting"):
-        return render_template("pleasewait.html", action=open("preparing_problems/" + idx + "/waiting").read())
+        return render_template("pleasewait.html",
+                               action=tools.read("preparing_problems", idx, "waiting"))
     o = problemsetting.check_background_action(idx)
     if o is not None:
         return render_template("pleasewaitlog.html", action=o[1], log=o[0])
-    with open("preparing_problems/" + idx + "/info.json") as f:
-        dat = json.load(f)
+    dat = tools.read_json("preparing_problems", idx, "info.json")
     if not current_user.has("admin") and current_user.id not in dat["users"]:
         abort(403)
     public_files = os.listdir(f"preparing_problems/{idx}/public_file")
@@ -324,8 +347,7 @@ def my_problem_page(idx):
             dat["groups"] = {}
         if "default" not in dat["groups"]:
             dat["groups"]["default"] = {}
-        with open("preparing_problems/" + idx + "/info.json", "w") as f:
-            json.dump(dat, f, indent=2)
+        tools.write_json(dat, "preparing_problems", idx, "info.json")
     return render_template("problemsetting.html", dat=constants.default_problem_info | dat, pid=idx,
                            versions=problemsetting.query_versions(idx), enumerate=enumerate,
                            public_files=public_files, default_checkers=default_checkers,
@@ -345,8 +367,7 @@ def problem_action():
         abort(503)
     if problemsetting.check_background_action(idx) is not None:
         abort(503)
-    with open(f"preparing_problems/{idx}/info.json") as f:
-        dat = json.load(f)
+    dat = tools.read_json(f"preparing_problems/{idx}/info.json")
     if not current_user.has("admin") and current_user.id not in dat["users"]:
         abort(403)
     return problemsetting.action(request.form)
@@ -362,9 +383,8 @@ def problem_preview():
     if not os.path.isfile(f"preparing_problems/{idx}/info.json"):
         abort(404)
     if os.path.isfile("preparing_problems/" + idx + "/waiting"):
-        return render_template("pleasewait.html", action=open("preparing_problems/" + idx + "/waiting").read())
-    with open(f"preparing_problems/{idx}/info.json") as f:
-        dat = json.load(f)
+        return render_template("pleasewait.html", action=tools.read("preparing_problems", idx, "waiting"))
+    dat = tools.read_json(f"preparing_problems/{idx}/info.json")
     if not current_user.has("admin") and current_user.id not in dat["users"]:
         abort(403)
     return problemsetting.preview(request.args)

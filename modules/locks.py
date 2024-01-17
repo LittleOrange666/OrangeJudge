@@ -2,10 +2,7 @@ import os
 from multiprocessing import Lock, Manager
 from time import sleep
 
-keys = ("create_submission", "create_problem")
 manager = Manager()
-locks = {k: Lock() for k in keys}
-
 _used_set = manager.dict()
 _used_lock = Lock()
 

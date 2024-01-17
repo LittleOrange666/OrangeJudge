@@ -7,3 +7,4 @@ markdown
 python-markdown-math
 regex
 infix
+yarl

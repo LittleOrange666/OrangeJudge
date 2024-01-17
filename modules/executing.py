@@ -133,9 +133,7 @@ class Environment:
 class Language:
     def __init__(self, name: str, branch: str | None = None):
         self.name = name
-        file = f"langs/{name}.json"
-        with open(file, "r") as f:
-            self.data = json.load(f)
+        self.data = tools.read_json(f"langs/{name}.json")
         self.branch = self.data["default_branch"] if branch is None else branch
         self.kwargs = self.data["branches"][self.branch]
         self.base_exec_cmd = self.get_execmd(
@@ -169,13 +167,11 @@ class Language:
         filename = env.send_file(file)
         filename, ce_msg = self.compile(filename, env)
         if ce_msg:
-            with open(os.path.join(os.path.dirname(file), "ce_msg.txt"), "w") as f:
-                f.write(ce_msg)
+            tools.write(ce_msg, os.path.dirname(file), "ce_msg.txt")
             return "CE"
         exec_cmd = self.get_execmd(filename)
         for stdin, stdout in tasks:
-            with open(stdout, "w"):
-                pass
+            tools.create(stdout)
             out = env.runwithshell(exec_cmd, env.send_file(stdin), env.send_file(stdout), 10, 1000, self.base_exec_cmd)
             if TLE(out):
                 return "TLE: Testing is limited by 10 seconds"
@@ -207,7 +203,6 @@ langs: dict[str, Language] = {}
 
 for lang in os.listdir("langs"):
     lang_name = os.path.splitext(lang)[0]
-    with open(f"langs/{lang_name}.json") as json_file:
-        keys = json.load(json_file)["branches"].keys()
+    keys = tools.read_json(f"langs/{lang_name}.json")["branches"].keys()
     for key in keys:
         langs[key] = Language(lang_name, key)

@@ -47,3 +47,14 @@ $("textarea").on('keydown', function(e) {
 $(".date-string").each(function(){
     $(this).text(new Date(+$(this).text()).toLocaleString());
 });
+var myModal = new bootstrap.Modal(document.getElementById('myModal'));
+function show_modal(title, text, refresh){
+    $("#myModalTitle").text(title);
+    $("#myModalText").text(text);
+    myModal.show();
+    if (refresh) {
+        $("#myModal").on("hidden.bs.modal", function(){
+            location.reload();
+        });
+    }
+}

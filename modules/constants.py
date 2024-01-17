@@ -1,3 +1,5 @@
+import re
+
 result_class = {
     "OK": "table-success",
     "WA": "table-danger",
@@ -32,3 +34,12 @@ default_problem_info = {"name": "unknow", "timelimit": "1000", "memorylimit": "2
                         "statement": {"main": "", "input": "", "output": "", "score": ""}, "files": [],
                         "checker_source": ["default", "unknow"], "is_interact": False, "role": "private",
                         "groups": {"default": {"score": 100}}, "interactor_source": ["default", "unknow"]}
+
+email_reg = re.compile("^[\\w\\-\\.]+@([\\w\\-]+\\.)+[\\w-]{2,4}$")
+
+user_id_reg = re.compile("^[A-Za-z0-9_]+$")
+
+email_content = """Subject: OrangeJudge verification code ({0})
+
+Your verification code is: {0}
+This verification code is valid within 10 minutes"""

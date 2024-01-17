@@ -1,5 +1,6 @@
 import json
 import os
+import time
 from datetime import datetime
 from functools import partial
 from typing import Callable
@@ -88,6 +89,10 @@ def exists(*filename: str) -> bool:
     return os.path.exists(os.path.join(*filename))
 
 
+def elapsed(*filename: str) -> float:
+    return time.time() - os.path.getmtime(os.path.join(*filename))
+
+
 def get_timestring() -> str:
     t = datetime.now()
     return f"{t.year}-{t.month}-{t.day} {t.hour}:{t.minute:0>2d}:{t.second:0>2d}"
@@ -135,3 +140,28 @@ class Json:
         with open(self.name, "w") as f:
             json.dump(self.dat, f, indent=2)
         self.lock.__exit__(exc_type, exc_val, exc_tb)
+
+
+class File:
+    def __init__(self, *filename: str):
+        self.name = os.path.abspath(os.path.join(*filename))
+        self.lock = Locker(self.name)
+
+    def __enter__(self):
+        self.lock.__enter__()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.lock.__exit__(exc_type, exc_val, exc_tb)
+
+    def read(self):
+        with open(self.name) as f:
+            return f.read()
+
+    def write(self, content: str):
+        with open(self.name, "w") as f:
+            return f.write(content)
+
+    def append(self, content: str):
+        with open(self.name, "a") as f:
+            return f.write(content)

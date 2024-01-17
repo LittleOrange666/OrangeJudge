@@ -2,23 +2,21 @@ import json
 import os
 from multiprocessing import Queue, Process
 
+from flask import abort
+
 from modules import executing, constants, tools
-from modules.locks import locks, AtomicValue
+from modules.locks import AtomicValue
 
 submissions_queue = Queue()
 
-with locks["create_submission"]:
-    with open("data/submission_count") as f:
-        last_judged = AtomicValue(int(f.read()))
+last_judged = AtomicValue(int(tools.read("data/submission_count")))
 
 
 def create_submission() -> str:
-    with locks["create_submission"]:
-        with open("data/submission_count") as f:
-            count = int(f.read())
+    with tools.File("data/submission_count") as f:
+        count = int(f.read())
         count = str(count + 1)
-        with open("data/submission_count", "w") as f:
-            f.write(count)
+        f.write(count)
     os.mkdir(f"submissions/{count}")
     return count
 
@@ -30,10 +28,8 @@ def run_test(idx, dat):
     in_file = os.path.abspath(f"submissions/{idx}/" + dat["infile"])
     out_file = os.path.abspath(f"submissions/{idx}/" + dat["outfile"])
     result = lang.run(source, env, [(in_file, out_file)])
-    with open(f"submissions/{idx}/result", "w") as f:
-        f.write(result + "\n")
-    with open(f"submissions/{idx}/completed", "w"):
-        pass
+    tools.write(result+"\n", f"submissions/{idx}/results")
+    tools.create(f"submissions/{idx}/completed")
 
 
 def run_problem(idx, dat):
@@ -154,13 +150,13 @@ def run_problem(idx, dat):
     keys = ("result", "time", "mem")
     out_info["group_results"] = {k: {key: v[key] for key in keys} for k, v in groups.items() if k in exist_gp}
     out_info["simple_result"] = simple_result
-    with open(f"submissions/{idx}/results.json", "w") as f:
-        json.dump(out_info, f, ensure_ascii=False, indent=2)
-    with open(f"submissions/{idx}/completed", "w"):
-        pass
+    tools.write_json(out_info, f"submissions/{idx}/results.json")
+    tools.create(f"submissions/{idx}/completed")
 
 
-def get_queue_position(idx):
+def get_queue_position(idx: str):
+    if not idx.isdigit():
+        abort(400)
     return max(int(idx) - last_judged.value, 0)
 
 
@@ -168,8 +164,7 @@ def runner():
     while True:
         idx = submissions_queue.get()
         try:
-            with open(f"submissions/{idx}/info.json", encoding="utf8") as f:
-                dat = json.load(f)
+            dat = tools.read_json(f"submissions/{idx}/info.json")
             last_judged.value = int(idx)
             match dat["type"]:
                 case "test":

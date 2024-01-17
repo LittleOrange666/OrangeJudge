@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}登入{% endblock %}
+
+{% block main %}
+<form method="post" action="/signup">
+    <div class="mb-3 col-7 offset-2">
+        <label for="user_id" class="form-label">Email</label>
+        <div class="input-group mb-3">
+            <input type="email" class="form-control" id="email" name="email" placeholder="email" required>
+            <button class="btn btn-outline-secondary" type="button" id="get-code">取得驗證碼</button>
+        </div>
+    </div>
+    <div class="mb-3 col-7 offset-2">
+        <label for="verify" class="form-label">驗證碼</label>
+        <input type="text" class="form-control" id="verify" name="verify" placeholder="驗證碼" required>
+    </div>
+    <div class="mb-3 col-7 offset-2">
+        <label for="user_id" class="form-label">User Id</label>
+        <input type="text" class="form-control" id="user_id" name="user_id" placeholder="user id" required pattern="^[A-Za-z0-9_]+$">
+    </div>
+    <div class="mb-3 col-7 offset-2">
+        <label for="password" class="form-label">Password</label>
+        <input type="password" class="form-control" id="password" name="password" placeholder="Password" required pattern="^.{6,}$">
+    </div>
+    <div class="mb-3 col-7 offset-2">
+        <label for="password_again" class="form-label">Password Again</label>
+        <input type="password" class="form-control" id="password_again" placeholder="Password Again" required>
+    </div>
+    <div class="mb-3 col-7 offset-2">
+        <button type="submit" class="btn btn-primary">註冊</button>
+    </div>
+    <input type="text" name="next" id="next" hidden>
+</form>
+{% endblock %}
+
+{% block script %}
+next.value = new URL(document.location).searchParams.get("next");
+let msg = new URL(document.location).searchParams.get("msg");
+if(msg) show_modal("失敗",msg);
+$("#get-code").click(function(){
+    let email = $("#email").val();
+    if(!email.match(/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g))show_modal("錯誤","email格式不合法");
+    else{
+        $.ajax({
+            url: "/get_code",
+            method: "POST",
+            contentType: "application/x-www-form-urlencoded",
+            data: {"email": email},
+            error: function(xhr, status, content){
+                show_modal("錯誤","獲取失敗");
+            },
+            success: function(content, status, xhr){
+                show_modal("成功","驗證碼已發送至'"+email+"'，十分鐘內有效");
+            }
+        });
+    }
+});
+{% endblock %}
