@@ -178,12 +178,21 @@ $(function() {
         let main = $("#statement_main_area").val();
         let input = $("#statement_input_area").val();
         let output = $("#statement_output_area").val();
+        let interaction = $("#statement_interaction_area").val();
+        let scoring = $("#statement_scoring_area").val();
+        let samples = [];
+        $("#manual_samples").find(".row").each(function(){
+            samples.push([$(this).find("textarea").eq(0).val(),$(this).find("textarea").eq(1).val()]);
+        });
         post("/problemsetting_action", {
             "action": "save_statement",
             "pid": pid,
             "statement_main": main,
             "statement_input": input,
-            "statement_output": output
+            "statement_output": output,
+            "statement_interaction": interaction,
+            "statement_scoring": scoring,
+            "samples": JSON.stringify(samples)
         }, function(data,status,xhr){
             $("#save_statement").prop("disabled",false);
             if(status == "success") {
@@ -194,6 +203,42 @@ $(function() {
                 $("#create_version").prop("disabled", false);
             }
         });
+    });
+    function remove_sample(){
+        $(this).parents(".row").first().remove();
+        let it = 1;
+        $("#manual_samples").find(".row").each(function(){
+            $(this).find("label").eq(0).text("Input "+it);
+            $(this).find("label").eq(1).text("Output "+it);
+            it++;
+        });
+    }
+    $(".remove_sample").click(remove_sample);
+    $("#add_sample").click(function(){
+        let id = _uuid();
+        let e = $(`                <div class="row">
+                    <div class="col">
+                        <label for="sample_input_${id}" class="form-label">Input 1</label>
+                        <textarea class="form-control" id="sample_input_${id}"
+                                  rows="3"></textarea>
+                    </div>
+                    <div class="col">
+                        <label for="sample_output_${id}" class="form-label">Output 1</label>
+                        <textarea class="form-control" id="sample_output_${id}"
+                                  rows="3"></textarea>
+                    </div>
+                    <div class="col">
+                        <button class="btn btn-danger remove_sample">刪除範例</button>
+                    </div>
+                </div>`);
+        $(this).before(e);
+        let it = 1;
+        $("#manual_samples").find(".row").each(function(){
+            $(this).find("label").eq(0).text("Input "+it);
+            $(this).find("label").eq(1).text("Output "+it);
+            it++;
+        });
+        e.find(".remove_sample").click(remove_sample);
     });
     // files
     $(".remove_public_file").click(function(){

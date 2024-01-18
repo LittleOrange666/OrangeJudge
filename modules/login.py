@@ -78,6 +78,9 @@ def create_account(email, user_id, password):
     folder = f"accounts/{user_id.lower()}"
     os.makedirs(folder, exist_ok=True)
     dat = {"name": user_id, "DisplayName": user_id, "email": email, "password": try_hash(password)}
+    if tools.exists(folder, "info.json"):
+        return
     tools.write_json(dat, folder, "info.json")
     tools.create(folder, "problems")
     tools.create(folder, "submissions")
+    tools.create(f"verify/used_email")

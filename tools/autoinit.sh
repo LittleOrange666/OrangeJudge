@@ -16,3 +16,4 @@ sudo lxc-attach -n lxc-test -- mkdir /judge
 sudo lxc-attach -n lxc-test -- useradd judge --system --no-create-home
 sudo python3 file_protect.py
 python3 add_ignored.py
+echo ok > tools/inited

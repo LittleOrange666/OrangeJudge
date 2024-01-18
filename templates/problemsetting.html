@@ -98,6 +98,36 @@
                 <textarea class="form-control" id="statement_output_area"
                           rows="3">{{ dat['statement']['output'] }}</textarea>
             </div>
+            <div class="mb-3">
+                <label for="statement_interaction_area" class="form-label">互動說明</label>
+                <textarea class="form-control" id="statement_interaction_area"
+                          rows="3">{{ dat['statement'].get("interaction","") }}</textarea>
+            </div>
+            <div class="mb-3">
+                <label for="statement_scoring_area" class="form-label">配分</label>
+                <textarea class="form-control" id="statement_scoring_area"
+                          rows="3">{{ dat['statement'].get("scoring","") }}</textarea>
+            </div>
+            <div class="card card-body" id="manual_samples">
+                {% for i,sample in enumerate(dat.get('manual_samples',[])) %}
+                <div class="row">
+                    <div class="col">
+                        <label for="sample_input_{{ i }}" class="form-label">Input {{ i+1 }}</label>
+                        <textarea class="form-control" id="sample_input_{{ i }}"
+                                  rows="3">{{ sample[0] }}</textarea>
+                    </div>
+                    <div class="col">
+                        <label for="sample_output_{{ i }}" class="form-label">Output {{ i+1 }}</label>
+                        <textarea class="form-control" id="sample_output_{{ i }}"
+                                  rows="3">{{ sample[1] }}</textarea>
+                    </div>
+                    <div class="col">
+                        <button class="btn btn-danger remove_sample">刪除範例</button>
+                    </div>
+                </div>
+                {% endfor %}
+                <button class="btn btn-success" id="add_sample">新增範例</button>
+            </div>
             <button class="btn btn-primary data-saver" id="save_statement">儲存</button>
         </div>
     </div>

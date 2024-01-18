@@ -21,11 +21,9 @@
 + background action log
 + better editer(自動縮排&空格縮排)
 + 出題小組
-+ 手動添加sample (重要)
 + admin UI
 + two steps
-+ problem accessibility (重要)
-+ import from Codeforces Polygon
++ import from Codeforces Polygon (重要)
 + Group Dependency
 + API
 + 資料用ajax拿

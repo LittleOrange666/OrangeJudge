@@ -6,6 +6,7 @@ from functools import partial
 from typing import Callable
 
 import infix
+from flask import abort
 
 from modules.locks import Locker
 
@@ -99,6 +100,13 @@ def elapsed(*filename: str) -> float:
 def get_timestring() -> str:
     t = datetime.now()
     return f"{t.year}-{t.month}-{t.day} {t.hour}:{t.minute:0>2d}:{t.second:0>2d}"
+
+
+def form_json(s):
+    try:
+        return json.loads(s)
+    except json.decoder.JSONDecodeError:
+        abort(400)
 
 
 J = infix.all_infix(os.path.join)

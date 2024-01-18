@@ -69,7 +69,7 @@ def signup():
             return redirect('/')
         return render_template("signup.html")
     email = request.form["email"]
-    fn = "verify/" + secure_filename(email)
+    fn = "verify/email/" + secure_filename(email)
     verify = request.form["verify"]
     user_id = request.form["user_id"]
     password = request.form["password"]
@@ -96,6 +96,7 @@ def signup():
         q = {"msg": err}
         q.update(url.query)
         return redirect(str(url.with_query(q)))
+    tools.remove(fn)
     login_user(user)
     return redirect(nxt or '/')
 
@@ -106,7 +107,9 @@ def get_code():
     if constants.email_reg.match(email) is None:
         abort(400)
     sec_email = secure_filename(email)
-    if os.path.exists(f"verify/{sec_email}") and os.path.getmtime(f"verify/{sec_email}") > time.time() - 60:
+    if os.path.exists(f"verify/used_email/{sec_email}"):
+        abort(400)
+    if os.path.exists(f"verify/email/{sec_email}") and os.path.getmtime(f"verify/email/{sec_email}") > time.time() - 60:
         abort(400)
     idx = "".join(str(random.randint(0, 9)) for _ in range(6))
     tools.write(idx, "verify", sec_email)
@@ -257,7 +260,7 @@ def problem(idx):
         return tools.read(path, "rendered.html")
     statement = tools.read(path, "statement.html")
     lang_exts = json.dumps({k: v.data["source_ext"] for k, v in executing.langs.items()})
-    samples = [[tools.read(path, k, o["in"]), tools.read(path, k, o["out"])]
+    samples = dat.get("manual_samples", []) + [[tools.read(path, k, o["in"]), tools.read(path, k, o["out"])]
                for k in ("testcases", "testcases_gen") for o in dat.get(k, []) if o.get("sample", False)]
     ret = render_template("problem.html", dat=dat, statement=statement,
                           langs=executing.langs.keys(), lang_exts=lang_exts, pid=idx,

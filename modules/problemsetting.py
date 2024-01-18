@@ -336,11 +336,18 @@ def create_version(form, pid, path, dat):
 
 @actions.bind
 def save_statement(form, pid, path, dat):
+    dat["manual_samples"] = tools.form_json(form["samples"])
     dat["statement"]["main"] = form["statement_main"]
     dat["statement"]["input"] = form["statement_input"]
     dat["statement"]["output"] = form["statement_output"]
+    dat["statement"]["interaction"] = form["statement_interaction"]
+    dat["statement"]["scoring"] = form["statement_scoring"]
     full = "# 題目敘述\n" + form["statement_main"] + "\n## 輸入說明\n" + form[
         "statement_input"] + "\n## 輸出說明\n" + form["statement_output"]
+    if form["statement_interaction"]:
+        full += "\n## 互動說明\n" + form["statement_interaction"]
+    if form["statement_scoring"]:
+        full += "\n## 配分\n" + form["statement_scoring"]
     tools.write(full, f"preparing_problems/{pid}/statement.md")
     parse.dirname = pid
     tools.write(run_markdown(full), f"preparing_problems/{pid}/statement.html")
