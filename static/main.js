@@ -82,3 +82,11 @@ $("a[data-args]").each(function(){
     }
     $(this).attr("href",url.href);
 });
+let url = new URL(location.href);
+url.pathname = "/login"
+url.searchParams.append("next",location.pathname);
+if (location.pathname=="/login"){
+    $("#login_btn").hide();
+}else{
+    $("#login_btn").attr("href",url.href)
+}

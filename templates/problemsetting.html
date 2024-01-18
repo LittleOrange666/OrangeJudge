@@ -54,6 +54,28 @@
             </div>
             <button class="btn btn-primary data-saver" id="save_general_info">儲存</button>
         </div>
+        <br>
+        <h3>題目權限</h3>
+        <div class="container-fluid">
+            <div class="row">
+                <span class="col">目前狀態：
+                {% if dat.get("public",False) %}
+                公開
+                {% else %}
+                不公開
+                {% endif %}
+                </span>
+            </div>
+            {% if dat.get("public",False) %}
+            <form the_action="protect_problem">
+                <button class="btn btn-primary submitter">保密題目</button>
+            </form>
+            {% else %}
+            <form the_action="public_problem">
+                <button class="btn btn-primary submitter">公開題目</button>
+            </form>
+            {% endif %}
+        </div>
     </div>
     <div id="statement" class="tab-pane fade">
         <h3>題敘</h3>

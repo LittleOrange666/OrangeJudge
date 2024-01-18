@@ -34,7 +34,7 @@ lxc_name = "lxc-test"
 
 default_problem_info = {"name": "unknow", "timelimit": "1000", "memorylimit": "256", "testcases": [], "users": [],
                         "statement": {"main": "", "input": "", "output": "", "score": ""}, "files": [],
-                        "checker_source": ["default", "unknow"], "is_interact": False, "role": "private",
+                        "checker_source": ["default", "unknow"], "is_interact": False, "public": False,
                         "groups": {"default": {"score": 100, "rule": "min"}}, "interactor_source": ["default", "unknow"]}
 
 email_reg = re.compile("^[\\w\\-\\.]+@([\\w\\-]+\\.)+[\\w-]{2,4}$")

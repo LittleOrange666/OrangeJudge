@@ -24,10 +24,8 @@
 + 手動添加sample (重要)
 + admin UI
 + two steps
-+ protected testcase (重要)
 + problem accessibility (重要)
 + import from Codeforces Polygon
-+ Pagination (重要)
 + Group Dependency
 + API
 + 資料用ajax拿

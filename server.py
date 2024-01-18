@@ -37,6 +37,11 @@ def error_404(error):
     return render_template("404.html"), 404
 
 
+@app.errorhandler(403)
+def error_403(error):
+    return render_template("403.html"), 403
+
+
 @app.route("/", methods=["GET"])
 def index():
     return render_template("index.html")
@@ -241,10 +246,15 @@ def problem(idx):
     path = "problems/" + idx
     if not os.path.isdir(path):
         abort(404)
+    dat = tools.read_json(path, "info.json")
+    if not dat.get("public", False):
+        if not current_user.is_authenticated:
+            abort(403)
+        if not current_user.has("admin") and current_user.id not in dat.get("users",[]):
+            abort(403)
     if (os.path.isfile(path + "/rendered.html") and
             os.path.getmtime(path + "/rendered.html") >= os.path.getmtime(path + "/info.json")):
         return tools.read(path, "rendered.html")
-    dat = tools.read_json(path, "info.json")
     statement = tools.read(path, "statement.html")
     lang_exts = json.dumps({k: v.data["source_ext"] for k, v in executing.langs.items()})
     samples = [[tools.read(path, k, o["in"]), tools.read(path, k, o["out"])]
@@ -260,6 +270,12 @@ def problem(idx):
 def problem_file(idx, filename):
     idx = secure_filename(idx)
     filename = secure_filename(filename)
+    dat = tools.read_json("problems", idx, "info.json")
+    if not dat.get("public", False):
+        if not current_user.is_authenticated:
+            abort(403)
+        if not current_user.has("admin") and current_user.id not in dat["users"]:
+            abort(403)
     target = f"problems/{idx}/public_file/{filename}"
     if not os.path.isfile(target):
         abort(404)
@@ -319,6 +335,8 @@ def my_problems():
         if os.path.isfile(f"preparing_problems/{idx}.img") and not os.path.isfile(
                 f"preparing_problems/{idx}/info.json"):
             problemsetting.system(f"sudo mount -o loop {idx}.img ./{idx}", "preparing_problems")
+        if not tools.exists(f"preparing_problems/{idx}/info.json"):
+            continue
         dat = tools.read_json(f"preparing_problems/{idx}/info.json")
         problems_dat.append({"pid": idx, "name": dat["name"]})
     return render_template("my_problems.html", problems=problems_dat)
@@ -333,7 +351,6 @@ def create_problem():
         return render_template("create_problem.html")
     else:
         idx = problemsetting.create_problem(request.form["name"], current_user.id)
-        tools.write("建立題目", "preparing_problems", idx, "waiting")
         tools.append(idx + "\n", current_user.folder, "problems")
         return redirect("/problemsetting/" + idx)
 
@@ -348,9 +365,6 @@ def my_problem_page(idx):
         abort(404)
     if len(os.listdir("preparing_problems/" + idx)) == 0:
         problemsetting.system(f"sudo mount -o loop {idx}.img ./{idx}", "preparing_problems")
-    if os.path.isfile("preparing_problems/" + idx + "/waiting"):
-        return render_template("pleasewait.html",
-                               action=tools.read("preparing_problems", idx, "waiting"))
     o = problemsetting.check_background_action(idx)
     if o is not None:
         return render_template("pleasewaitlog.html", action=o[1], log=o[0])

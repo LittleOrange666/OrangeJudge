@@ -20,10 +20,6 @@ from modules.tools import J
 
 worker_queue = Queue()
 
-ignores = """/waiting
-testcases/gen/
-testcases_gen/"""
-
 root_folder = os.getcwd()
 background_actions = tools.Switcher()
 actions = tools.Switcher()
@@ -132,7 +128,7 @@ def create_problem(name, user):
         pid = str(pid + 1)
         f.write(pid)
     os.mkdir("preparing_problems/" + pid)
-    worker_queue.put({"action": "init_problem", "pid": pid, "name": name, "user": user})
+    init_problem(pid, name, user)
     return pid
 
 
@@ -157,17 +153,11 @@ def end(success: bool):
     raise StopActionException()
 
 
-@background_actions.bind
 def init_problem(pid, name, user):
     path = "preparing_problems/" + pid
     # system(f"sudo dd if=/dev/zero of={pid}.img bs=1G count=1", "preparing_problems")
     # system(f"sudo mkfs.ext4 {pid}.img", "preparing_problems")
-    try:
-        os.remove(path + "/waiting")
-    except FileNotFoundError:
-        pass
     # system(f"sudo mount -o loop {pid}.img ./{pid}", "preparing_problems")
-    tools.write("建立題目", path, "waiting")
     try:
         making_dir(path + "/testcases")
         making_dir(path + "/file")
@@ -176,11 +166,6 @@ def init_problem(pid, name, user):
         pass
     info = constants.default_problem_info | {"name": name, "users": [user]}
     tools.write_json(info, path + "/info.json")
-    shutil.copy("testlib/checkers/wcmp", path)
-    try:
-        os.remove(path + "/waiting")
-    except FileNotFoundError:
-        pass
 
 
 @background_actions.bind
@@ -612,6 +597,34 @@ def save_groups(form, pid, path, dat):
             abort(400)
     for k in dat["groups"]:
         dat["groups"][k]["score"] = int(d[k])
+    return "tests"
+
+
+@actions.bind
+def protect_problem(form, pid, path, dat):
+    if not dat.get("public", False):
+        abort(409)
+    dat["public"] = False
+    if tools.exists(f"problems/{pid}/info.json"):
+        with tools.Json(f"problems/{pid}/info.json") as obj:
+            obj["public"] = False
+    with tools.Json("data/public_problems.json") as pubs:
+        if pid in pubs:
+            del pubs[pid]
+    return "general_info"
+
+
+@actions.bind
+def public_problem(form, pid, path, dat):
+    if dat.get("public", False):
+        abort(409)
+    dat["public"] = True
+    if tools.exists(f"problems/{pid}/info.json"):
+        with tools.Json(f"problems/{pid}/info.json") as obj:
+            obj["public"] = True
+    with tools.Json("data/public_problems.json") as pubs:
+        pubs[pid] = dat["name"]
+    return "general_info"
 
 
 def action(form: ImmutableMultiDict[str, str]) -> Response:
