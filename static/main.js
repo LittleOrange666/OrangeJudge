@@ -62,5 +62,23 @@ $("input[data-checked]").each(function(){
     $(this).prop("checked",$(this).data("checked")==="True")
 });
 $("*[data-disabled]").each(function(){
-    $(this).prop("disabled",$(this).data("disabled")==="True")
+    if($(this).data("disabled")==="True"){
+        $(this).prop("disabled",true);
+        $(this).addClass("disabled");
+    }
+});
+$("*[data-active]").each(function(){
+    if($(this).data("active")==="True"){
+        $(this).addClass("active");
+    }
+});
+$("a[data-args]").each(function(){
+    let o = $(this).data("args").split("=");
+    let url = new URL(location.href);
+    if (url.searchParams.has(o[0])){
+        url.searchParams.set(o[0],o[1]);
+    }else{
+        url.searchParams.append(o[0],o[1]);
+    }
+    $(this).attr("href",url.href);
 });

@@ -154,6 +154,7 @@ class Language:
                 print(out[1])
                 return new_filename, out[1]
             return new_filename, ""
+        env.executable(filename)
         return filename, ""
 
     def get_execmd(self, filename: str) -> list[str]:

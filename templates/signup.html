@@ -17,11 +17,13 @@
     </div>
     <div class="mb-3 col-7 offset-2">
         <label for="user_id" class="form-label">User Id</label>
-        <input type="text" class="form-control" id="user_id" name="user_id" placeholder="user id" required pattern="^[A-Za-z0-9_]+$">
+        <input type="text" class="form-control" id="user_id" name="user_id" placeholder="user id" required
+               pattern="^[A-Za-z0-9_]+$">
     </div>
     <div class="mb-3 col-7 offset-2">
         <label for="password" class="form-label">Password</label>
-        <input type="password" class="form-control" id="password" name="password" placeholder="Password" required pattern="^.{6,}$">
+        <input type="password" class="form-control" id="password" name="password" placeholder="Password" required
+               pattern="^.{6,}$">
     </div>
     <div class="mb-3 col-7 offset-2">
         <label for="password_again" class="form-label">Password Again</label>
@@ -39,21 +41,21 @@ next.value = new URL(document.location).searchParams.get("next");
 let msg = new URL(document.location).searchParams.get("msg");
 if(msg) show_modal("失敗",msg);
 $("#get-code").click(function(){
-    let email = $("#email").val();
-    if(!email.match(/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g))show_modal("錯誤","email格式不合法");
-    else{
-        $.ajax({
-            url: "/get_code",
-            method: "POST",
-            contentType: "application/x-www-form-urlencoded",
-            data: {"email": email},
-            error: function(xhr, status, content){
-                show_modal("錯誤","獲取失敗");
-            },
-            success: function(content, status, xhr){
-                show_modal("成功","驗證碼已發送至'"+email+"'，十分鐘內有效");
-            }
-        });
-    }
+let email = $("#email").val();
+if(!email.match(/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g))show_modal("錯誤","email格式不合法");
+else{
+$.ajax({
+url: "/get_code",
+method: "POST",
+contentType: "application/x-www-form-urlencoded",
+data: {"email": email},
+error: function(xhr, status, content){
+show_modal("錯誤","獲取失敗");
+},
+success: function(content, status, xhr){
+show_modal("成功","驗證碼已發送至'"+email+"'，十分鐘內有效");
+}
+});
+}
 });
 {% endblock %}

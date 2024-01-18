@@ -21,7 +21,7 @@
 + background action log
 + better editer(自動縮排&空格縮排)
 + 出題小組
-+ 手動添加sample
++ 手動添加sample (重要)
 + admin UI
 + two steps
 + protected testcase (重要)
@@ -29,3 +29,5 @@
 + import from Codeforces Polygon
 + Pagination (重要)
 + Group Dependency
++ API
++ 資料用ajax拿

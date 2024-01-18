@@ -177,6 +177,7 @@ def run_problem(idx, dat):
     out_info["group_results"] = {k: {key: v[key] for key in keys} for k, v in groups.items() if k in exist_gp}
     out_info["simple_result"] = simple_result
     out_info["total_score"] = total_score
+    out_info["protected"] = dat["user"] not in problem_info["users"]
     tools.write_json(out_info, f"submissions/{idx}/results.json")
     tools.create(f"submissions/{idx}/completed")
 

@@ -7,15 +7,14 @@ import time
 from flask import Flask, render_template, request, redirect, session, abort, send_file, Response
 from flask_login import login_user, logout_user, login_required, current_user
 from flask_session import Session
-from yarl import URL
-from werkzeug.utils import secure_filename
-
-from modules import executing, tasks, tools, problemsetting, constants
-from modules.login import try_login, init_login, send_email, exist, create_account
-from modules.constants import result_class, lxc_name
-
 from pygments import highlight, lexers
 from pygments.formatters import HtmlFormatter
+from werkzeug.utils import secure_filename
+from yarl import URL
+
+from modules import executing, tasks, tools, problemsetting, constants
+from modules.constants import result_class, lxc_name
+from modules.login import try_login, init_login, send_email, exist, create_account
 
 prepares = {k: lexers.get_lexer_by_name(k) for lexer in lexers.get_all_lexers() for k in lexer[1]}
 app = Flask(__name__, static_url_path='/static', static_folder="static/", template_folder="templates/")
@@ -31,6 +30,11 @@ init_login(app)
 @app.before_request
 def make_session_permanent():
     session.permanent = True
+
+
+@app.errorhandler(404)
+def error_404(error):
+    return render_template("404.html"), 404
 
 
 @app.route("/", methods=["GET"])
@@ -185,7 +189,7 @@ def submission(idx):
         case "test":
             inp = tools.read(path, dat["infile"])
             out = tools.read_default(path, dat["outfile"])
-            result = tools.read_default(path, "result")
+            result = tools.read_default(path, "results")
             ret = render_template("submission/test.html", lang=lang, source=source, inp=inp,
                                   out=out, completed=completed, result=result, pos=tasks.get_queue_position(idx),
                                   ce_msg=ce_msg)
@@ -199,18 +203,20 @@ def submission(idx):
                 result_data = tools.read_json(path, "results.json")
                 result["CE"] = result_data["CE"]
                 results = result_data["results"]
-                for i in range(len(results)):
-                    tcl = len(problem_info["testcases"])
-                    it = i if i < tcl else i - tcl
-                    test_type = "testcases" if i < tcl else "testcases_gen"
-                    results[i] |= problem_info[test_type][it]
-                    if results[i]["result"] != "SKIP":
-                        results[i]["in"] = tools.read(f"{path}/testcases/{i}.in")
-                        results[i]["out"] = tools.read(f"{path}/testcases/{i}.ans")
-                    else:
-                        results[i]["in"] = results[i]["out"] = ""
-                    if results[i].get("has_output", False):
-                        results[i]["user_out"] = tools.read(f"{path}/testcases/{i}.out")
+                result["protected"] = protected = result_data.get("protected", False)
+                if not protected:
+                    for i in range(len(results)):
+                        tcl = len(problem_info["testcases"])
+                        it = i if i < tcl else i - tcl
+                        test_type = "testcases" if i < tcl else "testcases_gen"
+                        results[i] |= problem_info[test_type][it]
+                        if results[i]["result"] != "SKIP":
+                            results[i]["in"] = tools.read(f"{path}/testcases/{i}.in")
+                            results[i]["out"] = tools.read(f"{path}/testcases/{i}.ans")
+                        else:
+                            results[i]["in"] = results[i]["out"] = ""
+                        if results[i].get("has_output", False):
+                            results[i]["user_out"] = tools.read(f"{path}/testcases/{i}.out")
                 result["results"] = results
                 if "group_results" in result_data:
                     gpr = result_data["group_results"]
@@ -264,8 +270,18 @@ def problem_file(idx, filename):
 @login_required
 def my_submissions():
     submission_list = tools.read(current_user.folder, "submissions").split()
+    submit_cnt = len(submission_list)
+    page_cnt = (submit_cnt - 1) // constants.page_size + 1
     out = []
-    for idx in reversed(submission_list):
+    page = request.args.get("page", "1")
+    if not page.isdigit():
+        abort(404)
+    page_idx = int(page)
+    if page_idx <= 0 or page_idx > page_cnt:
+        abort(404)
+    got_data = submission_list[
+               max(0, submit_cnt - constants.page_size * page_idx):submit_cnt - constants.page_size * (page_idx - 1)]
+    for idx in reversed(got_data):
         o = {"name": idx, "time": "blank", "result": "blank"}
         if not tools.exists(f"submissions/{idx}/info.json"):
             continue
@@ -286,7 +302,10 @@ def my_submissions():
             source_dat = tools.read_json(f"problems/{dat['pid']}/info.json")
             o["source_name"] = source_dat["name"]
         out.append(o)
-    return render_template("my_submissions.html", submissions=out)
+    displays = [1, page_cnt]
+    displays.extend(range(max(2, page_idx - 2), min(page_cnt, page_idx + 2) + 1))
+    return render_template("my_submissions.html", submissions=out, page_cnt=page_cnt, page_idx=page_idx,
+                           show_pages=sorted(set(displays)))
 
 
 @app.route("/problemsetting", methods=['GET'])

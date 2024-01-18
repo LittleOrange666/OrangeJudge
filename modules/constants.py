@@ -45,3 +45,5 @@ email_content = """Subject: OrangeJudge verification code ({0})
 
 Your verification code is: {0}
 This verification code is valid within 10 minutes"""
+
+page_size = 12
