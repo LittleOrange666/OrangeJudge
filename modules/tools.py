@@ -12,6 +12,9 @@ from modules.locks import Locker
 
 
 def create_truncated(source: str, target: str) -> str:
+    if not exists(source):
+        create(target)
+        return ""
     file_stats = os.stat(source)
     if file_stats.st_size <= 500:
         content = read(source)
@@ -61,8 +64,21 @@ def read_default(*filename: str, default: str = "") -> str:
 
 
 def write(content: str, *filename: str) -> str:
-    with Locker(os.path.join(*filename)):
-        with open(os.path.join(*filename), "w") as f:
+    fn = os.path.join(*filename)
+    if not os.path.isdir(os.path.dirname(fn)):
+        os.makedirs(os.path.dirname(fn), exist_ok=True)
+    with Locker(fn):
+        with open(fn, "w") as f:
+            f.write(content)
+    return content
+
+
+def write_binary(content: bytes, *filename: str) -> bytes:
+    fn = os.path.join(*filename)
+    if not os.path.isdir(os.path.dirname(fn)):
+        os.makedirs(os.path.dirname(fn), exist_ok=True)
+    with Locker(fn):
+        with open(fn, "wb") as f:
             f.write(content)
     return content
 
@@ -148,9 +164,12 @@ class Json:
         return self.dat
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        self.save()
+        self.lock.__exit__(exc_type, exc_val, exc_tb)
+
+    def save(self):
         with open(self.name, "w") as f:
             json.dump(self.dat, f, indent=2)
-        self.lock.__exit__(exc_type, exc_val, exc_tb)
 
 
 class File:

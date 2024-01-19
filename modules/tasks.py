@@ -87,7 +87,7 @@ def run_problem(idx, dat):
                 results.append({"time": 0, "mem": 0, "result": "SKIP", "info": "Skipped",
                                 "has_output": False})
                 continue
-            tt = "testcases_gen/" if "gen" in testcase else "testcases/"
+            tt = "testcases_gen/" if testcase.get("gen",False) else "testcases/"
             in_file = os.path.abspath(problem_path + tt + testcase["in"])
             ans_file = os.path.abspath(problem_path + tt + testcase["out"])
             out_file = os.path.abspath(f"submissions/{idx}/testcases/{i}.out")

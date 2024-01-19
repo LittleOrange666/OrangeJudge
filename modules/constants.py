@@ -48,3 +48,11 @@ Your verification code is: {0}
 This verification code is valid within 10 minutes"""
 
 page_size = 12
+
+polygon_type = {"cpp.msys2-mingw64-9-g++17": "C++17", "cpp.g++17": "C++17", "python.3": "Python3"}
+
+polygon_statment = {"statement_main": "statement-sections/english/legend.tex",
+                    "statement_input": "statement-sections/english/input.tex",
+                    "statement_output": "statement-sections/english/output.tex",
+                    "statement_interaction": "statement-sections/english/interaction.tex",
+                    "statement_scoring": "statement-sections/english/scoring.tex"}

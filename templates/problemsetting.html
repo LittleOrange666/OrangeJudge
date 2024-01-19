@@ -41,14 +41,14 @@
             <div class="mb-3">
                 <label for="time_input" class="form-label">時間限制</label>
                 <div class="input-group mb-3">
-                    <input type="text" class="form-control" id="time_input" value="{{ dat['timelimit'] }}">
+                    <input type="number" min="250" max="10000" class="form-control" id="time_input" value="{{ dat['timelimit'] }}">
                     <span class="input-group-text">ms</span>
                 </div>
             </div>
             <div class="mb-3">
                 <label for="memory_input" class="form-label">記憶體限制</label>
                 <div class="input-group mb-3">
-                    <input type="text" class="form-control" id="memory_input" value="{{ dat['memorylimit'] }}">
+                    <input type="number" min="4" max="1024" class="form-control" id="memory_input" value="{{ dat['memorylimit'] }}">
                     <span class="input-group-text">MB</span>
                 </div>
             </div>
@@ -76,6 +76,19 @@
             </form>
             {% endif %}
         </div>
+        <h3>引入Polygon題目</h3>
+        <form the_action="import_polygon">
+            <div class="mb-3">
+                <input type="file" class="form-control" accept=".zip" name="zip_file" required>
+            </div>
+            <div class="mb-3">
+                <button class="btn btn-primary submitter">
+                <span class="visually-hidden spinner-border spinner-border-sm" role="status"
+                      aria-hidden="true"></span>
+                    上傳zip檔
+                </button>
+            </div>
+        </form>
     </div>
     <div id="statement" class="tab-pane fade">
         <h3>題敘</h3>

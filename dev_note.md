@@ -23,7 +23,8 @@
 + 出題小組
 + admin UI
 + two steps
-+ import from Codeforces Polygon (重要)
++ import from Codeforces Polygon (部分完成, 可用但後續修改困難)
 + Group Dependency
 + API
 + 資料用ajax拿
++ seccomp

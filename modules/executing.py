@@ -48,9 +48,18 @@ class Environment:
         file_abspath = os.path.abspath(filepath)
         if source is None:
             source = os.path.basename(filepath)
-        cmd = ["sudo", "mv", f"/var/lib/lxc/{self.lxc_name}/rootfs/{self.dirname}/{source}",
+        if self.dirname not in source:
+            source = os.path.join("/"+self.dirname,source)
+        cmd = ["sudo", "mv", os.path.join(f"/var/lib/lxc/{self.lxc_name}/rootfs",source),
                os.path.dirname(file_abspath)]
         call(cmd)
+
+    def simple_path(self, filepath: str):
+        target = os.path.basename(filepath)
+        cmd = ["sudo", "mv", os.path.join(f"/{self.dirname}", filepath),f"/{self.dirname}/{target}"]
+        if os.path.join(f"/{self.dirname}", filepath) != f"/{self.dirname}/{target}":
+            self.simple_run(cmd)
+        return target
 
     def rm_file(self, filepath: str) -> None:
         cmd = ["sudo", "rm", f"/var/lib/lxc/{self.lxc_name}/rootfs" + self.filepath(filepath)]
@@ -148,6 +157,7 @@ class Language:
             for i in range(len(compile_cmd)):
                 compile_cmd[i] = compile_cmd[i].format(filename, new_filename, **self.kwargs)
             out = env.simple_run(compile_cmd)
+            new_filename = env.simple_path(new_filename)
             env.executable(new_filename)
             new_filename = os.path.join(dirname, new_filename)
             if out[1] and out[2] != 0:

@@ -5,8 +5,11 @@ import subprocess
 import time
 import traceback
 import uuid
+from xml.etree import ElementTree
+from xml.etree.ElementTree import Element
 
 from flask import Response, abort, render_template, request, redirect, send_file
+from latex2markdown import LaTeX2Markdown
 from pyzipper.zipfile_aes import AESZipInfo
 from werkzeug.datastructures import ImmutableMultiDict, MultiDict
 from werkzeug.utils import secure_filename
@@ -174,56 +177,100 @@ def generate_testcase(pid):
     path = "preparing_problems/" + pid
     env = executing.Environment()
     env.send_file("testlib/testlib.h")
-    if "gen_msg" not in problem:
-        log("generater info not found")
-        end(False)
-    i = 1
-    tests = []
-    seed = problem["gen_msg"]["seed"]
-    for k, v in problem["gen_msg"]["counts"].items():
-        for j in range(int(v)):
-            tests.append((f"{k}_{j + 1}", [str(i), k, seed]))
-            i += 1
-    exec_cmd = problem.compile_inner(problem["gen_msg"]["generator"], "generator", env)
-    sol_cmd = problem.compile_inner(problem["gen_msg"]["solution"], "solution", env)
-    sol_lang = problem.lang(problem["gen_msg"]["solution"])
+    gen_list = []
     int_cmd = []
     if problem["is_interact"]:
         int_cmd = problem.compile_inner(problem["interactor_source"], "interactor", env)
     tl = float(problem["timelimit"]) / 1000
     ml = int(problem["memorylimit"])
-    if os.path.isdir(path + "/testcases_gen/"):
-        shutil.rmtree(path + "/testcases_gen/")
-    os.makedirs(path + "/testcases_gen/", exist_ok=True)
-    for test in tests:
-        in_file = os.path.abspath(path + "/testcases_gen/" + test[0] + ".in")
-        out_file = os.path.abspath(path + "/testcases_gen/" + test[0] + ".out")
-        log(f"generating testcase {test[0]!r}")
-        gen_out = env.safe_run(exec_cmd + test[1])
-        if gen_out[2]:
-            log("generator RE")
-            log(gen_out[1])
-            end(False)
-        tools.write(gen_out[0], in_file)
-        env.send_file(in_file)
-        env.writeable(out_file)
-        if problem["is_interact"]:
-            env.safe_readable(in_file)
-            out = env.runwithinteractshell(sol_cmd, int_cmd, env.filepath(in_file), env.filepath(out_file), tl, ml,
-                                           sol_lang.base_exec_cmd)
-        else:
-            env.readable(in_file)
-            out = env.runwithshell(sol_cmd, env.filepath(in_file), env.filepath(out_file), tl, ml,
-                                   sol_lang.base_exec_cmd)
-        result = {o[0]: o[1] for o in (s.split("=") for s in out[0].split("\n")) if len(o) == 2}
-        if "1" == result.get("WIFSIGNALED", None) or "0" != result.get("WEXITSTATUS", "0"):
-            log("solution RE")
-            log(out[1])
-            end(False)
-        env.get_file(out_file)
-    log(f"generate complete")
-    problem["testcases_gen"] = [{"in": test[0] + ".in", "out": test[0] + ".out", "sample": False, "group": test[1][1]} \
-                                for test in tests]
+    if "gen_msg" in problem:
+        i = 1
+        tests = []
+        seed = problem["gen_msg"]["seed"]
+        for k, v in problem["gen_msg"]["counts"].items():
+            for j in range(int(v)):
+                tests.append((f"{k}_{j + 1}", [str(i), k, seed]))
+                i += 1
+        exec_cmd = problem.compile_inner(problem["gen_msg"]["generator"], "generator", env)
+        sol_cmd = problem.compile_inner(problem["gen_msg"]["solution"], "solution", env)
+        sol_lang = problem.lang(problem["gen_msg"]["solution"])
+        if os.path.isdir(path + "/testcases_gen/"):
+            shutil.rmtree(path + "/testcases_gen/")
+        os.makedirs(path + "/testcases_gen/", exist_ok=True)
+        for test in tests:
+            in_file = os.path.abspath(path + "/testcases_gen/" + test[0] + ".in")
+            out_file = os.path.abspath(path + "/testcases_gen/" + test[0] + ".out")
+            log(f"generating testcase {test[0]!r}")
+            gen_out = env.safe_run(exec_cmd + test[1])
+            if gen_out[2]:
+                log("generator RE")
+                log(gen_out[1])
+                end(False)
+            tools.write(gen_out[0], in_file)
+            env.send_file(in_file)
+            env.writeable(out_file)
+            if problem["is_interact"]:
+                env.safe_readable(in_file)
+                out = env.runwithinteractshell(sol_cmd, int_cmd, env.filepath(in_file), env.filepath(out_file), tl, ml,
+                                               sol_lang.base_exec_cmd)
+            else:
+                env.readable(in_file)
+                out = env.runwithshell(sol_cmd, env.filepath(in_file), env.filepath(out_file), tl, ml,
+                                       sol_lang.base_exec_cmd)
+            result = {o[0]: o[1] for o in (s.split("=") for s in out[0].split("\n")) if len(o) == 2}
+            if "1" == result.get("WIFSIGNALED", None) or "0" != result.get("WEXITSTATUS", "0"):
+                log("solution RE")
+                log(out[1])
+                end(False)
+            env.get_file(out_file)
+        log(f"generate complete")
+        gen_list += [{"in": test[0] + ".in", "out": test[0] + ".out", "sample": False, "group": test[1][1]}
+                     for test in tests]
+    if "ex_gen_msg" in problem:
+        sol = problem["ex_gen_msg"]["solution"]
+        cmds = problem["ex_gen_msg"]["cmds"]
+        sol_cmd = problem.compile_inner(sol, "solution", env)
+        sol_lang = problem.lang(sol)
+        gens = list({cmd[0].split()[0] for cmd in cmds})
+        gen_exec = {}
+        print(problem["files"])
+        print(gens)
+        for k in gens:
+            if not any(file["name"].startswith(k+".") for file in problem["files"]):
+                log(f"unknown generator {k!r}")
+        for k in gens:
+            gen = next(file["name"] for file in problem["files"] if file["name"].startswith(k+"."))
+            gen_exec[k] = problem.compile_inner(gen, f"generator({k})", env)
+        for i, test in enumerate(cmds):
+            test = test[0].split()
+            in_file = os.path.abspath(path + f"/testcases_gen/{i}_exgen.in")
+            out_file = os.path.abspath(path + f"/testcases_gen/{i}_exgen.out")
+            log(f"generating ex testcase {i}")
+            gen_out = env.safe_run(gen_exec[test[0]] + test[1:])
+            if gen_out[2]:
+                log("generator RE")
+                log(gen_out[1])
+                end(False)
+            tools.write(gen_out[0], in_file)
+            env.send_file(in_file)
+            env.writeable(out_file)
+            if problem["is_interact"]:
+                env.safe_readable(in_file)
+                out = env.runwithinteractshell(sol_cmd, int_cmd, env.filepath(in_file), env.filepath(out_file), tl, ml,
+                                               sol_lang.base_exec_cmd)
+            else:
+                env.readable(in_file)
+                out = env.runwithshell(sol_cmd, env.filepath(in_file), env.filepath(out_file), tl, ml,
+                                       sol_lang.base_exec_cmd)
+            result = {o[0]: o[1] for o in (s.split("=") for s in out[0].split("\n")) if len(o) == 2}
+            if "1" == result.get("WIFSIGNALED", None) or "0" != result.get("WEXITSTATUS", "0"):
+                log("solution RE")
+                log(out[1])
+                end(False)
+            env.get_file(out_file)
+        gen_list += [{"in": f"{i}_exgen.in", "out": f"{i}_exgen.out", "sample": False, "group": test[1]}
+                     for i, test in enumerate(cmds)]
+    problem["testcases_gen"] = gen_list
 
 
 @background_actions.bind
@@ -236,16 +283,16 @@ def creating_version(pid, description):
         log("checker missing")
         end(False)
     file = problem.compile_dat(problem["checker_source"], "checker", env)
-    env.get_file(path, os.path.basename(file))
+    env.get_file(path+"/"+os.path.basename(file), os.path.basename(file))
     problem["checker"] = [os.path.basename(file), problem.lang_of(*problem["checker_source"]).branch]
     if problem["is_interact"]:
         if "interactor_source" not in problem:
             log("interactor missing")
             end(False)
         file = problem.compile_dat(("my", problem["interactor_source"]), "interactor", env)
-        env.get_file(path, file)
+        env.get_file(path+"/"+os.path.basename(file), file)
         problem["interactor"] = [os.path.basename(file), problem.lang(problem["interactor_source"]).branch]
-    if "gen_msg" in problem:
+    if "gen_msg" in problem or "ex_gen_msg" in problem:
         generate_testcase(pid)
     if "versions" not in problem:
         problem["versions"] = []
@@ -253,6 +300,7 @@ def creating_version(pid, description):
     if os.path.exists("problems/" + pid):
         log("remove old version")
         shutil.rmtree("problems/" + pid)
+    problem.save()
     log("copy overall folder")
     shutil.copytree(path, "problems/" + pid, dirs_exist_ok=True)
     log("complete")
@@ -320,7 +368,7 @@ def save_general_info(form, pid, path, dat):
     tl = form["timelimit"]
     if not ml.isdigit() or not tl.isdigit():
         abort(400)
-    if not (10000 >= int(ml) >= 250 and 1024 >= int(tl) >= 4):
+    if not (10000 >= int(tl) >= 250 and 1024 >= int(ml) >= 4):
         abort(400)
     dat["memorylimit"] = form["memorylimit"]
     dat["timelimit"] = form["timelimit"]
@@ -631,6 +679,82 @@ def public_problem(form, pid, path, dat):
             obj["public"] = True
     with tools.Json("data/public_problems.json") as pubs:
         pubs[pid] = dat["name"]
+    return "general_info"
+
+
+@actions.bind
+def import_polygon(form, pid, path, dat):
+    file = request.files["zip_file"]
+    filename = f"tmp/{str(uuid.uuid4())}.zip"
+    file.save(filename)
+    zip_file = AESZipFile(filename, "r")
+    filelist: list[AESZipInfo] = zip_file.filelist
+    files: dict[str, AESZipInfo] = {o.filename: o for o in filelist if not o.is_dir()}
+    if "problem.xml" not in files:
+        abort(400)
+    root: Element = ElementTree.fromstring(zip_file.read(files["problem.xml"]).decode())
+    dat["name"] = root.find("names").find("name").get("value")
+    testset = root.find("judging").find("testset")
+    tl = testset.find("time-limit").text
+    dat["timelimit"] = str(max(250, min(10000, int(tl))))
+    ml = testset.find("memory-limit").text
+    dat["memorylimit"] = str(max(4, min(1024, int(ml) // 1048576)))
+    groups = {"default": {"score": 0}}
+    for gp in testset.find("groups").iter("group"):
+        name = gp.get("name")
+        score = float(gp.get("points"))
+        dependency = [e.get("group") for e in gp.iter("dependency")]
+        groups[name] = {"score": score, "dependency": dependency}
+    dat["groups"] = groups
+    manual_tests = iter([files[k] for k in files if k.startswith("tests/")])
+    gen_cmds = []
+    for test in testset.find("tests").iter("test"):
+        group = test.get("group", "default")
+        if test.get("method") == "manual":
+            f = next(manual_tests)
+            fn = os.path.basename(f.filename)
+            tools.write_binary(zip_file.read(f), path, "testcases", fn)
+            dat["testcases"].append({"in": fn, "out": fn + ".out", "group": group, "uncomplete": True})
+        else:
+            gen_cmds.append([test.get("cmd"), group])
+    print(gen_cmds)
+    assets = root.find("assets")
+    checker = assets.find("checker").find("source")
+    fn = "checker_" + os.path.basename(checker.get("path"))
+    tools.write_binary(zip_file.read(files[checker.get("path")]), path, "file", fn)
+    dat["checker_source"] = ["my", fn]
+    dat["files"].append({"name": fn, "type": constants.polygon_type.get(checker.get("type"), "C++17")})
+    interactor = assets.find("interactor")
+    if interactor:
+        source = interactor.find("source")
+        fn = "interactor_" + os.path.basename(source.get("path"))
+        tools.write_binary(zip_file.read(files[source.get("path")]), path, "file", fn)
+        dat["interactor_source"] = fn
+        dat["files"].append({"name": fn, "type": constants.polygon_type.get(source.get("type"), "C++17")})
+        problem["is_interact"] = True
+    main_sol = None
+    for solution in assets.find("solutions").iter("solution"):
+        source = solution.find("source")
+        fn = "solution_" + os.path.basename(source.get("path"))
+        tools.write_binary(zip_file.read(files[source.get("path")]), path, "file", fn)
+        dat["files"].append({"name": fn, "type": constants.polygon_type.get(source.get("type"), "C++17")})
+        if solution.get("tag") == "main":
+            main_sol = fn
+        print(source.get("path"), solution.get("tag"))
+    if main_sol:
+        dat["ex_gen_msg"] = {"solution": main_sol, "cmds": gen_cmds}
+    for executable in root.iter("executable"):
+        source = executable.find("source")
+        fn = os.path.basename(source.get("path"))
+        tools.write_binary(zip_file.read(files[source.get("path")]), path, "file", fn)
+        dat["files"].append({"name": fn, "type": constants.polygon_type.get(source.get("type"), "C++17")})
+    fake_form = {k: "" for k in constants.polygon_statment}
+    fake_form["samples"] = "[]"
+    for k, v in constants.polygon_statment.items():
+        if v in files:
+            fake_form[k] = LaTeX2Markdown(zip_file.read(files[v]).decode()).to_markdown()
+    save_statement(fake_form, pid, path, dat)
+    os.remove(filename)
     return "general_info"
 
 

@@ -29,6 +29,7 @@ $("textarea").on("input",function(){
     let rc = 1 + ($(this).val().match(/\n/g) || []).length;
     $(this).attr("rows",Math.max(rc,+$(this).data("default-rows")));
 });
+$("textarea").trigger("input");
 $("textarea").on('keydown', function(e) {
   if (e.key == 'Tab') {
     e.preventDefault();

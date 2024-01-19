@@ -8,3 +8,4 @@ python-markdown-math
 regex
 infix
 yarl
+latex2markdown
