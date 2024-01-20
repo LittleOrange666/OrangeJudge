@@ -236,10 +236,10 @@ def generate_testcase(pid):
         print(problem["files"])
         print(gens)
         for k in gens:
-            if not any(file["name"].startswith(k+".") for file in problem["files"]):
+            if not any(file["name"].startswith(k + ".") for file in problem["files"]):
                 log(f"unknown generator {k!r}")
         for k in gens:
-            gen = next(file["name"] for file in problem["files"] if file["name"].startswith(k+"."))
+            gen = next(file["name"] for file in problem["files"] if file["name"].startswith(k + "."))
             gen_exec[k] = problem.compile_inner(gen, f"generator({k})", env)
         for i, test in enumerate(cmds):
             test = test[0].split()
@@ -283,14 +283,14 @@ def creating_version(pid, description):
         log("checker missing")
         end(False)
     file = problem.compile_dat(problem["checker_source"], "checker", env)
-    env.get_file(path+"/"+os.path.basename(file), os.path.basename(file))
+    env.get_file(path + "/" + os.path.basename(file), os.path.basename(file))
     problem["checker"] = [os.path.basename(file), problem.lang_of(*problem["checker_source"]).branch]
     if problem["is_interact"]:
         if "interactor_source" not in problem:
             log("interactor missing")
             end(False)
         file = problem.compile_dat(("my", problem["interactor_source"]), "interactor", env)
-        env.get_file(path+"/"+os.path.basename(file), file)
+        env.get_file(path + "/" + os.path.basename(file), file)
         problem["interactor"] = [os.path.basename(file), problem.lang(problem["interactor_source"]).branch]
     if "gen_msg" in problem or "ex_gen_msg" in problem:
         generate_testcase(pid)
@@ -700,23 +700,25 @@ def import_polygon(form, pid, path, dat):
     ml = testset.find("memory-limit").text
     dat["memorylimit"] = str(max(4, min(1024, int(ml) // 1048576)))
     groups = {"default": {"score": 0}}
-    for gp in testset.find("groups").iter("group"):
-        name = gp.get("name")
-        score = float(gp.get("points"))
-        dependency = [e.get("group") for e in gp.iter("dependency")]
-        groups[name] = {"score": score, "dependency": dependency}
+    if testset.find("groups"):
+        for gp in testset.find("groups").iter("group"):
+            name = gp.get("name")
+            score = float(gp.get("points"))
+            dependency = [e.get("group") for e in gp.iter("dependency")]
+            groups[name] = {"score": score, "dependency": dependency}
     dat["groups"] = groups
     manual_tests = iter([files[k] for k in files if k.startswith("tests/")])
     gen_cmds = []
-    for test in testset.find("tests").iter("test"):
-        group = test.get("group", "default")
-        if test.get("method") == "manual":
-            f = next(manual_tests)
-            fn = os.path.basename(f.filename)
-            tools.write_binary(zip_file.read(f), path, "testcases", fn)
-            dat["testcases"].append({"in": fn, "out": fn + ".out", "group": group, "uncomplete": True})
-        else:
-            gen_cmds.append([test.get("cmd"), group])
+    if testset.find("tests"):
+        for test in testset.find("tests").iter("test"):
+            group = test.get("group", "default")
+            if test.get("method") == "manual":
+                f = next(manual_tests)
+                fn = os.path.basename(f.filename)
+                tools.write_binary(zip_file.read(f), path, "testcases", fn)
+                dat["testcases"].append({"in": fn, "out": fn + ".out", "group": group, "uncomplete": True})
+            else:
+                gen_cmds.append([test.get("cmd"), group])
     print(gen_cmds)
     assets = root.find("assets")
     checker = assets.find("checker").find("source")
@@ -731,7 +733,7 @@ def import_polygon(form, pid, path, dat):
         tools.write_binary(zip_file.read(files[source.get("path")]), path, "file", fn)
         dat["interactor_source"] = fn
         dat["files"].append({"name": fn, "type": constants.polygon_type.get(source.get("type"), "C++17")})
-        problem["is_interact"] = True
+        dat["is_interact"] = True
     main_sol = None
     for solution in assets.find("solutions").iter("solution"):
         source = solution.find("source")
@@ -766,12 +768,22 @@ def action(form: ImmutableMultiDict[str, str]) -> Response:
         return redirect(f"/problemsetting/{pid}#{tp}")
 
 
+def sending_file(file):
+    if not os.path.exists(file):
+        abort(404)
+    return send_file(file)
+
+
 def preview(args: MultiDict[str, str]) -> Response:
     pid = args["pid"]
     path = f"preparing_problems/{pid}"
     match args["type"]:
         case "statement":
-            dat = tools.read_json(path + "/info.json")
+            if not tools.exists(path + "/info.json"):
+                abort(404)
+            if not tools.exists(path + "/statement.html"):
+                abort(404)
+            dat = tools.read_json()
             statement = tools.read(path + "/statement.html")
             lang_exts = json.dumps({k: v.data["source_ext"] for k, v in executing.langs.items()})
             samples = [[tools.read(path, k, o["in"]), tools.read(path, k, o["out"])]
@@ -781,13 +793,13 @@ def preview(args: MultiDict[str, str]) -> Response:
                                   preview=True, samples=enumerate(samples))
             return Response(ret)
         case "public_file":
-            return send_file(path + "/public_file/" + secure_filename(args["name"]))
+            return sending_file(path + "/public_file/" + secure_filename(args["name"]))
         case "file":
-            return send_file(path + "/file/" + secure_filename(args["name"]))
+            return sending_file(path + "/file/" + secure_filename(args["name"]))
         case "testcases":
-            return send_file(path + "/testcases/" + secure_filename(args["name"]))
+            return sending_file(path + "/testcases/" + secure_filename(args["name"]))
         case "testcases_gen":
-            return send_file(path + "/testcases_gen/" + secure_filename(args["name"]))
+            return sending_file(path + "/testcases_gen/" + secure_filename(args["name"]))
     abort(404)
 
 

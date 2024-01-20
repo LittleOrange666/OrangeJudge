@@ -102,3 +102,6 @@ function _uuid() {
       return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
   });
 }
+$("form").each(function(){
+    $(this).append($("#csrf_token").clone());
+});

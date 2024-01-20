@@ -7,6 +7,7 @@ import time
 from flask import Flask, render_template, request, redirect, session, abort, send_file, Response
 from flask_login import login_user, logout_user, login_required, current_user
 from flask_session import Session
+from flask_wtf import CSRFProtect
 from pygments import highlight, lexers
 from pygments.formatters import HtmlFormatter
 from werkzeug.utils import secure_filename
@@ -24,6 +25,7 @@ app.config["SESSION_FILE_DIR"] = "sessions"
 app.config["SESSION_COOKIE_NAME"] = "OrangeJudgeSession"
 app.config["PERMANENT_SESSION_LIFETIME"] = 3000000
 Session(app)
+CSRFProtect(app)
 init_login(app)
 
 
@@ -76,8 +78,8 @@ def signup():
     nxt = request.form.get('next')
     url = URL(request.referrer)
     err = ""
-    if len(verify) != 6 or not os.path.exists(fn) or os.path.getmtime(fn) < time.time() - 600 or not tools.read(
-            fn).startswith(verify):
+    if len(verify) < 6 or not os.path.exists(fn) or os.path.getmtime(fn) < time.time() - 600 or not tools.read(
+            fn).startswith(verify[:6]):
         err = "驗證碼錯誤"
     elif constants.user_id_reg.match(user_id) is None:
         err = "ID不合法"
@@ -112,7 +114,7 @@ def get_code():
     if os.path.exists(f"verify/email/{sec_email}") and os.path.getmtime(f"verify/email/{sec_email}") > time.time() - 60:
         abort(400)
     idx = "".join(str(random.randint(0, 9)) for _ in range(6))
-    tools.write(idx, "verify", sec_email)
+    tools.write(idx, "verify", "email", sec_email)
     send_email(email, constants.email_content.format(idx))
     return Response(status=200)
 
@@ -186,8 +188,6 @@ def submission(idx):
     if not os.path.isdir(path):
         abort(404)
     dat = tools.read_json(path, "info.json")
-    if not current_user.has("admin") and dat["user"] != current_user.id:
-        abort(403)
     lang = dat["lang"]
     source = tools.read(path, dat["source"])
     source = highlight(source, prepares[executing.langs[lang].name], HtmlFormatter())
@@ -195,6 +195,8 @@ def submission(idx):
     ce_msg = tools.read_default(path, "ce_msg.txt")
     match dat["type"]:
         case "test":
+            if not current_user.has("admin") and dat["user"] != current_user.id:
+                abort(403)
             inp = tools.read(path, dat["infile"])
             out = tools.read_default(path, dat["outfile"])
             result = tools.read_default(path, "results")
@@ -206,6 +208,8 @@ def submission(idx):
             problem_path = f"problems/{pid}/"
             group_results = {}
             problem_info = tools.read_json(problem_path, "info.json")
+            if not current_user.has("admin") and dat["user"] != current_user.id and current_user.id not in problem_info["users"]:
+                abort(403)
             result = {}
             if completed:
                 result_data = tools.read_json(path, "results.json")
@@ -255,18 +259,13 @@ def problem(idx):
             abort(403)
         if not current_user.has("admin") and current_user.id not in dat.get("users",[]):
             abort(403)
-    if (os.path.isfile(path + "/rendered.html") and
-            os.path.getmtime(path + "/rendered.html") >= os.path.getmtime(path + "/info.json")):
-        return tools.read(path, "rendered.html")
     statement = tools.read(path, "statement.html")
     lang_exts = json.dumps({k: v.data["source_ext"] for k, v in executing.langs.items()})
     samples = dat.get("manual_samples", []) + [[tools.read(path, k, o["in"]), tools.read(path, k, o["out"])]
                for k in ("testcases", "testcases_gen") for o in dat.get(k, []) if o.get("sample", False)]
-    ret = render_template("problem.html", dat=dat, statement=statement,
+    return render_template("problem.html", dat=dat, statement=statement,
                           langs=executing.langs.keys(), lang_exts=lang_exts, pid=idx,
                           preview=False, samples=enumerate(samples))
-    tools.write(ret, path, "rendered.html")
-    return ret
 
 
 @app.route("/problem_file/<idx>/<filename>", methods=['GET'])
@@ -443,7 +442,7 @@ def main():
     os.system(f"sudo cp -r -f judge /var/lib/lxc/{lxc_name}/rootfs/")
     tasks.init()
     problemsetting.init()
-    app.run(port=8080)
+    app.run("0.0.0.0", port=8080)
 
 
 if __name__ == '__main__':

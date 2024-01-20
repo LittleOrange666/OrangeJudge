@@ -26,6 +26,7 @@ $(function() {
             url: url,
             method: "POST",
             contentType: "application/x-www-form-urlencoded",
+            headers: {"x-csrf-token": $("#csrf_token").val()},
             data: data,
             error: function(xhr, status, content){
                 callback(content, status, xhr)

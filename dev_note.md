@@ -11,6 +11,7 @@
 + lxc中nobody可以執行真內建的system call
 + 出題者可能可以實行XSS attack
 + 缺乏Dos防護 (重要)
++ chmod混亂
 
 ## 未實裝特性
 + contests (重要)
@@ -23,8 +24,10 @@
 + 出題小組
 + admin UI
 + two steps
-+ import from Codeforces Polygon (部分完成, 可用但後續修改困難)
++ import from Codeforces Polygon (部分完成, 可用但後續修改困難) (附加檔案未匯入)
 + Group Dependency
 + API
 + 資料用ajax拿
 + seccomp
++ 適當提供RE massage
++ csrf token

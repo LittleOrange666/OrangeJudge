@@ -16,7 +16,7 @@ email_sender = ""
 class User(UserMixin):
     def __init__(self, name: str):
         self.id = secure_filename(name.lower())
-        self.data = tools.read_json(f"accounts/{name}/info.json")
+        self.data = tools.read_json(f"accounts/{self.id}/info.json")
 
     @property
     def folder(self) -> str:
@@ -43,7 +43,15 @@ def init_login(app):
 
 
 def send_email(target: str, content: str):
-    smtp.sendmail(email_sender, target, content)
+    try:
+        smtp.sendmail(email_sender, target, content)
+    except smtplib.SMTPException:
+        smtp.connect('smtp.gmail.com', 587)
+        smtp.ehlo()
+        smtp.starttls()
+        lines = tools.read("secret/smtp").split("\n")
+        smtp.login(lines[0], lines[1])
+        smtp.sendmail(email_sender, target, content)
 
 
 def try_hash(content: str) -> str:
@@ -83,4 +91,4 @@ def create_account(email, user_id, password):
     tools.write_json(dat, folder, "info.json")
     tools.create(folder, "problems")
     tools.create(folder, "submissions")
-    tools.create(f"verify/used_email")
+    tools.write(user_id, f"verify/used_email", secure_filename(email))

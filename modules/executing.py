@@ -50,7 +50,7 @@ class Environment:
             source = os.path.basename(filepath)
         if self.dirname not in source:
             source = os.path.join("/"+self.dirname,source)
-        cmd = ["sudo", "mv", os.path.join(f"/var/lib/lxc/{self.lxc_name}/rootfs",source),
+        cmd = ["sudo", "mv", f"/var/lib/lxc/{self.lxc_name}/rootfs"+source,
                os.path.dirname(file_abspath)]
         call(cmd)
 
@@ -89,7 +89,7 @@ class Environment:
                 tools.create(self.fullfilepath(filename))
             filepath = self.filepath(filename)
             call(self.prefix + ["chgrp", "judge", filepath])
-            call(self.prefix + ["chmod", "770", filepath])
+            call(self.prefix + ["chmod", "777", filepath])
 
     def executable(self, *filenames: str):
         for filename in filenames:
@@ -182,7 +182,9 @@ class Language:
         exec_cmd = self.get_execmd(filename)
         for stdin, stdout in tasks:
             tools.create(stdout)
-            out = env.runwithshell(exec_cmd, env.send_file(stdin), env.send_file(stdout), 10, 1000, self.base_exec_cmd)
+            outf = env.send_file(stdout)
+            env.writeable(outf)
+            out = env.runwithshell(exec_cmd, env.send_file(stdin), outf, 10, 1000, self.base_exec_cmd)
             if is_tle(out):
                 return "TLE: Testing is limited by 10 seconds"
             result = {o[0]: o[1] for o in (s.split("=") for s in out[0].split("\n")) if len(o) == 2}

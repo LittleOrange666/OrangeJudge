@@ -166,7 +166,9 @@ def run_problem(idx, dat):
                 simple_result = "NA"
             if groups[gp].get("rule", "min") == "min":
                 groups[gp]["gainscore"] = min(groups[gp]["gainscore"], score)
-            groups[gp]["cnt"] = groups[gp].get("cnt",0)+1
+            else:
+                groups[gp]["gainscore"] += score
+            groups[gp]["cnt"] = groups[gp].get("cnt", 0)+1
         for o in groups.values():
             if o.get("cnt", 0):
                 if o.get("rule", "min") == "avg":
