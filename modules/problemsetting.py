@@ -208,13 +208,14 @@ def generate_testcase(pid):
                 end(False)
             tools.write(gen_out[0], in_file)
             env.send_file(in_file)
-            env.writeable(out_file)
             if problem["is_interact"]:
-                env.safe_readable(in_file)
+                env.judge_readable(in_file)
+                env.judge_writeable(out_file)
                 out = env.runwithinteractshell(sol_cmd, int_cmd, env.filepath(in_file), env.filepath(out_file), tl, ml,
                                                sol_lang.base_exec_cmd)
             else:
                 env.readable(in_file)
+                env.writeable(out_file)
                 out = env.runwithshell(sol_cmd, env.filepath(in_file), env.filepath(out_file), tl, ml,
                                        sol_lang.base_exec_cmd)
             result = {o[0]: o[1] for o in (s.split("=") for s in out[0].split("\n")) if len(o) == 2}
@@ -253,13 +254,14 @@ def generate_testcase(pid):
                 end(False)
             tools.write(gen_out[0], in_file)
             env.send_file(in_file)
-            env.writeable(out_file)
             if problem["is_interact"]:
-                env.safe_readable(in_file)
+                env.judge_readable(in_file)
+                env.judge_writeable(out_file)
                 out = env.runwithinteractshell(sol_cmd, int_cmd, env.filepath(in_file), env.filepath(out_file), tl, ml,
                                                sol_lang.base_exec_cmd)
             else:
                 env.readable(in_file)
+                env.writeable(out_file)
                 out = env.runwithshell(sol_cmd, env.filepath(in_file), env.filepath(out_file), tl, ml,
                                        sol_lang.base_exec_cmd)
             result = {o[0]: o[1] for o in (s.split("=") for s in out[0].split("\n")) if len(o) == 2}

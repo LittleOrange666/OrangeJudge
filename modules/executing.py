@@ -2,6 +2,7 @@ import math
 import os.path
 import subprocess
 import uuid
+from typing import Callable
 
 from modules import constants, tools
 from modules.constants import exit_codes
@@ -11,7 +12,6 @@ def call(cmd: list[str], stdin: str = "", timeout: float | None = None) -> tuple
     print(" ".join(cmd))
     process = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     ret = process.communicate(stdin.encode("utf8"), timeout=timeout)
-    # print([ret[0].decode("utf8"), ret[1].decode("utf8")])
     return ret[0].decode("utf8"), ret[1].decode("utf8"), process.returncode
 
 
@@ -34,14 +34,16 @@ class Environment:
         self.prefix: list[str] = ["sudo", "lxc-attach", "-n", self.lxc_name, "--"]
         self.safe: list[str] = ["sudo", "-u", "nobody"]
         self.judge: list[str] = ["sudo", "-u", "judge"]
-        # call(self.prefix + ["chmod", "750", "/" + self.dirname])
 
-    def send_file(self, filepath: str) -> str:
+    def send_file(self, filepath: str, nxt: Callable[[str], None] | None = None) -> str:
         print("send", filepath)
         file_abspath = os.path.abspath(filepath)
         cmd = ["sudo", "cp", file_abspath, f"/var/lib/lxc/{self.lxc_name}/rootfs/{self.dirname}"]
         call(cmd)
-        self.protected(filepath)
+        if nxt is None:
+            self.protected(filepath)
+        else:
+            nxt(filepath)
         return self.filepath(file_abspath)
 
     def get_file(self, filepath: str, source: None | str = None) -> None:
@@ -49,14 +51,14 @@ class Environment:
         if source is None:
             source = os.path.basename(filepath)
         if self.dirname not in source:
-            source = os.path.join("/"+self.dirname,source)
-        cmd = ["sudo", "mv", f"/var/lib/lxc/{self.lxc_name}/rootfs"+source,
+            source = os.path.join("/" + self.dirname, source)
+        cmd = ["sudo", "mv", f"/var/lib/lxc/{self.lxc_name}/rootfs" + source,
                os.path.dirname(file_abspath)]
         call(cmd)
 
-    def simple_path(self, filepath: str):
+    def simple_path(self, filepath: str) -> str:
         target = os.path.basename(filepath)
-        cmd = ["sudo", "mv", os.path.join(f"/{self.dirname}", filepath),f"/{self.dirname}/{target}"]
+        cmd = ["sudo", "mv", os.path.join(f"/{self.dirname}", filepath), f"/{self.dirname}/{target}"]
         if os.path.join(f"/{self.dirname}", filepath) != f"/{self.dirname}/{target}":
             self.simple_run(cmd)
         return target
@@ -80,37 +82,50 @@ class Environment:
     def safe_run(self, cmd: list[str]) -> tuple[str, str, int]:
         return call(self.prefix + self.safe + cmd)
 
-    def exist(self, filename: str):
+    def exist(self, filename: str) -> bool:
         return os.path.exists(self.fullfilepath(filename))
 
-    def writeable(self, *filenames: str):
+    def judge_writeable(self, *filenames: str) -> None:
         for filename in filenames:
             if not self.exist(filename):
                 tools.create(self.fullfilepath(filename))
             filepath = self.filepath(filename)
             call(self.prefix + ["chgrp", "judge", filepath])
-            call(self.prefix + ["chmod", "777", filepath])
+            call(self.prefix + ["chmod", "760", filepath])
 
-    def executable(self, *filenames: str):
+    def writeable(self, *filenames: str) -> None:
+        for filename in filenames:
+            if not self.exist(filename):
+                tools.create(self.fullfilepath(filename))
+            filepath = self.filepath(filename)
+            call(self.prefix + ["chmod", "766", filepath])
+
+    def judge_executable(self, *filenames: str) -> None:
+        for filename in filenames:
+            filepath = self.filepath(filename)
+            call(self.prefix + ["chgrp", "judge", filepath])
+            call(self.prefix + ["chmod", "750", filepath])
+
+    def executable(self, *filenames: str) -> None:
         for filename in filenames:
             filepath = self.filepath(filename)
             call(self.prefix + ["chmod", "755", filepath])
 
-    def readable(self, *filenames: str):
+    def readable(self, *filenames: str) -> None:
         for filename in filenames:
             filepath = self.filepath(filename)
             call(self.prefix + ["chmod", "744", filepath])
 
-    def safe_readable(self, *filenames: str):
+    def judge_readable(self, *filenames: str) -> None:
         for filename in filenames:
             filepath = self.filepath(filename)
             call(self.prefix + ["chgrp", "judge", filepath])
             call(self.prefix + ["chmod", "740", filepath])
 
-    def protected(self, *filenames: str):
+    def protected(self, *filenames: str) -> None:
         for filename in filenames:
             filepath = self.filepath(filename)
-            call(self.prefix + ["chmod", "750", filepath])
+            call(self.prefix + ["chmod", "700", filepath])
 
     def runwithshell(self, cmd: list[str], in_file: str, out_file: str, tl: float, ml: int, base_cmd: list[str]) \
             -> tuple[str, str, int]:
@@ -182,9 +197,8 @@ class Language:
         exec_cmd = self.get_execmd(filename)
         for stdin, stdout in tasks:
             tools.create(stdout)
-            outf = env.send_file(stdout)
-            env.writeable(outf)
-            out = env.runwithshell(exec_cmd, env.send_file(stdin), outf, 10, 1000, self.base_exec_cmd)
+            outf = env.send_file(stdout, env.writeable)
+            out = env.runwithshell(exec_cmd, env.send_file(stdin, env.readable), outf, 10, 1000, self.base_exec_cmd)
             if is_tle(out):
                 return "TLE: Testing is limited by 10 seconds"
             result = {o[0]: o[1] for o in (s.split("=") for s in out[0].split("\n")) if len(o) == 2}
@@ -213,8 +227,12 @@ class Language:
 
 langs: dict[str, Language] = {}
 
-for lang in os.listdir("langs"):
-    lang_name = os.path.splitext(lang)[0]
-    keys = tools.read_json(f"langs/{lang_name}.json")["branches"].keys()
-    for key in keys:
-        langs[key] = Language(lang_name, key)
+
+def init():
+    for name in os.listdir("judge"):
+        call(["sudo", "lxc-attach", "-n", constants.lxc_name, "--"] + ["chmod", "700", f"/judge/{name}"])
+    for lang in os.listdir("langs"):
+        lang_name = os.path.splitext(lang)[0]
+        keys = tools.read_json(f"langs/{lang_name}.json")["branches"].keys()
+        for key in keys:
+            langs[key] = Language(lang_name, key)

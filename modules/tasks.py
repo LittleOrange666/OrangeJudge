@@ -1,5 +1,6 @@
-import json
 import os
+import traceback
+import uuid
 from multiprocessing import Queue, Process
 
 from flask import abort
@@ -55,12 +56,10 @@ def run_problem(idx, dat):
         ml = int(problem_info["memorylimit"])
         int_exec = []
         if problem_info["is_interact"]:
-            int_file = env.send_file(problem_path + "/" + problem_info["interactor"][0])
+            int_file = env.send_file(problem_path + "/" + problem_info["interactor"][0], env.judge_executable)
             int_lang = executing.langs[problem_info["interactor"][1]]
             int_exec = int_lang.get_execmd(int_file)
-            env.executable(int_file)
-        checker = env.send_file(problem_path + problem_info["checker"][0])
-        env.executable(checker)
+        checker = env.send_file(problem_path + problem_info["checker"][0], env.judge_executable)
         checker_cmd = executing.langs[problem_info["checker"][1]].get_execmd(checker)
         exec_cmd = lang.get_execmd(filename)
         os.mkdir(f"submissions/{idx}/testcases")
@@ -94,13 +93,14 @@ def run_problem(idx, dat):
             tools.create_truncated(in_file, f"submissions/{idx}/testcases/{i}.in")
             tools.create_truncated(ans_file, f"submissions/{idx}/testcases/{i}.ans")
             env.send_file(in_file)
-            env.writeable(out_file)
             if problem_info["is_interact"]:
-                env.safe_readable(in_file)
+                env.judge_readable(in_file)
+                env.judge_writeable(out_file)
                 out = env.runwithinteractshell(exec_cmd, int_exec, env.filepath(in_file), env.filepath(out_file), tl,
                                                ml, lang.base_exec_cmd)
             else:
                 env.readable(in_file)
+                env.writeable(out_file)
                 out = env.runwithshell(exec_cmd, env.filepath(in_file), env.filepath(out_file), tl, ml,
                                        lang.base_exec_cmd)
             timeusage = 0
@@ -137,7 +137,7 @@ def run_problem(idx, dat):
                         has_output = True
                         full_checker_cmd = checker_cmd + [env.filepath(in_file), env.filepath(out_file),
                                                           env.send_file(ans_file)]
-                        env.readable(ans_file, in_file, out_file)
+                        env.judge_readable(ans_file, in_file, out_file)
                         checker_out = env.safe_run(full_checker_cmd)
                         env.protected(ans_file, in_file, out_file)
                         env.get_file(out_file)
@@ -193,8 +193,10 @@ def get_queue_position(idx: str):
 def runner():
     while True:
         idx = submissions_queue.get()
+        if not tools.exists(f"submissions/{idx}/info.json"):
+            continue
+        dat = tools.read_json(f"submissions/{idx}/info.json")
         try:
-            dat = tools.read_json(f"submissions/{idx}/info.json")
             last_judged.value = int(idx)
             match dat["type"]:
                 case "test":
@@ -202,7 +204,13 @@ def runner():
                 case "problem":
                     run_problem(idx, dat)
         except Exception as e:
-            print("An exception occurred:", e)
+            traceback.print_exception(e)
+            dat["JE"] = True
+            log_uuid = str(uuid.uuid4())
+            dat["log_uuid"] = log_uuid
+            tools.write("".join(traceback.format_exception(e)), "logs", log_uuid+".log")
+            tools.write_json(dat, f"submissions/{idx}/info.json")
+            tools.create(f"submissions/{idx}/completed")
 
 
 def init():

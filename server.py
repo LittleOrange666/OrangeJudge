@@ -142,6 +142,8 @@ def test():
         inp = request.form["input"]
         if not inp.endswith("\n"):
             inp += "\n"
+        if lang not in executing.langs:
+            abort(404)
         ext = executing.langs[lang].data["source_ext"]
         idx = tasks.create_submission()
         if tools.elapsed(current_user.folder, "submissions") < 5:
@@ -197,12 +199,12 @@ def submission(idx):
         case "test":
             if not current_user.has("admin") and dat["user"] != current_user.id:
                 abort(403)
-            inp = tools.read(path, dat["infile"])
+            inp = tools.read_default(path, dat["infile"])
             out = tools.read_default(path, dat["outfile"])
             result = tools.read_default(path, "results")
             ret = render_template("submission/test.html", lang=lang, source=source, inp=inp,
                                   out=out, completed=completed, result=result, pos=tasks.get_queue_position(idx),
-                                  ce_msg=ce_msg)
+                                  ce_msg=ce_msg, je=dat.get("JE", False), logid=dat.get("log_uuid", ""))
         case "problem":
             pid = dat["pid"]
             problem_path = f"problems/{pid}/"
@@ -211,7 +213,7 @@ def submission(idx):
             if not current_user.has("admin") and dat["user"] != current_user.id and current_user.id not in problem_info["users"]:
                 abort(403)
             result = {}
-            if completed:
+            if completed and not dat.get("JE", False):
                 result_data = tools.read_json(path, "results.json")
                 result["CE"] = result_data["CE"]
                 results = result_data["results"]
@@ -241,7 +243,7 @@ def submission(idx):
             ret = render_template("submission/problem.html", lang=lang, source=source, completed=completed,
                                   pname=problem_info["name"], result=result, enumerate=enumerate,
                                   group_results=group_results, pid=pid, pos=tasks.get_queue_position(idx),
-                                  ce_msg=ce_msg)
+                                  ce_msg=ce_msg, je=dat.get("JE", False), logid=dat.get("log_uuid", ""))
         case _:
             abort(404)
     return ret
@@ -440,6 +442,7 @@ def main():
         raise RuntimeError("The judge server must be run as root")
     os.system(f"sudo lxc-start {lxc_name}")
     os.system(f"sudo cp -r -f judge /var/lib/lxc/{lxc_name}/rootfs/")
+    executing.init()
     tasks.init()
     problemsetting.init()
     app.run("0.0.0.0", port=8080)

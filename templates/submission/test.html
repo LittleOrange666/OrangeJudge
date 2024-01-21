@@ -13,7 +13,7 @@
     <div>Input:</div>
     <pre>{{ inp }}</pre>
 </div>
-{% if completed %}
+{% if completed and not je %}
 {% if result["CE"] %}
 <div class="test-case">
     <div>Compilation Error</div>
@@ -32,11 +32,15 @@
 </div>
 {% endif %}
 {% else %}
+{% if je %}
+<div class="test-case">Judge Error, id = '{{ logid }}'</div>
+{% else %}
 {% if pos == 0 %}
 <div class="test-case">Judging</div>
 {% else %}
 <div class="test-case">In queue ({{ pos }})</div>
 {% endif %}
 <meta http-equiv="refresh" content="5">
+{% endif %}
 {% endif %}
 {% endblock %}

@@ -30,4 +30,4 @@
 + 資料用ajax拿
 + seccomp
 + 適當提供RE massage
-+ csrf token
++ judge error log (不完整)
