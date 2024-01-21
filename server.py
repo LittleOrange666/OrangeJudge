@@ -87,6 +87,8 @@ def signup():
         err = "ID已被使用"
     elif len(password) < 6:
         err = "密碼應至少6個字元"
+    elif tools.exists(f"verify/used_email", secure_filename(email)):
+        err = "此email已被使用"
     if err:
         q = {"msg": err}
         q.update(url.query)
@@ -109,8 +111,6 @@ def get_code():
     if constants.email_reg.match(email) is None:
         abort(400)
     sec_email = secure_filename(email)
-    if os.path.exists(f"verify/used_email/{sec_email}"):
-        abort(400)
     if os.path.exists(f"verify/email/{sec_email}") and os.path.getmtime(f"verify/email/{sec_email}") > time.time() - 60:
         abort(400)
     idx = "".join(str(random.randint(0, 9)) for _ in range(6))

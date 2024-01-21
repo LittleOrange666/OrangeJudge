@@ -1,5 +1,4 @@
 import hashlib
-import json
 import os.path
 import smtplib
 
@@ -66,6 +65,8 @@ def try_login(user_id, password) -> None | User:
     user_id = secure_filename(user_id)
     if password is None:
         return None
+    if tools.exists(f"verify/used_email", user_id):
+        user_id = tools.read(f"verify/used_email", user_id)
     file = f"accounts/{user_id.lower()}/info.json"
     if not os.path.isfile(file):
         return None
