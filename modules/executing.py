@@ -18,16 +18,12 @@ def is_tle(result: tuple[str, str, int]) -> bool:
     return result == ("TLE", "TLE", 777777)
 
 
-def create_name() -> str:
-    return str(uuid.uuid4())
-
-
 class Environment:
     __slots__ = ("lxc_name", "dirname", "prefix", "safe", "judge")
 
     def __init__(self, lxc_name: str = constants.lxc_name):
         self.lxc_name: str = lxc_name
-        self.dirname: str = create_name()
+        self.dirname: str = tools.random_string()
         mkdir = ["sudo", "lxc-attach", "-n", self.lxc_name, "--", "mkdir", "/" + self.dirname]
         call(mkdir)
         self.prefix: list[str] = ["sudo", "lxc-attach", "-n", self.lxc_name, "--"]
@@ -145,7 +141,7 @@ class Environment:
         try:
             main = ["sudo", os.path.abspath("/judge/interact_shell"), str(math.ceil(tl)), str(ml * 1024 * 1024),
                     str(100 * 1024 * 1024), repr(" ".join(base_cmd)),
-                    repr(" ".join(cmd)), repr(" ".join(interact_cmd)), in_file, out_file, self.filepath(create_name())]
+                    repr(" ".join(cmd)), repr(" ".join(interact_cmd)), in_file, out_file, self.filepath(tools.random_string())]
             return call(self.prefix + main, timeout=tl + 1)
         except subprocess.TimeoutExpired:
             return "TLE", "TLE", 777777

@@ -57,3 +57,10 @@ polygon_statment: dict[str, str] = {"statement_main": "statement-sections/englis
                                     "statement_output": "statement-sections/english/output.tex",
                                     "statement_interaction": "statement-sections/english/interaction.tex",
                                     "statement_scoring": "statement-sections/english/scoring.tex"}
+
+latex_begin = """\\documentclass[]{article}
+\\usepackage{hyperref}
+\\usepackage{graphicx}
+\\begin{document}
+"""
+latex_end = "\n\\end{document}"

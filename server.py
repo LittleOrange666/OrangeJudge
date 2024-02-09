@@ -83,10 +83,10 @@ def signup():
         err = "ID不合法"
     elif login.exist(user_id):
         err = "ID已被使用"
+    elif tools.exists(f"verify/used_email", secure_filename(email)):
+        err = "email已被使用"
     elif len(password) < 6:
         err = "密碼應至少6個字元"
-    elif tools.exists(f"verify/used_email", secure_filename(email)):
-        err = "此email已被使用"
     if err:
         q = {"msg": err}
         q.update(url.query)

@@ -1,6 +1,7 @@
 import json
 import os
 import time
+import uuid
 from datetime import datetime
 from functools import partial
 from typing import Callable
@@ -193,3 +194,16 @@ class File:
         with open(self.name, "a") as f:
             f.write(content)
             return content
+
+
+class TempFile(File):
+    def __init__(self, end=""):
+        super().__init__("tmp", random_string() + end)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        super().__exit__(exc_type, exc_val, exc_tb)
+        os.remove(self.name)
+
+
+def random_string() -> str:
+    return uuid.uuid4().hex

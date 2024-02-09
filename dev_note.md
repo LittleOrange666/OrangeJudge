@@ -23,7 +23,6 @@
 + better editer(自動縮排&空格縮排)
 + 出題小組 (虛擬使用者?)
 + admin UI
-+ two steps
 + code checker
 + import from Codeforces Polygon (部分完成, 可用但後續修改困難) (附加檔案未匯入)
 + Group Dependency

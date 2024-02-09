@@ -60,7 +60,9 @@ def send_email(target: str, content: str) -> None:
         smtp.sendmail(email_sender, target, content)
 
 
-def try_hash(content: str) -> str:
+def try_hash(content: str | None) -> str:
+    if content is None:
+        return ""
     m = hashlib.sha256()
     m.update(content.encode("utf-8"))
     return m.hexdigest()
@@ -86,10 +88,11 @@ def exist(user_id: str) -> bool:
     return os.path.isfile(f"accounts/{user_id.lower()}/info.json")
 
 
-def create_account(email: str, user_id: str, password: str) -> None:
+def create_account(email: str, user_id: str, password: str | None, is_team: bool = False) -> None:
     folder = f"accounts/{user_id.lower()}"
     os.makedirs(folder, exist_ok=True)
-    dat = {"name": user_id, "DisplayName": user_id, "email": email, "password": try_hash(password)}
+    dat = {"name": user_id, "DisplayName": user_id, "email": email, "password": try_hash(password),
+           "team": is_team}
     if tools.exists(folder, "info.json"):
         return
     if tools.exists(f"verify/used_email", secure_filename(email)):

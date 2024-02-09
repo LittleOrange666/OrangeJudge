@@ -295,10 +295,87 @@ def creating_version(pid: str, description: str):
     if os.path.exists("problems/" + pid):
         log("remove old version")
         shutil.rmtree("problems/" + pid)
-    problem.save()
+    problem.save()  # 勿刪，此用於保證複製過去的文件完整
     log("copy overall folder")
     shutil.copytree(path, "problems/" + pid, dirs_exist_ok=True)
     log("complete")
+
+
+@background_actions.bind
+def do_import_polygon(pid: str, filename: str):
+    zip_file = AESZipFile(filename, "r")
+    filelist: list[AESZipInfo] = zip_file.filelist
+    files: dict[str, AESZipInfo] = {o.filename: o for o in filelist if not o.is_dir()}
+    if "problem.xml" not in files:
+        abort(400)
+    root: Element = ElementTree.fromstring(zip_file.read(files["problem.xml"]).decode())
+    path = f"preparing_problems/{pid}"
+    dat = problem
+    dat["name"] = root.find("names").find("name").get("value")
+    testset = root.find("judging").find("testset")
+    tl = testset.find("time-limit").text
+    dat["timelimit"] = str(max(250, min(10000, int(tl))))
+    ml = testset.find("memory-limit").text
+    dat["memorylimit"] = str(max(4, min(1024, int(ml) // 1048576)))
+    groups = {"default": {"score": 0}}
+    if testset.find("groups"):
+        for gp in testset.find("groups").iter("group"):
+            name = gp.get("name")
+            score = float(gp.get("points"))
+            dependency = [e.get("group") for e in gp.iter("dependency")]
+            groups[name] = {"score": score, "dependency": dependency}
+    dat["groups"] = groups
+    manual_tests = iter([files[k] for k in files if k.startswith("tests/")])
+    gen_cmds = []
+    if testset.find("tests"):
+        for test in testset.find("tests").iter("test"):
+            group = test.get("group", "default")
+            if test.get("method") == "manual":
+                f = next(manual_tests)
+                fn = os.path.basename(f.filename)
+                tools.write_binary(zip_file.read(f), path, "testcases", fn)
+                dat["testcases"].append({"in": fn, "out": fn + ".out", "group": group, "uncomplete": True})
+            else:
+                gen_cmds.append([test.get("cmd"), group])
+    print(gen_cmds)
+    assets = root.find("assets")
+    checker = assets.find("checker").find("source")
+    fn = "checker_" + os.path.basename(checker.get("path"))
+    tools.write_binary(zip_file.read(files[checker.get("path")]), path, "file", fn)
+    dat["checker_source"] = ["my", fn]
+    dat["files"].append({"name": fn, "type": constants.polygon_type.get(checker.get("type"), "C++17")})
+    interactor = assets.find("interactor")
+    if interactor:
+        source = interactor.find("source")
+        fn = "interactor_" + os.path.basename(source.get("path"))
+        tools.write_binary(zip_file.read(files[source.get("path")]), path, "file", fn)
+        dat["interactor_source"] = fn
+        dat["files"].append({"name": fn, "type": constants.polygon_type.get(source.get("type"), "C++17")})
+        dat["is_interact"] = True
+    main_sol = None
+    for solution in assets.find("solutions").iter("solution"):
+        source = solution.find("source")
+        fn = "solution_" + os.path.basename(source.get("path"))
+        tools.write_binary(zip_file.read(files[source.get("path")]), path, "file", fn)
+        dat["files"].append({"name": fn, "type": constants.polygon_type.get(source.get("type"), "C++17")})
+        if solution.get("tag") == "main":
+            main_sol = fn
+        print(source.get("path"), solution.get("tag"))
+    if main_sol:
+        dat["ex_gen_msg"] = {"solution": main_sol, "cmds": gen_cmds}
+    for executable in root.iter("executable"):
+        source = executable.find("source")
+        fn = os.path.basename(source.get("path"))
+        tools.write_binary(zip_file.read(files[source.get("path")]), path, "file", fn)
+        dat["files"].append({"name": fn, "type": constants.polygon_type.get(source.get("type"), "C++17")})
+    fake_form = {k: "" for k in constants.polygon_statment}
+    fake_form["samples"] = "[]"
+    for k, v in constants.polygon_statment.items():
+        if v in files:
+            fake_form[k] = zip_file.read(files[v]).decode()
+    fake_form["statement_type"] = "latex"
+    save_statement(fake_form, pid, path, dat)
+    os.remove(filename)
 
 
 def runner():
@@ -380,16 +457,21 @@ def create_version(form: ImmutableMultiDict[str, str], pid: str, path: str, dat:
 @actions.bind
 def save_statement(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
     dat["manual_samples"] = tools.form_json(form["samples"])
-    dat["statement"]["main"] = form["statement_main"]
-    dat["statement"]["input"] = form["statement_input"]
-    dat["statement"]["output"] = form["statement_output"]
-    dat["statement"]["interaction"] = form["statement_interaction"]
-    dat["statement"]["scoring"] = form["statement_scoring"]
-    full = "# 題目敘述\n" + form["statement_main"] + "\n## 輸入說明\n" + form[
-        "statement_input"] + "\n## 輸出說明\n" + form["statement_output"]
-    if form["statement_interaction"]:
+    obj = dat["statement"]
+    obj["main"] = form["statement_main"]
+    obj["input"] = form["statement_input"]
+    obj["output"] = form["statement_output"]
+    obj["interaction"] = form["statement_interaction"]
+    obj["scoring"] = form["statement_scoring"]
+    obj["type"] = form.get("statement_type", "md")
+    if obj["type"] == "latex":
+        obj["main"], obj["input"], obj["output"], obj["interaction"], obj["scoring"] = \
+            createhtml.run_latex(pid, [obj["main"], obj["input"], obj["output"], obj["interaction"], obj["scoring"]])
+    full = "# 題目敘述\n" + obj["main"] + "\n## 輸入說明\n" + obj["input"] + "\n## 輸出說明\n" \
+           + obj["output"]
+    if obj["interaction"]:
         full += "\n## 互動說明\n" + form["statement_interaction"]
-    if form["statement_scoring"]:
+    if obj["scoring"]:
         full += "\n## 配分\n" + form["statement_scoring"]
     tools.write(full, f"preparing_problems/{pid}/statement.md")
     createhtml.parse.dirname = pid
@@ -402,7 +484,7 @@ def upload_zip(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dic
     input_ext = form["input_ext"]
     output_ext = form["output_ext"]
     file = request.files["zip_file"]
-    filename = f"tmp/{str(uuid.uuid4())}.zip"
+    filename = f"tmp/{tools.random_string()}.zip"
     file.save(filename)
     zip_file = AESZipFile(filename, "r")
     files: list[AESZipInfo] = zip_file.filelist
@@ -680,78 +762,9 @@ def public_problem(form: ImmutableMultiDict[str, str], pid: str, path: str, dat:
 @actions.bind
 def import_polygon(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
     file = request.files["zip_file"]
-    filename = f"tmp/{str(uuid.uuid4())}.zip"
+    filename = f"tmp/{tools.random_string()}.zip"
     file.save(filename)
-    zip_file = AESZipFile(filename, "r")
-    filelist: list[AESZipInfo] = zip_file.filelist
-    files: dict[str, AESZipInfo] = {o.filename: o for o in filelist if not o.is_dir()}
-    if "problem.xml" not in files:
-        abort(400)
-    root: Element = ElementTree.fromstring(zip_file.read(files["problem.xml"]).decode())
-    dat["name"] = root.find("names").find("name").get("value")
-    testset = root.find("judging").find("testset")
-    tl = testset.find("time-limit").text
-    dat["timelimit"] = str(max(250, min(10000, int(tl))))
-    ml = testset.find("memory-limit").text
-    dat["memorylimit"] = str(max(4, min(1024, int(ml) // 1048576)))
-    groups = {"default": {"score": 0}}
-    if testset.find("groups"):
-        for gp in testset.find("groups").iter("group"):
-            name = gp.get("name")
-            score = float(gp.get("points"))
-            dependency = [e.get("group") for e in gp.iter("dependency")]
-            groups[name] = {"score": score, "dependency": dependency}
-    dat["groups"] = groups
-    manual_tests = iter([files[k] for k in files if k.startswith("tests/")])
-    gen_cmds = []
-    if testset.find("tests"):
-        for test in testset.find("tests").iter("test"):
-            group = test.get("group", "default")
-            if test.get("method") == "manual":
-                f = next(manual_tests)
-                fn = os.path.basename(f.filename)
-                tools.write_binary(zip_file.read(f), path, "testcases", fn)
-                dat["testcases"].append({"in": fn, "out": fn + ".out", "group": group, "uncomplete": True})
-            else:
-                gen_cmds.append([test.get("cmd"), group])
-    print(gen_cmds)
-    assets = root.find("assets")
-    checker = assets.find("checker").find("source")
-    fn = "checker_" + os.path.basename(checker.get("path"))
-    tools.write_binary(zip_file.read(files[checker.get("path")]), path, "file", fn)
-    dat["checker_source"] = ["my", fn]
-    dat["files"].append({"name": fn, "type": constants.polygon_type.get(checker.get("type"), "C++17")})
-    interactor = assets.find("interactor")
-    if interactor:
-        source = interactor.find("source")
-        fn = "interactor_" + os.path.basename(source.get("path"))
-        tools.write_binary(zip_file.read(files[source.get("path")]), path, "file", fn)
-        dat["interactor_source"] = fn
-        dat["files"].append({"name": fn, "type": constants.polygon_type.get(source.get("type"), "C++17")})
-        dat["is_interact"] = True
-    main_sol = None
-    for solution in assets.find("solutions").iter("solution"):
-        source = solution.find("source")
-        fn = "solution_" + os.path.basename(source.get("path"))
-        tools.write_binary(zip_file.read(files[source.get("path")]), path, "file", fn)
-        dat["files"].append({"name": fn, "type": constants.polygon_type.get(source.get("type"), "C++17")})
-        if solution.get("tag") == "main":
-            main_sol = fn
-        print(source.get("path"), solution.get("tag"))
-    if main_sol:
-        dat["ex_gen_msg"] = {"solution": main_sol, "cmds": gen_cmds}
-    for executable in root.iter("executable"):
-        source = executable.find("source")
-        fn = os.path.basename(source.get("path"))
-        tools.write_binary(zip_file.read(files[source.get("path")]), path, "file", fn)
-        dat["files"].append({"name": fn, "type": constants.polygon_type.get(source.get("type"), "C++17")})
-    fake_form = {k: "" for k in constants.polygon_statment}
-    fake_form["samples"] = "[]"
-    for k, v in constants.polygon_statment.items():
-        if v in files:
-            fake_form[k] = LaTeX2Markdown(zip_file.read(files[v]).decode()).to_markdown()
-    save_statement(fake_form, pid, path, dat)
-    os.remove(filename)
+    add_background_action({"action": "do_import_polygon", "pid": pid, "filename": filename})
     return "general_info"
 
 
@@ -778,7 +791,7 @@ def preview(args: MultiDict[str, str]) -> Response:
                 abort(404)
             if not tools.exists(path + "/statement.html"):
                 abort(404)
-            dat = tools.read_json()
+            dat = tools.read_json(path + "/info.json")
             statement = tools.read(path + "/statement.html")
             lang_exts = json.dumps({k: v.data["source_ext"] for k, v in executing.langs.items()})
             samples = [[tools.read(path, k, o["in"]), tools.read(path, k, o["out"])]

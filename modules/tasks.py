@@ -203,7 +203,7 @@ def runner():
         except Exception as e:
             traceback.print_exception(e)
             dat["JE"] = True
-            log_uuid = str(uuid.uuid4())
+            log_uuid = tools.random_string()
             dat["log_uuid"] = log_uuid
             tools.write("".join(traceback.format_exception(e)), "logs", log_uuid + ".log")
             tools.write_json(dat, f"submissions/{idx}/info.json")
