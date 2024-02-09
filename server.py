@@ -112,7 +112,7 @@ def get_code():
         abort(400)
     sec_email = secure_filename(email)
     if os.path.exists(f"verify/email/{sec_email}") and os.path.getmtime(f"verify/email/{sec_email}") > time.time() - 60:
-        abort(400)
+        abort(409)
     idx = "".join(str(random.randint(0, 9)) for _ in range(6))
     tools.write(idx, "verify", "email", sec_email)
     send_email(email, constants.email_content.format(idx))

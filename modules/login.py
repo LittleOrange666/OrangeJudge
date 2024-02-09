@@ -24,6 +24,9 @@ class User(UserMixin):
     def has(self, key: str) -> bool:
         return key in self.data and bool(self.data[key])
 
+    def in_team(self, key: str) -> bool:
+        return self.id == key or "teams" in self.data and key in self.data["teams"]
+
 
 def init_login(app):
     global login_manager, email_sender
@@ -88,6 +91,8 @@ def create_account(email, user_id, password):
     os.makedirs(folder, exist_ok=True)
     dat = {"name": user_id, "DisplayName": user_id, "email": email, "password": try_hash(password)}
     if tools.exists(folder, "info.json"):
+        return
+    if tools.exists(f"verify/used_email", secure_filename(email)):
         return
     tools.write_json(dat, folder, "info.json")
     tools.create(folder, "problems")
