@@ -13,9 +13,7 @@ from pygments.formatters import HtmlFormatter
 from werkzeug.utils import secure_filename
 from yarl import URL
 
-from modules import executing, tasks, tools, problemsetting, constants
-from modules.constants import result_class, lxc_name
-from modules.login import try_login, init_login, send_email, exist, create_account
+from modules import executing, tasks, tools, problemsetting, constants, login
 
 prepares = {k: lexers.get_lexer_by_name(k) for lexer in lexers.get_all_lexers() for k in lexer[1]}
 app = Flask(__name__, static_url_path='/static', static_folder="static/", template_folder="templates/")
@@ -26,7 +24,7 @@ app.config["SESSION_COOKIE_NAME"] = "OrangeJudgeSession"
 app.config["PERMANENT_SESSION_LIFETIME"] = 3000000
 Session(app)
 CSRFProtect(app)
-init_login(app)
+login.init(app)
 
 
 @app.before_request
@@ -50,14 +48,14 @@ def index():
 
 
 @app.route('/login', methods=['GET', 'POST'])
-def login():
+def do_login():
     if request.method == 'GET':
         if current_user.is_authenticated:
             return redirect('/')
         return render_template("login.html")
     nxt = request.form.get('next')
     name = request.form['user_id']
-    user = try_login(name, request.form['password'])
+    user = login.try_login(name, request.form['password'])
     if user is not None:
         login_user(user)
         return redirect(nxt or '/')
@@ -83,7 +81,7 @@ def signup():
         err = "驗證碼錯誤"
     elif constants.user_id_reg.match(user_id) is None:
         err = "ID不合法"
-    elif exist(user_id):
+    elif login.exist(user_id):
         err = "ID已被使用"
     elif len(password) < 6:
         err = "密碼應至少6個字元"
@@ -93,8 +91,8 @@ def signup():
         q = {"msg": err}
         q.update(url.query)
         return redirect(str(url.with_query(q)))
-    create_account(email, user_id, password)
-    user = try_login(user_id, password)
+    login.create_account(email, user_id, password)
+    user = login.try_login(user_id, password)
     if user is None:
         err = "註冊失敗"
         q = {"msg": err}
@@ -115,7 +113,7 @@ def get_code():
         abort(409)
     idx = "".join(str(random.randint(0, 9)) for _ in range(6))
     tools.write(idx, "verify", "email", sec_email)
-    send_email(email, constants.email_content.format(idx))
+    login.send_email(email, constants.email_content.format(idx))
     return Response(status=200)
 
 
@@ -195,6 +193,7 @@ def submission(idx):
     source = highlight(source, prepares[executing.langs[lang].name], HtmlFormatter())
     completed = os.path.exists(path + "/completed")
     ce_msg = tools.read_default(path, "ce_msg.txt")
+    ret = ""
     match dat["type"]:
         case "test":
             if not current_user.has("admin") and dat["user"] != current_user.id:
@@ -202,9 +201,10 @@ def submission(idx):
             inp = tools.read_default(path, dat["infile"])
             out = tools.read_default(path, dat["outfile"])
             result = tools.read_default(path, "results")
+            err = tools.read_default(path, "stderr.txt")
             ret = render_template("submission/test.html", lang=lang, source=source, inp=inp,
                                   out=out, completed=completed, result=result, pos=tasks.get_queue_position(idx),
-                                  ce_msg=ce_msg, je=dat.get("JE", False), logid=dat.get("log_uuid", ""))
+                                  ce_msg=ce_msg, je=dat.get("JE", False), logid=dat.get("log_uuid", ""), err=err)
         case "problem":
             pid = dat["pid"]
             problem_path = f"problems/{pid}/"
@@ -237,7 +237,7 @@ def submission(idx):
                     if len(gpr) > 0 and type(next(iter(gpr.values()))) == dict:
                         group_results = gpr
                         for o in group_results.values():
-                            o["class"] = result_class.get(o["result"], "")
+                            o["class"] = constants.result_class.get(o["result"], "")
                 if "total_score" in result_data:
                     result["total_score"] = result_data["total_score"]
             ret = render_template("submission/problem.html", lang=lang, source=source, completed=completed,
@@ -440,8 +440,8 @@ def main():
         raise RuntimeError("The judge server only supports Linux")
     if not executing.call(["whoami"])[0].startswith("root\n"):
         raise RuntimeError("The judge server must be run as root")
-    os.system(f"sudo lxc-start {lxc_name}")
-    os.system(f"sudo cp -r -f judge /var/lib/lxc/{lxc_name}/rootfs/")
+    os.system(f"sudo lxc-start {constants.lxc_name}")
+    os.system(f"sudo cp -r -f judge /var/lib/lxc/{constants.lxc_name}/rootfs/")
     executing.init()
     tasks.init()
     problemsetting.init()

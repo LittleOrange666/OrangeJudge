@@ -5,7 +5,6 @@ import uuid
 from typing import Callable
 
 from modules import constants, tools
-from modules.constants import exit_codes
 
 
 def call(cmd: list[str], stdin: str = "", timeout: float | None = None) -> tuple[str, str, int]:
@@ -15,11 +14,11 @@ def call(cmd: list[str], stdin: str = "", timeout: float | None = None) -> tuple
     return ret[0].decode("utf8"), ret[1].decode("utf8"), process.returncode
 
 
-def is_tle(result):
+def is_tle(result: tuple[str, str, int]) -> bool:
     return result == ("TLE", "TLE", 777777)
 
 
-def create_name():
+def create_name() -> str:
     return str(uuid.uuid4())
 
 
@@ -81,6 +80,9 @@ class Environment:
 
     def safe_run(self, cmd: list[str]) -> tuple[str, str, int]:
         return call(self.prefix + self.safe + cmd)
+
+    def judge_run(self, cmd: list[str]) -> tuple[str, str, int]:
+        return call(self.prefix + self.judge + cmd)
 
     def exist(self, filename: str) -> bool:
         return os.path.exists(self.fullfilepath(filename))
@@ -197,21 +199,21 @@ class Language:
         exec_cmd = self.get_execmd(filename)
         for stdin, stdout in tasks:
             tools.create(stdout)
-            outf = env.send_file(stdout, env.writeable)
-            out = env.runwithshell(exec_cmd, env.send_file(stdin, env.readable), outf, 10, 1000, self.base_exec_cmd)
+            outf = env.send_file(stdout)
+            out = env.runwithshell(exec_cmd, env.send_file(stdin), outf, 10, 1000, self.base_exec_cmd)
             if is_tle(out):
                 return "TLE: Testing is limited by 10 seconds"
             result = {o[0]: o[1] for o in (s.split("=") for s in out[0].split("\n")) if len(o) == 2}
-            print(result)
-            print(out[1])
+            print(out)
+            tools.write(out[1], os.path.dirname(file), "stderr.txt")
             if "1" == result.get("WIFSIGNALED", None):
                 return "RE: " + "您的程式無法正常執行"
             exit_code = result.get("WEXITSTATUS", "0")
             if "153" == exit_code:
                 return "OLE"
             if "0" != exit_code:
-                if exit_code in exit_codes:
-                    return "RE: " + exit_codes[exit_code]
+                if exit_code in constants.exit_codes:
+                    return "RE: " + constants.exit_codes[exit_code]
                 else:
                     return "RE: code=" + exit_code
             timeusage = 0
@@ -236,3 +238,4 @@ def init():
         keys = tools.read_json(f"langs/{lang_name}.json")["branches"].keys()
         for key in keys:
             langs[key] = Language(lang_name, key)
+        call(["sudo", "lxc-attach", "-n", constants.lxc_name, "--"] + ["chmod", "755", f"/judge/__pycache__"])

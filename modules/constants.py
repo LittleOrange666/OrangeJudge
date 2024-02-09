@@ -1,6 +1,7 @@
 import re
+from re import Pattern
 
-result_class = {
+result_class: dict[str, str] = {
     "OK": "table-success",
     "WA": "table-danger",
     "MLE": "table-warning",
@@ -9,7 +10,7 @@ result_class = {
     "RE": "table-secondary"
 }
 
-exit_codes = {
+exit_codes: dict[str, str] = {
     "1": "您的程式被監控系統中斷，可能是程式無法正常結束所導致",
     "127": "無法分配記憶體",
     "132": "執行了非法的指令",
@@ -21,7 +22,7 @@ exit_codes = {
     "143": "產生程式中斷訊號！"
 }
 
-judge_exit_codes = {
+judge_exit_codes: dict[int, str] = {
     0: "OK",
     1: "WA",
     2: "PE",
@@ -30,29 +31,29 @@ judge_exit_codes = {
     7: "POINTS"
 }
 
-lxc_name = "lxc-test"
+lxc_name: str = "lxc-test"
 
-default_problem_info = {"name": "unknow", "timelimit": "1000", "memorylimit": "256", "testcases": [], "users": [],
-                        "statement": {"main": "", "input": "", "output": "", "scoring": "", "interaction": ""}, "files": [],
-                        "checker_source": ["default", "unknow"], "is_interact": False, "public": False,
-                        "groups": {"default": {"score": 100, "rule": "min"}}, "interactor_source": "unknow",
-                        "manual_samples": []}
+default_problem_info: dict = {"name": "unknow", "timelimit": "1000", "memorylimit": "256", "testcases": [], "users": [],
+                              "statement": {"main": "", "input": "", "output": "", "scoring": "", "interaction": ""},
+                              "files": [], "checker_source": ["default", "unknow"], "is_interact": False,
+                              "public": False, "groups": {"default": {"score": 100, "rule": "min"}},
+                              "interactor_source": "unknow", "manual_samples": []}
 
-email_reg = re.compile("^[\\w\\-\\.]+@([\\w\\-]+\\.)+[\\w-]{2,4}$")
+email_reg: Pattern = re.compile("^[\\w\\-\\.]+@([\\w\\-]+\\.)+[\\w-]{2,4}$")
 
-user_id_reg = re.compile("^[A-Za-z0-9_]+$")
+user_id_reg: Pattern = re.compile("^[A-Za-z0-9_]+$")
 
-email_content = """Subject: OrangeJudge verification code ({0})
+email_content: str = """Subject: OrangeJudge verification code ({0})
 
 Your verification code is: {0}
 This verification code is valid within 10 minutes"""
 
-page_size = 12
+page_size: int = 12
 
-polygon_type = {"cpp.msys2-mingw64-9-g++17": "C++17", "cpp.g++17": "C++17", "python.3": "Python3"}
+polygon_type: dict[str, str] = {"cpp.msys2-mingw64-9-g++17": "C++17", "cpp.g++17": "C++17", "python.3": "Python3"}
 
-polygon_statment = {"statement_main": "statement-sections/english/legend.tex",
-                    "statement_input": "statement-sections/english/input.tex",
-                    "statement_output": "statement-sections/english/output.tex",
-                    "statement_interaction": "statement-sections/english/interaction.tex",
-                    "statement_scoring": "statement-sections/english/scoring.tex"}
+polygon_statment: dict[str, str] = {"statement_main": "statement-sections/english/legend.tex",
+                                    "statement_input": "statement-sections/english/input.tex",
+                                    "statement_output": "statement-sections/english/output.tex",
+                                    "statement_interaction": "statement-sections/english/interaction.tex",
+                                    "statement_scoring": "statement-sections/english/scoring.tex"}

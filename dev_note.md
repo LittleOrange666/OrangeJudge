@@ -5,7 +5,7 @@
 + (出題)許多修改不應重新整理
 + python 版本不固定
 + 登入狀態丟失?
-+ test應輸出stderr
++ create version 未檢查checker是否能正確check測資
 
 ## 潛在威脅
 + judge 拿著root執行system call (重要)

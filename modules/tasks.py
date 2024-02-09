@@ -5,12 +5,11 @@ from multiprocessing import Queue, Process
 
 from flask import abort
 
-from modules import executing, constants, tools
-from modules.locks import AtomicValue
+from modules import executing, constants, tools, locks
 
 submissions_queue = Queue()
 
-last_judged = AtomicValue(int(tools.read("data/submission_count")))
+last_judged = locks.AtomicValue(int(tools.read("data/submission_count")))
 
 
 def create_submission() -> str:
@@ -22,7 +21,7 @@ def create_submission() -> str:
     return count
 
 
-def run_test(idx, dat):
+def run_test(idx: str, dat: dict) -> None:
     lang = executing.langs[dat["lang"]]
     env = executing.Environment()
     source = f"submissions/{idx}/" + dat["source"]
@@ -33,7 +32,7 @@ def run_test(idx, dat):
     tools.create(f"submissions/{idx}/completed")
 
 
-def run_problem(idx, dat):
+def run_problem(idx: str, dat: dict) -> None:
     lang = executing.langs[dat["lang"]]
     env = executing.Environment()
     source = f"submissions/{idx}/" + dat["source"]
@@ -86,7 +85,7 @@ def run_problem(idx, dat):
                 results.append({"time": 0, "mem": 0, "result": "SKIP", "info": "Skipped",
                                 "has_output": False})
                 continue
-            tt = "testcases_gen/" if testcase.get("gen",False) else "testcases/"
+            tt = "testcases_gen/" if testcase.get("gen", False) else "testcases/"
             in_file = os.path.abspath(problem_path + tt + testcase["in"])
             ans_file = os.path.abspath(problem_path + tt + testcase["out"])
             out_file = os.path.abspath(f"submissions/{idx}/testcases/{i}.out")
@@ -99,8 +98,6 @@ def run_problem(idx, dat):
                 out = env.runwithinteractshell(exec_cmd, int_exec, env.filepath(in_file), env.filepath(out_file), tl,
                                                ml, lang.base_exec_cmd)
             else:
-                env.readable(in_file)
-                env.writeable(out_file)
                 out = env.runwithshell(exec_cmd, env.filepath(in_file), env.filepath(out_file), tl, ml,
                                        lang.base_exec_cmd)
             timeusage = 0
@@ -138,7 +135,7 @@ def run_problem(idx, dat):
                         full_checker_cmd = checker_cmd + [env.filepath(in_file), env.filepath(out_file),
                                                           env.send_file(ans_file)]
                         env.judge_readable(ans_file, in_file, out_file)
-                        checker_out = env.safe_run(full_checker_cmd)
+                        checker_out = env.judge_run(full_checker_cmd)
                         env.protected(ans_file, in_file, out_file)
                         env.get_file(out_file)
                         tools.create_truncated(out_file, out_file)
@@ -168,12 +165,12 @@ def run_problem(idx, dat):
                 groups[gp]["gainscore"] = min(groups[gp]["gainscore"], score)
             else:
                 groups[gp]["gainscore"] += score
-            groups[gp]["cnt"] = groups[gp].get("cnt", 0)+1
+            groups[gp]["cnt"] = groups[gp].get("cnt", 0) + 1
         for o in groups.values():
             if o.get("cnt", 0):
                 if o.get("rule", "min") == "avg":
                     o["gainscore"] /= o.get("cnt", 0)
-                total_score += o["gainscore"]*o.get("score", 100)/top_score
+                total_score += o["gainscore"] * o.get("score", 100) / top_score
     out_info["results"] = results
     keys = ("result", "time", "mem", "gainscore")
     out_info["group_results"] = {k: {key: v[key] for key in keys} for k, v in groups.items() if k in exist_gp}
@@ -184,7 +181,7 @@ def run_problem(idx, dat):
     tools.create(f"submissions/{idx}/completed")
 
 
-def get_queue_position(idx: str):
+def get_queue_position(idx: str) -> int:
     if not idx.isdigit():
         abort(400)
     return max(int(idx) - last_judged.value, 0)
@@ -192,10 +189,10 @@ def get_queue_position(idx: str):
 
 def runner():
     while True:
-        idx = submissions_queue.get()
+        idx: str = submissions_queue.get()
         if not tools.exists(f"submissions/{idx}/info.json"):
             continue
-        dat = tools.read_json(f"submissions/{idx}/info.json")
+        dat: dict = tools.read_json(f"submissions/{idx}/info.json")
         try:
             last_judged.value = int(idx)
             match dat["type"]:
@@ -208,7 +205,7 @@ def runner():
             dat["JE"] = True
             log_uuid = str(uuid.uuid4())
             dat["log_uuid"] = log_uuid
-            tools.write("".join(traceback.format_exception(e)), "logs", log_uuid+".log")
+            tools.write("".join(traceback.format_exception(e)), "logs", log_uuid + ".log")
             tools.write_json(dat, f"submissions/{idx}/info.json")
             tools.create(f"submissions/{idx}/completed")
 

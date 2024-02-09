@@ -14,12 +14,9 @@ from pyzipper.zipfile_aes import AESZipInfo
 from werkzeug.datastructures import ImmutableMultiDict, MultiDict
 from werkzeug.utils import secure_filename
 
-from modules import executing, tools, constants
-from modules.createhtml import run_markdown, parse
+from modules import executing, tools, constants, createhtml, login
 from multiprocessing import Queue, Process
 from pyzipper import AESZipFile
-
-from modules.tools import J
 
 worker_queue = Queue()
 
@@ -97,7 +94,7 @@ class Problem(tools.Json):
         return do_compile(path, name, lang, env)
 
     def compile_dat(self, filedat: tuple[str, str], name: str, env: executing.Environment) -> str:
-        path = (f"testlib/{name}s" if filedat[0] == "default" else f"{self.path}/file") | J | filedat[1]
+        path = os.path.join(f"testlib/{name}s" if filedat[0] == "default" else f"{self.path}/file", filedat[1])
         lang = executing.langs["C++17"] if filedat[0] == "default" else self.lang(filedat[1])
         return just_compile(path, name, lang, env)
 
@@ -105,13 +102,13 @@ class Problem(tools.Json):
 problem: Problem | None = None
 
 
-def init():
+def init() -> None:
     global root_folder
     root_folder = os.path.abspath(os.getcwd())
     Process(target=runner).start()
 
 
-def system(s, cwd: str):
+def system(s: str, cwd: str) -> None:
     cwd = os.path.abspath(cwd)
     print(f"system command in {cwd!r}:", s)
     subprocess.call(s, shell=True, cwd=cwd)
@@ -125,7 +122,7 @@ def getout(s, cwd: str) -> str:
     return ret
 
 
-def create_problem(name, user):
+def create_problem(name: str, user: str) -> str:
     with tools.File("data/problem_count") as f:
         pid = int(f.read())
         pid = str(pid + 1)
@@ -156,7 +153,7 @@ def end(success: bool):
     raise StopActionException()
 
 
-def init_problem(pid, name, user):
+def init_problem(pid: str, name: str, user: str):
     path = "preparing_problems/" + pid
     # system(f"sudo dd if=/dev/zero of={pid}.img bs=1G count=1", "preparing_problems")
     # system(f"sudo mkfs.ext4 {pid}.img", "preparing_problems")
@@ -172,7 +169,7 @@ def init_problem(pid, name, user):
 
 
 @background_actions.bind
-def generate_testcase(pid):
+def generate_testcase(pid: str):
     log(f"generating testcase")
     path = "preparing_problems/" + pid
     env = executing.Environment()
@@ -214,8 +211,6 @@ def generate_testcase(pid):
                 out = env.runwithinteractshell(sol_cmd, int_cmd, env.filepath(in_file), env.filepath(out_file), tl, ml,
                                                sol_lang.base_exec_cmd)
             else:
-                env.readable(in_file)
-                env.writeable(out_file)
                 out = env.runwithshell(sol_cmd, env.filepath(in_file), env.filepath(out_file), tl, ml,
                                        sol_lang.base_exec_cmd)
             result = {o[0]: o[1] for o in (s.split("=") for s in out[0].split("\n")) if len(o) == 2}
@@ -260,8 +255,6 @@ def generate_testcase(pid):
                 out = env.runwithinteractshell(sol_cmd, int_cmd, env.filepath(in_file), env.filepath(out_file), tl, ml,
                                                sol_lang.base_exec_cmd)
             else:
-                env.readable(in_file)
-                env.writeable(out_file)
                 out = env.runwithshell(sol_cmd, env.filepath(in_file), env.filepath(out_file), tl, ml,
                                        sol_lang.base_exec_cmd)
             result = {o[0]: o[1] for o in (s.split("=") for s in out[0].split("\n")) if len(o) == 2}
@@ -276,7 +269,7 @@ def generate_testcase(pid):
 
 
 @background_actions.bind
-def creating_version(pid, description):
+def creating_version(pid: str, description: str):
     path = "preparing_problems/" + pid
     log(f"creating version {description!r}")
     env = executing.Environment()
@@ -335,7 +328,7 @@ def runner():
         os.chdir(root_folder)
 
 
-def add_background_action(obj):
+def add_background_action(obj: dict):
     folder = f"preparing_problems/{obj['pid']}/actions"
     if not os.path.isdir(folder):
         os.makedirs(folder, exist_ok=True)
@@ -348,7 +341,7 @@ def add_background_action(obj):
     tools.write_json(cur, f"preparing_problems/{obj['pid']}/actions/{idx}.json")
 
 
-def check_background_action(pid):
+def check_background_action(pid: str):
     idx = tools.read_default(f"preparing_problems/{pid}/background_action_cnt", default="0")
     if idx == "0":
         return None
@@ -364,7 +357,7 @@ def action_not_found(*args):
 
 
 @actions.bind
-def save_general_info(form, pid, path, dat):
+def save_general_info(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
     dat["name"] = form["title"]
     ml = form["memorylimit"]
     tl = form["timelimit"]
@@ -378,14 +371,14 @@ def save_general_info(form, pid, path, dat):
 
 
 @actions.bind
-def create_version(form, pid, path, dat):
+def create_version(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
     description = form["description"]
     add_background_action({"action": "creating_version", "pid": pid, "description": description})
     return "versions"
 
 
 @actions.bind
-def save_statement(form, pid, path, dat):
+def save_statement(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
     dat["manual_samples"] = tools.form_json(form["samples"])
     dat["statement"]["main"] = form["statement_main"]
     dat["statement"]["input"] = form["statement_input"]
@@ -399,13 +392,13 @@ def save_statement(form, pid, path, dat):
     if form["statement_scoring"]:
         full += "\n## 配分\n" + form["statement_scoring"]
     tools.write(full, f"preparing_problems/{pid}/statement.md")
-    parse.dirname = pid
-    tools.write(run_markdown(full), f"preparing_problems/{pid}/statement.html")
+    createhtml.parse.dirname = pid
+    tools.write(createhtml.run_markdown(full), f"preparing_problems/{pid}/statement.html")
     return "statement"
 
 
 @actions.bind
-def upload_zip(form, pid, path, dat):
+def upload_zip(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
     input_ext = form["input_ext"]
     output_ext = form["output_ext"]
     file = request.files["zip_file"]
@@ -441,7 +434,7 @@ def upload_zip(form, pid, path, dat):
 
 
 @actions.bind
-def upload_public_file(form, pid, path, dat):
+def upload_public_file(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
     get_files = request.files.getlist("files")
     for file in get_files:
         fn = secure_filename(file.filename)
@@ -456,7 +449,7 @@ def upload_public_file(form, pid, path, dat):
 
 
 @actions.bind
-def remove_public_file(form, pid, path, dat):
+def remove_public_file(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
     filename = form["filename"]
     filepath = path + "/public_file/" + secure_filename(filename)
     if os.path.exists(filepath):
@@ -467,7 +460,7 @@ def remove_public_file(form, pid, path, dat):
 
 
 @actions.bind
-def upload_file(form, pid, path, dat):
+def upload_file(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
     get_files = request.files.getlist("files")
     for file in get_files:
         if secure_filename(file.filename) == "":
@@ -480,7 +473,7 @@ def upload_file(form, pid, path, dat):
 
 
 @actions.bind
-def create_file(form, pid, path, dat):
+def create_file(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
     filename = secure_filename(form["filename"])
     if tools.exists(path, "file", filename):
         abort(409)
@@ -490,7 +483,7 @@ def create_file(form, pid, path, dat):
 
 
 @actions.bind
-def remove_file(form, pid, path, dat):
+def remove_file(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
     filename = secure_filename(form["filename"])
     filepath = path + "/file/" + filename
     target = None
@@ -509,7 +502,7 @@ def remove_file(form, pid, path, dat):
 
 
 @actions.bind
-def save_file_content(form, pid, path, dat):
+def save_file_content(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
     filename = form["filename"]
     filename = secure_filename(filename)
     content = form["content"]
@@ -529,7 +522,7 @@ def save_file_content(form, pid, path, dat):
 
 
 @actions.bind
-def choose_checker(form, pid, path, dat):
+def choose_checker(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
     tp = form["checker_type"]
     if tp not in ("my", "default"):
         abort(400)
@@ -542,7 +535,7 @@ def choose_checker(form, pid, path, dat):
 
 
 @actions.bind
-def choose_interactor(form, pid, path, dat):
+def choose_interactor(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
     tp = "my"
     name = secure_filename(form[tp + "_interactor"])
     use = form.get("enable_interactor", "off") == "on"
@@ -554,7 +547,7 @@ def choose_interactor(form, pid, path, dat):
 
 
 @actions.bind
-def save_testcase(form, pid, path, dat):
+def save_testcase(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
     try:
         modify = json.loads(form["modify"])
     except json.decoder.JSONDecodeError:
@@ -578,7 +571,7 @@ def save_testcase(form, pid, path, dat):
 
 
 @actions.bind
-def save_testcase_gen(form, pid, path, dat):
+def save_testcase_gen(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
     try:
         modify = json.loads(form["modify"])
     except json.decoder.JSONDecodeError:
@@ -602,7 +595,7 @@ def save_testcase_gen(form, pid, path, dat):
 
 
 @actions.bind
-def set_generator(form, pid, path, dat):
+def set_generator(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
     generator = form["generator"]
     solution = form["solution"]
     if not any(o["name"] == generator for o in dat["files"]):
@@ -620,13 +613,13 @@ def set_generator(form, pid, path, dat):
 
 
 @actions.bind
-def do_generate(form, pid, path, dat):
+def do_generate(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
     add_background_action({"action": "generate_testcase", "pid": pid})
     return "tests"
 
 
 @actions.bind
-def create_group(form, pid, path, dat):
+def create_group(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
     name = secure_filename(form["name"])
     if name in dat["groups"]:
         abort(409)
@@ -635,7 +628,7 @@ def create_group(form, pid, path, dat):
 
 
 @actions.bind
-def remove_group(form, pid, path, dat):
+def remove_group(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
     name = secure_filename(form["name"])
     if name not in dat["groups"]:
         abort(404)
@@ -646,7 +639,7 @@ def remove_group(form, pid, path, dat):
 
 
 @actions.bind
-def save_groups(form, pid, path, dat):
+def save_groups(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
     d = {}
     for k in dat["groups"]:
         d[k] = form["score_" + k]
@@ -658,7 +651,7 @@ def save_groups(form, pid, path, dat):
 
 
 @actions.bind
-def protect_problem(form, pid, path, dat):
+def protect_problem(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
     if not dat.get("public", False):
         abort(409)
     dat["public"] = False
@@ -672,7 +665,7 @@ def protect_problem(form, pid, path, dat):
 
 
 @actions.bind
-def public_problem(form, pid, path, dat):
+def public_problem(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
     if dat.get("public", False):
         abort(409)
     dat["public"] = True
@@ -685,7 +678,7 @@ def public_problem(form, pid, path, dat):
 
 
 @actions.bind
-def import_polygon(form, pid, path, dat):
+def import_polygon(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
     file = request.files["zip_file"]
     filename = f"tmp/{str(uuid.uuid4())}.zip"
     file.save(filename)
@@ -770,7 +763,7 @@ def action(form: ImmutableMultiDict[str, str]) -> Response:
         return redirect(f"/problemsetting/{pid}#{tp}")
 
 
-def sending_file(file):
+def sending_file(file: str) -> Response:
     if not os.path.exists(file):
         abort(404)
     return send_file(file)

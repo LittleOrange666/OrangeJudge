@@ -2,6 +2,7 @@ import hashlib
 import os.path
 import smtplib
 
+from flask import Flask
 from flask_login import LoginManager, UserMixin
 from werkzeug.utils import secure_filename
 
@@ -27,12 +28,15 @@ class User(UserMixin):
     def in_team(self, key: str) -> bool:
         return self.id == key or "teams" in self.data and key in self.data["teams"]
 
+    def is_team(self) -> bool:
+        return self.has("team")
 
-def init_login(app):
+
+def init(app: Flask) -> None:
     global login_manager, email_sender
     login_manager = LoginManager(app)
     login_manager.session_protection = None
-    login_manager.login_view = 'login'
+    login_manager.login_view = 'do_login'
     smtp.ehlo()
     smtp.starttls()
     lines = tools.read("secret/smtp").split("\n")
@@ -44,7 +48,7 @@ def init_login(app):
         return User(name)
 
 
-def send_email(target: str, content: str):
+def send_email(target: str, content: str) -> None:
     try:
         smtp.sendmail(email_sender, target, content)
     except smtplib.SMTPException:
@@ -62,9 +66,7 @@ def try_hash(content: str) -> str:
     return m.hexdigest()
 
 
-def try_login(user_id, password) -> None | User:
-    if user_id is None:
-        return None
+def try_login(user_id: str, password: str) -> None | User:
     user_id = secure_filename(user_id)
     if password is None:
         return None
@@ -79,14 +81,12 @@ def try_login(user_id, password) -> None | User:
     return User(user_id)
 
 
-def exist(user_id):
-    if user_id is None:
-        return None
+def exist(user_id: str) -> bool:
     user_id = secure_filename(user_id)
     return os.path.isfile(f"accounts/{user_id.lower()}/info.json")
 
 
-def create_account(email, user_id, password):
+def create_account(email: str, user_id: str, password: str) -> None:
     folder = f"accounts/{user_id.lower()}"
     os.makedirs(folder, exist_ok=True)
     dat = {"name": user_id, "DisplayName": user_id, "email": email, "password": try_hash(password)}
