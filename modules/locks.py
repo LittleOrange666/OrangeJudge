@@ -1,10 +1,13 @@
 import os
 from multiprocessing import Lock, Manager
+from multiprocessing.managers import SyncManager
 from time import sleep
+from typing import Generic, TypeVar
 
-manager = Manager()
+manager: SyncManager = Manager()
 _used_set = manager.dict()
 _used_lock = Lock()
+T = TypeVar('T')
 
 
 class Locker:
@@ -29,17 +32,17 @@ class Locker:
                 del _used_set[self.name]
 
 
-class AtomicValue:
-    def __init__(self, value):
-        self._value = manager.Value('i', value)
+class AtomicValue(Generic[T]):
+    def __init__(self, value: T):
+        self._value: T = manager.Value(type(value).__name__, value)
         self.lock = Lock()
 
     @property
-    def value(self):
+    def value(self) -> T:
         with self.lock:
             return self._value.value
 
     @value.setter
-    def value(self, value):
+    def value(self, value: T):
         with self.lock:
             self._value.value = value

@@ -1,13 +1,13 @@
+import os
+import re
+import shutil
+from html.parser import HTMLParser
 from typing import Callable
 
 import markdown
 import mdx_math
-from html.parser import HTMLParser
 from pygments import highlight, lexers
 from pygments.formatters import HtmlFormatter
-import re
-import shutil
-import os
 
 from modules import tools, constants, problemsetting
 
@@ -162,7 +162,7 @@ def run_latex(pid: str, strings: list[str]):
         out = tools.read_default(folder, "tmp.html")
         if out:
             out = out.replace("&amp;#", "&#").replace("\n", "")
-            out = out[out.find(">", out.find("<body"))+1:out.find("</body")]+"\n"
+            out = out[out.find(">", out.find("<body")) + 1:out.find("</body")] + "\n"
         outs.append(out)
     return outs
 

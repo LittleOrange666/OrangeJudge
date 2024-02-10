@@ -41,14 +41,16 @@
             <div class="mb-3">
                 <label for="time_input" class="form-label">時間限制</label>
                 <div class="input-group mb-3">
-                    <input type="number" min="250" max="10000" class="form-control" id="time_input" value="{{ dat['timelimit'] }}">
+                    <input type="number" min="250" max="10000" class="form-control" id="time_input"
+                           value="{{ dat['timelimit'] }}">
                     <span class="input-group-text">ms</span>
                 </div>
             </div>
             <div class="mb-3">
                 <label for="memory_input" class="form-label">記憶體限制</label>
                 <div class="input-group mb-3">
-                    <input type="number" min="4" max="1024" class="form-control" id="memory_input" value="{{ dat['memorylimit'] }}">
+                    <input type="number" min="4" max="1024" class="form-control" id="memory_input"
+                           value="{{ dat['memorylimit'] }}">
                     <span class="input-group-text">MB</span>
                 </div>
             </div>
@@ -554,4 +556,5 @@
 </div>
 <script src="/static/problemsetting.js"></script>
 <input id="pid" value="{{ pid }}" hidden>
+<input id="username" value="{{ username }}" hidden>
 {% endblock %}

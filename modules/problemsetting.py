@@ -4,19 +4,17 @@ import shutil
 import subprocess
 import time
 import traceback
-import uuid
+from multiprocessing import Queue, Process
 from xml.etree import ElementTree
 from xml.etree.ElementTree import Element
 
 from flask import Response, abort, render_template, request, redirect, send_file
-from latex2markdown import LaTeX2Markdown
+from pyzipper import AESZipFile
 from pyzipper.zipfile_aes import AESZipInfo
 from werkzeug.datastructures import ImmutableMultiDict, MultiDict
 from werkzeug.utils import secure_filename
 
-from modules import executing, tools, constants, createhtml, login
-from multiprocessing import Queue, Process
-from pyzipper import AESZipFile
+from modules import executing, tools, constants, createhtml
 
 worker_queue = Queue()
 
@@ -108,7 +106,7 @@ def init() -> None:
     Process(target=runner).start()
 
 
-def system(s: str, cwd: str) -> None:
+def system(s: str, cwd: str = "") -> None:
     cwd = os.path.abspath(cwd)
     print(f"system command in {cwd!r}:", s)
     subprocess.call(s, shell=True, cwd=cwd)

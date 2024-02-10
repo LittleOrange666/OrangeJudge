@@ -3,6 +3,7 @@ import os.path
 import random
 import sys
 import time
+import traceback
 
 from flask import Flask, render_template, request, redirect, session, abort, send_file, Response
 from flask_login import login_user, logout_user, login_required, current_user
@@ -10,6 +11,7 @@ from flask_session import Session
 from flask_wtf import CSRFProtect
 from pygments import highlight, lexers
 from pygments.formatters import HtmlFormatter
+from werkzeug.exceptions import InternalServerError
 from werkzeug.utils import secure_filename
 from yarl import URL
 
@@ -27,9 +29,32 @@ CSRFProtect(app)
 login.init(app)
 
 
+def check_user(require: str | None = None) -> login.User:
+    obj = request.args if request.method == "GET" else request.form
+    username = obj.get('user', current_user.id)
+    user = login.get_user(username)
+    if user is None:
+        return abort(404)
+    if not current_user.in_team(username):
+        return abort(403)
+    if require is not None and not user.has(require):
+        abort(403)
+    return user
+
+
 @app.before_request
 def make_session_permanent():
     session.permanent = True
+
+
+@app.errorhandler(400)
+def error_400(error):
+    return render_template("400.html"), 400
+
+
+@app.errorhandler(403)
+def error_403(error):
+    return render_template("403.html"), 403
 
 
 @app.errorhandler(404)
@@ -37,9 +62,12 @@ def error_404(error):
     return render_template("404.html"), 404
 
 
-@app.errorhandler(403)
-def error_403(error):
-    return render_template("403.html"), 403
+@app.errorhandler(Exception)
+def error_500(error: Exception):
+    target = tools.random_string()
+    with open(f"logs/{target}.log", "w", encoding="utf-8") as f:
+        traceback.print_exception(error, file=f)
+    return render_template("500.html", log_uid = target), 500
 
 
 @app.route("/", methods=["GET"])
@@ -113,7 +141,8 @@ def get_code():
         abort(409)
     idx = "".join(str(random.randint(0, 9)) for _ in range(6))
     tools.write(idx, "verify", "email", sec_email)
-    login.send_email(email, constants.email_content.format(idx))
+    if not login.send_email(email, constants.email_content.format(idx)):
+        return Response(status=503)
     return Response(status=200)
 
 
@@ -210,7 +239,8 @@ def submission(idx):
             problem_path = f"problems/{pid}/"
             group_results = {}
             problem_info = tools.read_json(problem_path, "info.json")
-            if not current_user.has("admin") and dat["user"] != current_user.id and current_user.id not in problem_info["users"]:
+            if not current_user.has("admin") and dat["user"] != current_user.id and current_user.id not in problem_info[
+                "users"]:
                 abort(403)
             result = {}
             if completed and not dat.get("JE", False):
@@ -259,15 +289,16 @@ def problem(idx):
     if not dat.get("public", False):
         if not current_user.is_authenticated:
             abort(403)
-        if not current_user.has("admin") and current_user.id not in dat.get("users",[]):
+        if not current_user.has("admin") and current_user.id not in dat.get("users", []):
             abort(403)
     statement = tools.read(path, "statement.html")
     lang_exts = json.dumps({k: v.data["source_ext"] for k, v in executing.langs.items()})
     samples = dat.get("manual_samples", []) + [[tools.read(path, k, o["in"]), tools.read(path, k, o["out"])]
-               for k in ("testcases", "testcases_gen") for o in dat.get(k, []) if o.get("sample", False)]
+                                               for k in ("testcases", "testcases_gen") for o in dat.get(k, []) if
+                                               o.get("sample", False)]
     return render_template("problem.html", dat=dat, statement=statement,
-                          langs=executing.langs.keys(), lang_exts=lang_exts, pid=idx,
-                          preview=False, samples=enumerate(samples))
+                           langs=executing.langs.keys(), lang_exts=lang_exts, pid=idx,
+                           preview=False, samples=enumerate(samples))
 
 
 @app.route("/problem_file/<idx>/<filename>", methods=['GET'])
@@ -331,9 +362,8 @@ def my_submissions():
 @app.route("/problemsetting", methods=['GET'])
 @login_required
 def my_problems():
-    if not current_user.has("make_problems"):
-        abort(403)
-    problem_list = tools.read(current_user.folder, "problems").split()
+    user = check_user("make_problems")
+    problem_list = tools.read(user.folder, "problems").split()
     problems_dat = []
     for idx in reversed(problem_list):
         if os.path.isfile(f"preparing_problems/{idx}.img") and not os.path.isfile(
@@ -343,28 +373,26 @@ def my_problems():
             continue
         dat = tools.read_json(f"preparing_problems/{idx}/info.json")
         problems_dat.append({"pid": idx, "name": dat["name"]})
-    return render_template("my_problems.html", problems=problems_dat)
+    return render_template("my_problems.html", problems=problems_dat, username=user.id)
 
 
 @app.route("/problemsetting_new", methods=['GET', 'POST'])
 @login_required
 def create_problem():
-    if not current_user.has("make_problems"):
-        abort(403)
+    user = check_user("make_problems")
     if request.method == "GET":
         return render_template("create_problem.html")
     else:
-        idx = problemsetting.create_problem(request.form["name"], current_user.id)
-        tools.append(idx + "\n", current_user.folder, "problems")
-        return redirect("/problemsetting/" + idx)
+        idx = problemsetting.create_problem(request.form["name"], user.id)
+        tools.append(idx + "\n", user.folder, "problems")
+        return redirect(f"/problemsetting/{idx}?user={user.id}")
 
 
 @app.route("/problemsetting/<idx>", methods=['GET'])
 @login_required
 def my_problem_page(idx):
+    user = check_user("make_problems")
     idx = secure_filename(idx)
-    if not current_user.has("make_problems"):
-        abort(403)
     if not os.path.isdir("preparing_problems/" + idx) or not os.path.isfile("preparing_problems/" + idx + "/info.json"):
         abort(404)
     if len(os.listdir("preparing_problems/" + idx)) == 0:
@@ -373,7 +401,7 @@ def my_problem_page(idx):
     if o is not None:
         return render_template("pleasewaitlog.html", action=o[1], log=o[0])
     dat = tools.read_json("preparing_problems", idx, "info.json")
-    if not current_user.has("admin") and current_user.id not in dat["users"]:
+    if not user.has("admin") and user.id not in dat["users"]:
         abort(403)
     public_files = os.listdir(f"preparing_problems/{idx}/public_file")
     try:
@@ -391,14 +419,14 @@ def my_problem_page(idx):
     return render_template("problemsetting.html", dat=constants.default_problem_info | dat, pid=idx,
                            versions=problemsetting.query_versions(idx), enumerate=enumerate,
                            public_files=public_files, default_checkers=default_checkers,
-                           langs=executing.langs.keys(), default_interactors=default_interactors)
+                           langs=executing.langs.keys(), default_interactors=default_interactors,
+                           username=user.id)
 
 
 @app.route("/problemsetting_action", methods=['POST'])
 @login_required
 def problem_action():
-    if not current_user.has("make_problems"):
-        abort(403)
+    user = check_user("make_problems")
     idx = request.form["pid"]
     idx = secure_filename(idx)
     if not os.path.isfile(f"preparing_problems/{idx}/info.json"):
@@ -408,7 +436,7 @@ def problem_action():
     if problemsetting.check_background_action(idx) is not None:
         abort(503)
     dat = tools.read_json(f"preparing_problems/{idx}/info.json")
-    if not current_user.has("admin") and current_user.id not in dat["users"]:
+    if not user.has("admin") and user.id not in dat["users"]:
         abort(403)
     return problemsetting.action(request.form)
 
@@ -416,8 +444,7 @@ def problem_action():
 @app.route("/problemsetting_preview", methods=["GET"])
 @login_required
 def problem_preview():
-    if not current_user.has("make_problems"):
-        abort(403)
+    user = check_user("make_problems")
     idx = request.args["pid"]
     idx = secure_filename(idx)
     if not os.path.isfile(f"preparing_problems/{idx}/info.json"):
@@ -425,7 +452,7 @@ def problem_preview():
     if os.path.isfile("preparing_problems/" + idx + "/waiting"):
         return render_template("pleasewait.html", action=tools.read("preparing_problems", idx, "waiting"))
     dat = tools.read_json(f"preparing_problems/{idx}/info.json")
-    if not current_user.has("admin") and current_user.id not in dat["users"]:
+    if not user.has("admin") and user.id not in dat["users"]:
         abort(403)
     return problemsetting.preview(request.args)
 
@@ -440,8 +467,8 @@ def main():
         raise RuntimeError("The judge server only supports Linux")
     if not executing.call(["whoami"])[0].startswith("root\n"):
         raise RuntimeError("The judge server must be run as root")
-    os.system(f"sudo lxc-start {constants.lxc_name}")
-    os.system(f"sudo cp -r -f judge /var/lib/lxc/{constants.lxc_name}/rootfs/")
+    problemsetting.system(f"sudo lxc-start {constants.lxc_name}")
+    problemsetting.system(f"sudo cp -r -f judge /var/lib/lxc/{constants.lxc_name}/rootfs/")
     executing.init()
     tasks.init()
     problemsetting.init()

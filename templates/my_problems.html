@@ -3,7 +3,7 @@
 {% block title %}My problems{% endblock %}
 
 {% block main %}
-<h1>My problems: </h1>
+<h1>My problems ({{ username }}): </h1>
 <table class="table table-hover table-striped">
     <thead>
     <tr>
@@ -16,8 +16,8 @@
     <tbody>
     {% for problem in problems %}
     <tr>
-        <th scope="row"><a href="/problemsetting/{{ problem['pid'] }}">{{ problem['pid'] }}</a></th>
-        <td><a href="/problemsetting/{{ problem['pid'] }}">{{ problem['name'] }}</a></td>
+        <th scope="row"><a href="/problemsetting/{{ problem['pid'] }}?user={{ username }}">{{ problem['pid'] }}</a></th>
+        <td><a href="/problemsetting/{{ problem['pid'] }}?user={{ username }}">{{ problem['name'] }}</a></td>
         <td>{{ problem["time"] }}</td>
         <td>{{ problem["version"] }}</td>
     </tr>
@@ -25,6 +25,6 @@
     </tbody>
 </table>
 <div class="mb-3">
-    <a class="btn btn-primary" href="/problemsetting_new" role="button">新建題目</a>
+    <a class="btn btn-primary" href="/problemsetting_new?user={{ username }}" role="button">新建題目</a>
 </div>
 {% endblock %}

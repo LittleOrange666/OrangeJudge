@@ -15,6 +15,7 @@
     <link href="/static/codehilite.css" rel="stylesheet" crossorigin="anonymous">
     <style>
         {% block style %}{% endblock %}
+
     </style>
 </head>
 
@@ -40,9 +41,10 @@
                     <li class="nav-item">
                         <a class="nav-link active" aria-current="page" href="/test">測試</a>
                     </li>
-                    {% if current_user.is_authenticated and current_user.has("make_problems") %}
+                    {% if current_user.is_authenticated and current_user.may_has("make_problems") %}
                     <li class="nav-item">
-                        <a class="nav-link active" aria-current="page" href="/problemsetting">出題</a>
+                        <a class="nav-link active" aria-current="page"
+                           href="/problemsetting?user={{ current_user.who_has('make_problems')[0] }}">出題</a>
                     </li>
                     {% endif %}
                 </ul>
@@ -89,6 +91,7 @@
         jax: ["input/TeX", "output/HTML-CSS", "output/NativeMML"],
         extensions: ["MathMenu.js", "MathZoom.js"]
     });
+
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js"></script>
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" id="csrf_token">
@@ -96,5 +99,6 @@
 </body>
 <script>
     {% block script %}{% endblock %}
+
 </script>
 </html>

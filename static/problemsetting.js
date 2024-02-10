@@ -11,6 +11,7 @@ $(function() {
         });
     }
     const pid = $("#pid").val();
+    const username = $("#username").val();
     const number_reg = /^\d+$/;
     var version_checked = false;
     var version_changed = false;
@@ -46,7 +47,11 @@ $(function() {
         $this.attr("target","_self");
         $this.attr("enctype","multipart/form-data");
         $this.prepend($('<input name="pid" value="'+pid+'" hidden>'));
+        $this.prepend($('<input name="user" value="'+username+'" hidden>'));
         $this.prepend($('<input name="action" value="'+$(this).attr("the_action")+'" hidden>'));
+    });
+    $("a[href^='/problemsetting_preview']").each(function(){
+        $(this).attr("href",$(this).attr("href")+"&user="+username)
     });
     $(".edit-detector").each(function(){
         let div = $(this);

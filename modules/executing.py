@@ -1,7 +1,6 @@
 import math
 import os.path
 import subprocess
-import uuid
 from typing import Callable
 
 from modules import constants, tools
@@ -141,7 +140,8 @@ class Environment:
         try:
             main = ["sudo", os.path.abspath("/judge/interact_shell"), str(math.ceil(tl)), str(ml * 1024 * 1024),
                     str(100 * 1024 * 1024), repr(" ".join(base_cmd)),
-                    repr(" ".join(cmd)), repr(" ".join(interact_cmd)), in_file, out_file, self.filepath(tools.random_string())]
+                    repr(" ".join(cmd)), repr(" ".join(interact_cmd)), in_file, out_file,
+                    self.filepath(tools.random_string())]
             return call(self.prefix + main, timeout=tl + 1)
         except subprocess.TimeoutExpired:
             return "TLE", "TLE", 777777

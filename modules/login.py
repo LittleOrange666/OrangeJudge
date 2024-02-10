@@ -1,22 +1,58 @@
 import hashlib
+import json
 import os.path
 import smtplib
+from multiprocessing import Lock
+from multiprocessing.managers import DictProxy
 
 from flask import Flask
 from flask_login import LoginManager, UserMixin
 from werkzeug.utils import secure_filename
 
-from modules import tools
+from modules import tools, locks
 
 login_manager = None
 smtp = smtplib.SMTP('smtp.gmail.com', 587)
 email_sender = ""
 
 
+class UserDataManager:
+    def __init__(self):
+        self.mp: DictProxy[str, str] = locks.manager.dict()
+        self.lock = Lock()
+
+    def read(self, name: str) -> dict:
+        with self.lock:
+            if name not in self.mp:
+                self.mp[name] = tools.read(f"accounts/{name}/info.json")
+            return json.loads(self.mp[name])
+
+    def write(self, name: str, value: dict):
+        with self.lock:
+            self.mp[name] = json.dumps(value, indent=2)
+
+    def save(self):
+        for name, value in self.mp.items():
+            tools.write_json(value, f"accounts/{name}/info.json")
+
+    def __del__(self):
+        self.save()
+
+
+user_data_manager = UserDataManager()
+
+
 class User(UserMixin):
     def __init__(self, name: str):
         self.id = secure_filename(name.lower())
-        self.data = tools.read_json(f"accounts/{self.id}/info.json")
+
+    @property
+    def data(self) -> dict:
+        return user_data_manager.read(self.id)
+
+    @data.setter
+    def data(self, value: dict):
+        user_data_manager.write(self.id, value)
 
     @property
     def folder(self) -> str:
@@ -24,6 +60,21 @@ class User(UserMixin):
 
     def has(self, key: str) -> bool:
         return key in self.data and bool(self.data[key])
+
+    def may_has(self, key: str) -> bool:
+        if self.has(key):
+            return True
+        return "teams" in self.data and any(User(k).has(key) for k in self.data["teams"])
+
+    def who_has(self, key: str) -> list[str]:
+        ret = []
+        if self.has(key):
+            ret.append(self.id)
+        if "teams" in self.data:
+            for k in self.data["teams"]:
+                if User(k).has(key):
+                    ret.append(k)
+        return ret
 
     def in_team(self, key: str) -> bool:
         return self.id == key or "teams" in self.data and key in self.data["teams"]
@@ -48,7 +99,7 @@ def init(app: Flask) -> None:
         return User(name)
 
 
-def send_email(target: str, content: str) -> None:
+def send_email(target: str, content: str) -> bool:
     try:
         smtp.sendmail(email_sender, target, content)
     except smtplib.SMTPException:
@@ -57,7 +108,11 @@ def send_email(target: str, content: str) -> None:
         smtp.starttls()
         lines = tools.read("secret/smtp").split("\n")
         smtp.login(lines[0], lines[1])
-        smtp.sendmail(email_sender, target, content)
+        try:
+            smtp.sendmail(email_sender, target, content)
+        except smtplib.SMTPException:
+            return False
+    return True
 
 
 def try_hash(content: str | None) -> str:
@@ -79,6 +134,13 @@ def try_login(user_id: str, password: str) -> None | User:
         return None
     data = tools.read_json(file)
     if try_hash(password) != data["password"]:
+        return None
+    return User(user_id)
+
+
+def get_user(user_id: str) -> User | None:
+    file = f"accounts/{user_id.lower()}/info.json"
+    if not os.path.isfile(file):
         return None
     return User(user_id)
 

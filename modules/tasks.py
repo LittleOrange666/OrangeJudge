@@ -1,6 +1,5 @@
 import os
 import traceback
-import uuid
 from multiprocessing import Queue, Process
 
 from flask import abort
