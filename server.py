@@ -62,17 +62,33 @@ def error_404(error):
     return render_template("404.html"), 404
 
 
+@app.errorhandler(409)
+def error_409(error):
+    return render_template("404.html"), 409
+
+
 @app.errorhandler(Exception)
 def error_500(error: Exception):
     target = tools.random_string()
     with open(f"logs/{target}.log", "w", encoding="utf-8") as f:
         traceback.print_exception(error, file=f)
+    if request.method == "POST":
+        print("error uid="+target)
     return render_template("500.html", log_uid=target), 500
 
 
 @app.route("/", methods=["GET"])
 def index():
     return render_template("index.html")
+
+
+@app.route("/log/<uid>", methods=["GET"])
+@login_required
+def log(uid):
+    check_user("admin")
+    if not tools.exists("logs", uid+".log"):
+        abort(404)
+    return render_template("log.html", content=tools.read("logs", uid+".log"))
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -459,9 +475,11 @@ def user_page(name):
 @app.route("/settings", methods=["GET", "POST"])
 @login_required
 def settings():
-    if request.method == "GET":
-        return render_template("settings.html", data=current_user.data)
     data = current_user.data
+    if request.method == "GET":
+        teams = {k: login.get_user(k).data for k in data.get("teams", [])}
+        perms = [(k, v) for k, v in constants.permissions.items() if current_user.has(k) and k != "admin"]
+        return render_template("settings.html", data=data, teams=teams, perms=perms)
     if request.form["action"] == "general_info":
         data["DisplayName"] = request.form.get("DisplayName", data["DisplayName"])
     elif request.form["action"] == "change_password":
@@ -472,6 +490,50 @@ def settings():
         if len(new_password) < 6:
             abort(400)
         data["password"] = login.try_hash(new_password)
+    elif request.form["action"] == "create_team":
+        name = request.form["name"].lower()
+        if not name:
+            abort(400)
+        if login.exist(name):
+            abort(409)
+        perms = [k for k in constants.permissions if current_user.has(k) and k != "admin" and
+                 request.form.get("perm_"+k, "") == "on"]
+        login.create_team(name, current_user.id, perms)
+        if "teams" not in data:
+            data["teams"] = []
+        data["teams"].append(name)
+    elif request.form["action"] == "add_member":
+        target = request.form["target"].lower()
+        name = request.form["team"].lower()
+        if not login.exist(target):
+            abort(404)
+        if not login.exist(name) or not login.get_user(name).data["owner"] == current_user.id:
+            abort(403)
+        team = login.get_user(name)
+        user = login.get_user(target)
+        team_data = team.data
+        user_data = user.data
+        if target in team_data["members"]:
+            abort(409)
+        if "teams" not in user_data:
+            user_data["teams"] = []
+        if name in user_data["teams"]:
+            abort(409)
+        team_data["members"].append(target)
+        user_data["teams"].append(name)
+        user.data = user_data
+        team.data = team_data
+    elif request.form["action"] == "leave_team":
+        name = request.form["team"].lower()
+        team = login.get_user(name)
+        team_data = team.data
+        if current_user.id not in team_data["members"]:
+            abort(409)
+        if name not in data.get("teams", []):
+            abort(409)
+        data["teams"].remove(name)
+        team_data["members"].remove(current_user.id)
+        team.data = team_data
     current_user.data = data
     return "", 200
 

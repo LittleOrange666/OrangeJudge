@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block title %}首頁{% endblock %}
+
+{% block main %}
+{% for line in content.split("\n") %}
+<p>{{ line }}</p>
+{% endfor %}
+{% endblock %}

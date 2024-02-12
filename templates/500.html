@@ -4,5 +4,5 @@
 
 {% block main %}
 <h1>500 Internal Server Error</h1>
-<p>伺服器內部錯誤，log uid={{ log_uid }}</p>
+<p>伺服器內部錯誤，log uid=<a href="/log/{{ log_uid }}">{{ log_uid }}</a></p>
 {% endblock %}

@@ -64,3 +64,5 @@ latex_begin = """\\documentclass[]{article}
 \\begin{document}
 """
 latex_end = "\n\\end{document}"
+
+permissions: dict[str, str] = {"admin": "管理者", "make_problems": "出題者"}

@@ -152,6 +152,7 @@ $(".submitter").click(function(e){
         }else {
             let msg = $this.data("msg-"+response.status);
             if(!msg&&response.status==400) msg = "輸入格式不正確"
+            if(!msg&&response.status==403) msg = "您似乎沒有權限執行此操作"
             show_modal("失敗",msg?msg:"Error Code: " + response.status);
         }
     });

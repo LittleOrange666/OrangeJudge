@@ -63,6 +63,68 @@
     </div>
     <div id="team" class="tab-pane fade">
         <h3>小組設置</h3>
+        <div class="container-fluid">
+            <h4>已加入的小組</h4>
+            <table class="table table-hover">
+                <thead>
+                <tr>
+                    <th scope="col">ID</th>
+                    <th scope="col">成員</th>
+                    <th scope="col">操作</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for name,dat in teams.items()%}
+                <tr>
+                    <th scope="row"><a href="/user/{{ name }}">{{ name }}</a></th>
+                    <td>
+                        {% for user in dat["members"] %}
+                        <span><a href="/user/{{ user }}">{{ user }}</a></span>
+                        {% if not loop.last %}<span>、</span>{% endif %}
+                        {% endfor %}
+                    </td>
+                    <td>
+                        {% if dat["owner"] != current_user.id %}
+                        <form method="post" action="/settings">
+                            <input type="hidden" name="action" value="leave_team">
+                            <input type="hidden" name="team" value="{{ name }}">
+                            <button type="button" class="btn btn-danger submitter">退出</button>
+                        </form>
+                        {% else %}
+                        <form method="post" action="/settings">
+                            <input type="hidden" name="action" value="add_member">
+                            <input type="hidden" name="team" value="{{ name }}">
+                            <div class="input-group mb-3">
+                                <input type="text" class="form-control" placeholder="user ID" name="target" required>
+                                <button type="button" class="btn btn-success submitter" data-msg-404="此人不存在" data-msg-409="此人已在小組中">邀請</button>
+                            </div>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="container-fluid">
+            <h4>創建小組</h4>
+            <form method="POST" action="/settings">
+                <input type="hidden" name="action" value="create_team">
+                <div class="mb-3">
+                    <label for="name_input" class="form-label">小組ID</label>
+                    <input type="text" class="form-control" id="name_input" name="name" required>
+                </div>
+                <div class="mb-3">
+                    {% for k,v in perms %}
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" id="perm_{{ k }}" name="perm_{{ k }}">
+                        <label class="form-check-label" for="perm_{{ k }}">{{ v }}</label>
+                    </div>
+                    {% endfor %}
+                </div>
+                <button class="btn btn-primary submitter" data-msg-409="ID已被使用">創建小組</button>
+            </form>
+        </div>
     </div>
 </div>
 {% endblock %}

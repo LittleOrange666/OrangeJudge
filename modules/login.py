@@ -164,3 +164,16 @@ def create_account(email: str, user_id: str, password: str | None, is_team: bool
     tools.create(folder, "problems")
     tools.create(folder, "submissions")
     tools.write(user_id, f"verify/used_email", secure_filename(email))
+
+
+def create_team(team_id: str, owner_id: str, permissions: list[str]):
+    folder = f"accounts/{team_id.lower()}"
+    os.makedirs(folder, exist_ok=True)
+    dat = {"name": team_id, "DisplayName": team_id, "owner": owner_id, "members": [owner_id]}
+    for k in permissions:
+        dat[k] = True
+    if tools.exists(folder, "info.json"):
+        return
+    tools.write_json(dat, folder, "info.json")
+    tools.create(folder, "problems")
+    tools.create(folder, "submissions")
