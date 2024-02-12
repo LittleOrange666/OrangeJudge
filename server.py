@@ -11,7 +11,6 @@ from flask_session import Session
 from flask_wtf import CSRFProtect
 from pygments import highlight, lexers
 from pygments.formatters import HtmlFormatter
-from werkzeug.exceptions import InternalServerError
 from werkzeug.utils import secure_filename
 from yarl import URL
 
@@ -29,16 +28,17 @@ CSRFProtect(app)
 login.init(app)
 
 
-def check_user(require: str | None = None) -> login.User:
+def check_user(require: str | None = None, users: list[str] | None = None) -> login.User:
     obj = request.args if request.method == "GET" else request.form
     username = obj.get('user', current_user.id)
     user = login.get_user(username)
     if user is None:
-        return abort(404)
-    if not current_user.in_team(username):
-        return abort(403)
-    if require is not None and not user.has(require):
-        abort(403)
+        abort(404)
+    if not user.has("admin"):
+        if require is not None and not user.may_has(require):
+            abort(403)
+        if users is not None and not any(user.in_team(name) for name in users):
+            abort(403)
     return user
 
 
@@ -67,7 +67,7 @@ def error_500(error: Exception):
     target = tools.random_string()
     with open(f"logs/{target}.log", "w", encoding="utf-8") as f:
         traceback.print_exception(error, file=f)
-    return render_template("500.html", log_uid = target), 500
+    return render_template("500.html", log_uid=target), 500
 
 
 @app.route("/", methods=["GET"])
@@ -366,9 +366,9 @@ def my_problems():
     problem_list = tools.read(user.folder, "problems").split()
     problems_dat = []
     for idx in reversed(problem_list):
-        if os.path.isfile(f"preparing_problems/{idx}.img") and not os.path.isfile(
-                f"preparing_problems/{idx}/info.json"):
-            problemsetting.system(f"sudo mount -o loop {idx}.img ./{idx}", "preparing_problems")
+        # if os.path.isfile(f"preparing_problems/{idx}.img") and not os.path.isfile(
+        #         f"preparing_problems/{idx}/info.json"):
+        #     problemsetting.system(f"sudo mount -o loop {idx}.img ./{idx}", "preparing_problems")
         if not tools.exists(f"preparing_problems/{idx}/info.json"):
             continue
         dat = tools.read_json(f"preparing_problems/{idx}/info.json")
@@ -391,18 +391,16 @@ def create_problem():
 @app.route("/problemsetting/<idx>", methods=['GET'])
 @login_required
 def my_problem_page(idx):
-    user = check_user("make_problems")
     idx = secure_filename(idx)
     if not os.path.isdir("preparing_problems/" + idx) or not os.path.isfile("preparing_problems/" + idx + "/info.json"):
         abort(404)
-    if len(os.listdir("preparing_problems/" + idx)) == 0:
-        problemsetting.system(f"sudo mount -o loop {idx}.img ./{idx}", "preparing_problems")
+    # if len(os.listdir("preparing_problems/" + idx)) == 0:
+    #     problemsetting.system(f"sudo mount -o loop {idx}.img ./{idx}", "preparing_problems")
     o = problemsetting.check_background_action(idx)
     if o is not None:
         return render_template("pleasewaitlog.html", action=o[1], log=o[0])
     dat = tools.read_json("preparing_problems", idx, "info.json")
-    if not user.has("admin") and user.id not in dat["users"]:
-        abort(403)
+    user = check_user("make_problems", dat["users"])
     public_files = os.listdir(f"preparing_problems/{idx}/public_file")
     try:
         public_files.remove(".gitkeep")
@@ -426,7 +424,6 @@ def my_problem_page(idx):
 @app.route("/problemsetting_action", methods=['POST'])
 @login_required
 def problem_action():
-    user = check_user("make_problems")
     idx = request.form["pid"]
     idx = secure_filename(idx)
     if not os.path.isfile(f"preparing_problems/{idx}/info.json"):
@@ -436,15 +433,13 @@ def problem_action():
     if problemsetting.check_background_action(idx) is not None:
         abort(503)
     dat = tools.read_json(f"preparing_problems/{idx}/info.json")
-    if not user.has("admin") and user.id not in dat["users"]:
-        abort(403)
+    user = check_user("make_problems", dat["users"])
     return problemsetting.action(request.form)
 
 
 @app.route("/problemsetting_preview", methods=["GET"])
 @login_required
 def problem_preview():
-    user = check_user("make_problems")
     idx = request.args["pid"]
     idx = secure_filename(idx)
     if not os.path.isfile(f"preparing_problems/{idx}/info.json"):
@@ -452,14 +447,33 @@ def problem_preview():
     if os.path.isfile("preparing_problems/" + idx + "/waiting"):
         return render_template("pleasewait.html", action=tools.read("preparing_problems", idx, "waiting"))
     dat = tools.read_json(f"preparing_problems/{idx}/info.json")
-    if not user.has("admin") and user.id not in dat["users"]:
-        abort(403)
+    user = check_user("make_problems", dat["users"])
     return problemsetting.preview(request.args)
 
 
 @app.route("/user/<name>", methods=["GET"])
 def user_page(name):
-    return redirect("/my_submissions")
+    abort(404)
+
+
+@app.route("/settings", methods=["GET", "POST"])
+@login_required
+def settings():
+    if request.method == "GET":
+        return render_template("settings.html", data=current_user.data)
+    data = current_user.data
+    if request.form["action"] == "general_info":
+        data["DisplayName"] = request.form.get("DisplayName", data["DisplayName"])
+    elif request.form["action"] == "change_password":
+        old_password = request.form.get("old_password", "")
+        new_password = request.form.get("new_password", "")
+        if login.try_hash(old_password) != data["password"]:
+            abort(403)
+        if len(new_password) < 6:
+            abort(400)
+        data["password"] = login.try_hash(new_password)
+    current_user.data = data
+    return "", 200
 
 
 def main():
@@ -472,7 +486,7 @@ def main():
     executing.init()
     tasks.init()
     problemsetting.init()
-    app.run("0.0.0.0", port=8080)
+    app.run("0.0.0.0", port=5555)
 
 
 if __name__ == '__main__':

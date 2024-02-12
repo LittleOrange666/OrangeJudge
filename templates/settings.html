@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}個人設置{% endblock %}
+
+{% block main %}
+<ul class="nav nav-tabs">
+    <li class="nav-item" role="presentation">
+        <a class="nav-link active" id="general_info_tab" data-bs-toggle="tab" data-bs-target="#general_info"
+           type="button" role="tab" aria-controls="general_info" aria-selected="true">基本訊息</a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link" id="password_tab" data-bs-toggle="tab" data-bs-target="#password" type="button" role="tab"
+           aria-controls="password" aria-selected="false">變更密碼</a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link" id="team_tab" data-bs-toggle="tab" data-bs-target="#team" type="button" role="tab"
+           aria-controls="team" aria-selected="false">小組設置</a>
+    </li>
+</ul>
+<div class="tab-content">
+    <div id="general_info" class="tab-pane fade show active">
+        <h3>基本訊息</h3>
+        <form method="POST" action="/settings">
+            <input type="hidden" name="action" value="general_info">
+            <div class="mb-3">
+                <label for="user_id_input" class="form-label">ID</label>
+                <input type="text" class="form-control" id="user_id_input" value="{{ current_user.id }}" disabled>
+            </div>
+            <div class="mb-3">
+                <label for="email_input" class="form-label">email</label>
+                <input type="text" class="form-control" id="email_input" value="{{ data['email'] }}" disabled>
+            </div>
+            <div class="mb-3">
+                <label for="display_name_input" class="form-label">顯示名稱</label>
+                <input type="text" class="form-control" id="display_name_input" value="{{ data['DisplayName'] }}"
+                       name="DisplayName" required>
+            </div>
+            <button class="btn btn-primary submitter">儲存</button>
+        </form>
+    </div>
+    <div id="password" class="tab-pane fade">
+        <h3>變更密碼</h3>
+        <form method="POST" action="/settings">
+            <input type="hidden" name="action" value="change_password">
+            <div class="mb-3">
+                <label for="old_password" class="form-label">舊密碼</label>
+                <input type="password" class="form-control" id="old_password" name="old_password" placeholder="舊密碼"
+                       required>
+            </div>
+            <div class="mb-3">
+                <label for="new_password" class="form-label">新密碼</label>
+                <input type="password" class="form-control" id="new_password" name="new_password" placeholder="新密碼"
+                       required
+                       pattern="^.{6,}$">
+            </div>
+            <div class="mb-3">
+                <label for="new_password_again" class="form-label">重複新密碼</label>
+                <input type="password" class="form-control" id="new_password_again" placeholder="重複新密碼"
+                       required>
+            </div>
+            <button class="btn btn-primary submitter" data-msg-403="舊密碼不正確">變更密碼</button>
+        </form>
+    </div>
+    <div id="team" class="tab-pane fade">
+        <h3>小組設置</h3>
+    </div>
+</div>
+{% endblock %}

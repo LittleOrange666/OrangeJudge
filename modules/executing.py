@@ -58,8 +58,7 @@ class Environment:
         return target
 
     def rm_file(self, filepath: str) -> None:
-        cmd = ["sudo", "rm", f"/var/lib/lxc/{self.lxc_name}/rootfs" + self.filepath(filepath)]
-        call(cmd)
+        call(self.prefix + ["rm", self.filepath(filepath)])
 
     def filepath(self, filename: str) -> str:
         if filename.startswith("/" + self.dirname):

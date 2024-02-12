@@ -16,27 +16,6 @@ $(function() {
     var version_checked = false;
     var version_changed = false;
     var version_checking = false;
-    function fetching(form){
-        return fetch(form.attr("action"),{
-            method: form.attr("method"),
-            body: new FormData(form[0])
-        });
-    }
-    function post(url, data, callback){
-        $.ajax({
-            url: url,
-            method: "POST",
-            contentType: "application/x-www-form-urlencoded",
-            headers: {"x-csrf-token": $("#csrf_token").val()},
-            data: data,
-            error: function(xhr, status, content){
-                callback(content, status, xhr)
-            },
-            success: function(content, status, xhr){
-                callback(content, status, xhr)
-            }
-        });
-    }
     function is_changed(e){
         return $(e).data("old_value") != $(e).val();
     }
@@ -111,30 +90,6 @@ $(function() {
             $("#version_checker").removeClass("alert-danger");
             $("#version_checker").removeClass("alert-success");
             $("#version_checker").text("正在檢測版本是否有更新，請稍候...");
-        });
-    });
-    $(".submitter").click(function(e){
-        e.preventDefault();
-        let $this = $(this);
-        let action_name = $this.text().trim();
-        let ok = true;
-        $this.parents("form").find("input,select,textarea").each(function(){
-            if($(this).prop("required")&&!$(this).val()) ok = false;
-        });
-        if(!ok){
-            show_modal("錯誤","部分資訊未填寫");
-            return;
-        }
-        fetching($this.parents("form").first()).then(function (response) {
-            console.log(response);
-            if(response.ok) {
-                show_modal("成功","成功"+action_name, !$this.data("no-refresh"));
-                $("#save_general_info").trigger("saved_data");
-            }else {
-                let msg = $this.data("msg-"+response.status);
-                show_modal("失敗",msg?msg:"Error Code: " + response.status);
-                $("#create_version").prop("disabled", false);
-            }
         });
     });
     // general info

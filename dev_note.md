@@ -6,6 +6,7 @@
 + python 版本不固定
 + 登入狀態丟失?
 + create version 未檢查checker是否能正確check測資
++ interactive problem 的時間&空間計算不知道對不對
 
 ## 潛在威脅
 + judge 拿著root執行system call (重要)

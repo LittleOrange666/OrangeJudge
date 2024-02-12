@@ -109,7 +109,7 @@ def init() -> None:
 def system(s: str, cwd: str = "") -> None:
     cwd = os.path.abspath(cwd)
     print(f"system command in {cwd!r}:", s)
-    subprocess.call(s, shell=True, cwd=cwd)
+    subprocess.call(s.split(), cwd=cwd)
 
 
 def getout(s, cwd: str) -> str:

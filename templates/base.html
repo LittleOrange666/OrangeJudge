@@ -16,6 +16,9 @@
     <style>
         {% block style %}{% endblock %}
 
+
+
+
     </style>
 </head>
 
@@ -41,18 +44,29 @@
                     <li class="nav-item">
                         <a class="nav-link active" aria-current="page" href="/test">測試</a>
                     </li>
-                    {% if current_user.is_authenticated and current_user.may_has("make_problems") %}
-                    <li class="nav-item">
-                        <a class="nav-link active" aria-current="page"
-                           href="/problemsetting?user={{ current_user.who_has('make_problems')[0] }}">出題</a>
-                    </li>
-                    {% endif %}
                 </ul>
                 <ul class="navbar-nav navbar-text">
                     {% if current_user.is_authenticated %}
-                    <li class="nav-item">
-                        <a class="nav-link active"
-                           href="/user/{{current_user.id}}">{{current_user.data['DisplayName']}}</a>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button"
+                           aria-expanded="false">{{current_user.data['DisplayName']}}</a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="/user/{{current_user.id}}">個人頁面</a></li>
+                            <li><a class="dropdown-item" href="/my_submissions">解題列表</a></li>
+                            <li><a class="dropdown-item" href="/settings">設定</a></li>
+                            {% if current_user.may_has("make_problems") %}
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <li><a class="dropdown-item" href="/problemsetting">題目管理</a></li>
+                            {% endif %}
+                            {% if current_user.has("admin") %}
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <li><a class="dropdown-item" href="/admin">管理介面</a></li>
+                            {% endif %}
+                        </ul>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link active" href="/logout">登出</a>
@@ -86,19 +100,17 @@
     </div>
 </div>
 <script type="text/x-mathjax-config">
-    MathJax.Hub.Config({
-        config: ["MMLorHTML.js"],
-        jax: ["input/TeX", "output/HTML-CSS", "output/NativeMML"],
-        extensions: ["MathMenu.js", "MathZoom.js"]
-    });
-
+MathJax.Hub.Config({
+    config: ["MMLorHTML.js"],
+    jax: ["input/TeX", "output/HTML-CSS", "output/NativeMML"],
+    extensions: ["MathMenu.js", "MathZoom.js"]
+});
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js"></script>
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" id="csrf_token">
 <script src="/static/main.js"></script>
 </body>
 <script>
-    {% block script %}{% endblock %}
-
+{% block script %}{% endblock %}
 </script>
 </html>

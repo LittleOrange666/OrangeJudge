@@ -103,5 +103,56 @@ function _uuid() {
   });
 }
 $("form").each(function(){
-    $(this).append($("#csrf_token").clone());
+    $(this).append($("#csrf_token").clone().removeAttr("id"));
+});
+function fetching(form){
+    return fetch(form.attr("action"),{
+        method: form.attr("method"),
+        body: new FormData(form[0])
+    });
+}
+function post(url, data, callback){
+    $.ajax({
+        url: url,
+        method: "POST",
+        contentType: "application/x-www-form-urlencoded",
+        headers: {"x-csrf-token": $("#csrf_token").val()},
+        data: data,
+        error: function(xhr, status, content){
+            callback(content, status, xhr)
+        },
+        success: function(content, status, xhr){
+            callback(content, status, xhr)
+        }
+    });
+}
+$(".submitter").click(function(e){
+    e.preventDefault();
+    let $this = $(this);
+    let action_name = $this.text().trim();
+    let ok = true;
+    $this.parents("form").find("input,select,textarea").each(function(){
+        if($(this).prop("required")&&!$(this).val()) ok = false;
+    });
+    if(!ok){
+        show_modal("錯誤","部分資訊未填寫");
+        return;
+    }
+    $this.parents("form").find("input,select,textarea").each(function(){
+        if($(this).prop("pattern")&&!$(this).val().match(RegExp($(this).prop("pattern")))) ok = false;
+    });
+    if(!ok||$this.parents("form")[0].onsubmit&&!$this.parents("form")[0].onsubmit()){
+        show_modal("錯誤","輸入格式不正確");
+        return;
+    }
+    fetching($this.parents("form").first()).then(function (response) {
+        console.log(response);
+        if(response.ok) {
+            show_modal("成功","成功"+action_name, !$this.data("no-refresh"));
+        }else {
+            let msg = $this.data("msg-"+response.status);
+            if(!msg&&response.status==400) msg = "輸入格式不正確"
+            show_modal("失敗",msg?msg:"Error Code: " + response.status);
+        }
+    });
 });

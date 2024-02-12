@@ -30,10 +30,11 @@ class UserDataManager:
     def write(self, name: str, value: dict):
         with self.lock:
             self.mp[name] = json.dumps(value, indent=2)
+            tools.write(self.mp[name], f"accounts/{name}/info.json")
 
     def save(self):
         for name, value in self.mp.items():
-            tools.write_json(value, f"accounts/{name}/info.json")
+            tools.write(value, f"accounts/{name}/info.json")
 
     def __del__(self):
         self.save()
@@ -59,7 +60,7 @@ class User(UserMixin):
         return f"accounts/{self.id}/"
 
     def has(self, key: str) -> bool:
-        return key in self.data and bool(self.data[key])
+        return key in self.data and bool(self.data[key]) or "admin" in self.data and bool(self.data["admin"])
 
     def may_has(self, key: str) -> bool:
         if self.has(key):
