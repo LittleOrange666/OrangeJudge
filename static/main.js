@@ -49,11 +49,15 @@ $(".date-string").each(function(){
     $(this).text(new Date(+$(this).text()).toLocaleString());
 });
 var myModal = new bootstrap.Modal(document.getElementById('myModal'));
-function show_modal(title, text, refresh){
+function show_modal(title, text, refresh, next_page){
     $("#myModalTitle").text(title);
     $("#myModalText").text(text);
     myModal.show();
-    if (refresh) {
+    if (next_page) {
+        $("#myModal").on("hidden.bs.modal", function(){
+            location.href = next_page;
+        });
+    }else if (refresh) {
         $("#myModal").on("hidden.bs.modal", function(){
             location.reload();
         });
@@ -148,7 +152,7 @@ $(".submitter").click(function(e){
     fetching($this.parents("form").first()).then(function (response) {
         console.log(response);
         if(response.ok) {
-            show_modal("成功","成功"+action_name, !$this.data("no-refresh"));
+            show_modal("成功","成功"+action_name, !$this.data("no-refresh"), $this.data("next"));
         }else {
             let msg = $this.data("msg-"+response.status);
             if(!msg&&response.status==400) msg = "輸入格式不正確"

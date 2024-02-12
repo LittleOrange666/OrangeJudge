@@ -1,3 +1,7 @@
 {% extends "base.html" %}
 
-{% block title %}首頁{% endblock %}
+{% block title %}{{ data["DisplayName"] }}{% endblock %}
+
+{% block main %}
+<h1>{{ data["DisplayName"] }}</h1>
+{% endblock %}

@@ -73,7 +73,7 @@ def error_500(error: Exception):
     with open(f"logs/{target}.log", "w", encoding="utf-8") as f:
         traceback.print_exception(error, file=f)
     if request.method == "POST":
-        print("error uid="+target)
+        print("error uid=" + target)
     return render_template("500.html", log_uid=target), 500
 
 
@@ -86,9 +86,9 @@ def index():
 @login_required
 def log(uid):
     check_user("admin")
-    if not tools.exists("logs", uid+".log"):
+    if not tools.exists("logs", uid + ".log"):
         abort(404)
-    return render_template("log.html", content=tools.read("logs", uid+".log"))
+    return render_template("log.html", content=tools.read("logs", uid + ".log"))
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -112,25 +112,23 @@ def signup():
         if current_user.is_authenticated:
             return redirect('/')
         return render_template("signup.html")
-    email = request.form["email"]
-    fn = "verify/email/" + secure_filename(email)
+    email = secure_filename(request.form["email"])
     verify = request.form["verify"]
     user_id = request.form["user_id"]
     password = request.form["password"]
     nxt = request.form.get('next')
     url = URL(request.referrer)
     err = ""
-    if len(verify) < 6 or not os.path.exists(fn) or os.path.getmtime(fn) < time.time() - 600 or not tools.read(
-            fn).startswith(verify[:6]):
-        err = "驗證碼錯誤"
-    elif constants.user_id_reg.match(user_id) is None:
+    if constants.user_id_reg.match(user_id) is None:
         err = "ID不合法"
     elif login.exist(user_id):
         err = "ID已被使用"
-    elif tools.exists(f"verify/used_email", secure_filename(email)):
+    elif tools.exists(f"verify/used_email", email):
         err = "email已被使用"
     elif len(password) < 6:
         err = "密碼應至少6個字元"
+    elif not use_code(email, verify):
+        err = "驗證碼錯誤"
     if err:
         q = {"msg": err}
         q.update(url.query)
@@ -142,7 +140,6 @@ def signup():
         q = {"msg": err}
         q.update(url.query)
         return redirect(str(url.with_query(q)))
-    tools.remove(fn)
     login_user(user)
     return redirect(nxt or '/')
 
@@ -160,6 +157,15 @@ def get_code():
     if not login.send_email(email, constants.email_content.format(idx)):
         return Response(status=503)
     return Response(status=200)
+
+
+def use_code(email: str, verify: str) -> bool:
+    fn = "verify/email/" + secure_filename(email)
+    if len(verify) < 6 or not os.path.exists(fn) or os.path.getmtime(fn) < time.time() - 600 or not tools.read(
+            fn).startswith(verify[:6]):
+        return False
+    tools.remove(fn)
+    return True
 
 
 @app.route('/logout')
@@ -469,7 +475,10 @@ def problem_preview():
 
 @app.route("/user/<name>", methods=["GET"])
 def user_page(name):
-    abort(404)
+    name = name.lower()
+    if not login.exist(name):
+        abort(404)
+    return render_template("user.html", name=name, data=login.get_user(name).data)
 
 
 @app.route("/settings", methods=["GET", "POST"])
@@ -497,7 +506,7 @@ def settings():
         if login.exist(name):
             abort(409)
         perms = [k for k in constants.permissions if current_user.has(k) and k != "admin" and
-                 request.form.get("perm_"+k, "") == "on"]
+                 request.form.get("perm_" + k, "") == "on"]
         login.create_team(name, current_user.id, perms)
         if "teams" not in data:
             data["teams"] = []
@@ -535,6 +544,26 @@ def settings():
         team_data["members"].remove(current_user.id)
         team.data = team_data
     current_user.data = data
+    return "", 200
+
+
+@app.route("/forget_password", methods=["GET", "POST"])
+def forget_password():
+    if current_user.is_authenticated:
+        abort(409)
+    if request.method == "GET":
+        return render_template("forget_password.html")
+    email = request.form["email"]
+    verify = request.form["verify"]
+    password = request.form["password"]
+    user = login.get_user(email)
+    if user is None:
+        abort(404)
+    if not use_code(email, verify):
+        abort(403)
+    data = user.data
+    data["password"] = login.try_hash(password)
+    user.data = data
     return "", 200
 
 

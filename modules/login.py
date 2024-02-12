@@ -140,6 +140,8 @@ def try_login(user_id: str, password: str) -> None | User:
 
 
 def get_user(user_id: str) -> User | None:
+    if tools.exists(f"verify/used_email", secure_filename(user_id)):
+        user_id = tools.read(f"verify/used_email", secure_filename(user_id))
     file = f"accounts/{user_id.lower()}/info.json"
     if not os.path.isfile(file):
         return None
