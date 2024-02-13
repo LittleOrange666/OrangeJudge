@@ -21,6 +21,7 @@
 
 
 
+
     </style>
 </head>
 
@@ -42,6 +43,9 @@
                     </li>
                     <li class="nav-item">
                         <a class="nav-link active" aria-current="page" href="/problems">公開題目</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="/contests">競賽列表</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link active" aria-current="page" href="/test">測試</a>
@@ -109,6 +113,7 @@ MathJax.Hub.Config({
 });
 
 
+
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js"></script>
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" id="csrf_token">
@@ -116,6 +121,7 @@ MathJax.Hub.Config({
 </body>
 <script>
 {% block script %}{% endblock %}
+
 
 
 </script>

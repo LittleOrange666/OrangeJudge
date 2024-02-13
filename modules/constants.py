@@ -33,11 +33,11 @@ judge_exit_codes: dict[int, str] = {
 
 lxc_name: str = "lxc-test"
 
-default_problem_info: dict = {"name": "unknow", "timelimit": "1000", "memorylimit": "256", "testcases": [], "users": [],
+default_problem_info: dict = {"name": "unknown", "timelimit": "1000", "memorylimit": "256", "testcases": [], "users": [],
                               "statement": {"main": "", "input": "", "output": "", "scoring": "", "interaction": ""},
-                              "files": [], "checker_source": ["default", "unknow"], "is_interact": False,
+                              "files": [], "checker_source": ["default", "unknown"], "is_interact": False,
                               "public": False, "groups": {"default": {"score": 100, "rule": "min"}},
-                              "interactor_source": "unknow", "manual_samples": []}
+                              "interactor_source": "unknown", "manual_samples": []}
 
 email_reg: Pattern = re.compile("^[\\w\\-\\.]+@([\\w\\-]+\\.)+[\\w-]{2,4}$")
 
@@ -66,3 +66,7 @@ latex_begin = """\\documentclass[]{article}
 latex_end = "\n\\end{document}"
 
 permissions: dict[str, str] = {"admin": "管理者", "make_problems": "出題者"}
+
+default_contest_info: dict = {"name": "unknown", "users": [], "problems": [], "start": 0, "elapsed": 0, "type": "icpc",
+                              "can_register": False, "standing": {"public": True, "start_freeze": 0, "end_freeze": 0},
+                              "pretest": "no", "practice": True}

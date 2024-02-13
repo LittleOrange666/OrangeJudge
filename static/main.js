@@ -48,6 +48,13 @@ $("textarea").on('keydown', function(e) {
 $(".date-string").each(function(){
     $(this).text(new Date(+$(this).text()).toLocaleString());
 });
+$(".time-string").each(function(){
+    let t = Math.floor(+$(this).text()/60000);
+    let d = Math.floor(t/1440);
+    let h = Math.floor((t%1440)/60);
+    let m = t%60;
+    $(this).text((d>0?d+':':'')+(h<10?"0":"")+h+":"+(m<10?"0":"")+m);
+});
 var myModal = new bootstrap.Modal(document.getElementById('myModal'));
 function show_modal(title, text, refresh, next_page){
     $("#myModalTitle").text(title);
@@ -151,13 +158,21 @@ $(".submitter").click(function(e){
     }
     fetching($this.parents("form").first()).then(function (response) {
         console.log(response);
-        if(response.ok) {
-            show_modal("成功","成功"+action_name, !$this.data("no-refresh"), $this.data("next"));
-        }else {
-            let msg = $this.data("msg-"+response.status);
-            if(!msg&&response.status==400) msg = "輸入格式不正確"
-            if(!msg&&response.status==403) msg = "您似乎沒有權限執行此操作"
-            show_modal("失敗",msg?msg:"Error Code: " + response.status);
-        }
+        response.text().then(function(text){
+            let link = null;
+            if(response.ok) {
+                if(!!$this.data("redirect")) link = text;
+                show_modal("成功","成功"+action_name, !$this.data("no-refresh"), $this.data("next") || link);
+            }else if (response.status==500){
+                response.text().then(function(text){
+                    show_modal("失敗", "伺服器內部錯誤，log uid="+text);
+                });
+            }else {
+                let msg = $this.data("msg-"+response.status);
+                if(!msg&&response.status==400) msg = "輸入格式不正確"
+                if(!msg&&response.status==403) msg = "您似乎沒有權限執行此操作"
+                show_modal("失敗",msg?msg:"Error Code: " + response.status);
+            }
+        });
     });
 });

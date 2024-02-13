@@ -165,6 +165,7 @@ def create_account(email: str, user_id: str, password: str | None, is_team: bool
     tools.write_json(dat, folder, "info.json")
     tools.create(folder, "problems")
     tools.create(folder, "submissions")
+    tools.create(folder, "contests")
     tools.write(user_id, f"verify/used_email", secure_filename(email))
 
 
@@ -179,3 +180,4 @@ def create_team(team_id: str, owner_id: str, permissions: list[str]):
     tools.write_json(dat, folder, "info.json")
     tools.create(folder, "problems")
     tools.create(folder, "submissions")
+    tools.create(folder, "contests")

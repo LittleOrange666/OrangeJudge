@@ -14,7 +14,7 @@ from pygments.formatters import HtmlFormatter
 from werkzeug.utils import secure_filename
 from yarl import URL
 
-from modules import executing, tasks, tools, problemsetting, constants, login
+from modules import executing, tasks, tools, problemsetting, constants, login, contests
 
 prepares = {k: lexers.get_lexer_by_name(k) for lexer in lexers.get_all_lexers() for k in lexer[1]}
 app = Flask(__name__, static_url_path='/static', static_folder="static/", template_folder="templates/")
@@ -73,7 +73,7 @@ def error_500(error: Exception):
     with open(f"logs/{target}.log", "w", encoding="utf-8") as f:
         traceback.print_exception(error, file=f)
     if request.method == "POST":
-        print("error uid=" + target)
+        return target, 500
     return render_template("500.html", log_uid=target), 500
 
 
@@ -567,6 +567,41 @@ def forget_password():
     return "", 200
 
 
+@app.route("/contests", methods=["GET"])
+def contests_list():
+    contest_list = tools.read("data/public_contests").split()
+    contest_cnt = len(contest_list)
+    page_cnt = max((contest_cnt - 1) // constants.page_size + 1, 1)
+    out = []
+    page = request.args.get("page", "1")
+    if not page.isdigit():
+        abort(404)
+    page_idx = int(page)
+    if page_idx <= 0 or page_idx > page_cnt:
+        abort(404)
+    got_data = contest_list[
+               max(0, contest_cnt - constants.page_size * page_idx):contest_cnt - constants.page_size * (page_idx - 1)]
+    for idx in got_data:
+        o = tools.read_json("contests", idx, "info.json")
+        o["idx"] = idx
+        out.append(o)
+    displays = [1, page_cnt]
+    displays.extend(range(max(2, page_idx - 2), min(page_cnt, page_idx + 2) + 1))
+    return render_template("contests.html", contests=out, page_cnt=page_cnt, page_idx=page_idx,
+                           show_pages=sorted(set(displays)))
+
+
+@app.route("/create_contest", methods=["POST"])
+@login_required
+def create_contest():
+    check_user("make_problems")
+    name = request.form["contest_name"]
+    if not name:
+        abort(400)
+    idx = contests.create_contest(name, current_user.id)
+    return "/contest/"+idx, 200
+
+
 def main():
     if not sys.platform.startswith("linux"):
         raise RuntimeError("The judge server only supports Linux")
@@ -577,7 +612,7 @@ def main():
     executing.init()
     tasks.init()
     problemsetting.init()
-    app.run("0.0.0.0", port=5555)
+    app.run("0.0.0.0", port=8898)
 
 
 if __name__ == '__main__':

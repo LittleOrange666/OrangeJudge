@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}競賽列表{% endblock %}
+
+{% block main %}
+<h1>競賽列表</h1>
+{% if current_user.is_authenticated and current_user.may_has("make_problems") %}
+<form method="post" action="/create_contest">
+    <div class="row">
+        <div class="col-auto">
+            <input type="text" class="form-control" name="contest_name" placeholder="競賽名稱" required>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary submitter" data-redirect="true">建立新的競賽</button>
+        </div>
+    </div>
+</form>
+{% endif %}
+<table class="table table-hover table-striped">
+    <thead>
+    <tr>
+        <th scope="col">競賽名稱</th>
+        <th scope="col">開始時間</th>
+        <th scope="col">持續時間</th>
+        <th scope="col">操作</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for contest in contests %}
+    <tr>
+        <th scope="row"><a href="/contest/{{ contest['idx'] }}">{{ contest['name'] }}</a></th>
+        <td class="date-string">{{ contest["start"] }}</td>
+        <td class="time-string">{{ contest["elapsed"] }}</td>
+        <td></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+<nav aria-label="Page navigation example">
+    <ul class="pagination">
+        <li class="page-item" data-disabled="{{ page_idx == 1 }}">
+            <a class="page-link" data-args="page={{ page_idx-1 }}" aria-label="Previous">
+                <span aria-hidden="true">&laquo;</span>
+            </a>
+        </li>
+        {% for page in show_pages %}
+        <li class="page-item" data-active="{{ page==page_idx }}"><a class="page-link" data-args="page={{ page }}">{{
+            page }}</a></li>
+        {% endfor %}
+        <li class="page-item" data-disabled="{{ page_idx == page_cnt }}">
+            <a class="page-link" data-args="page={{ page_idx+1 }}" aria-label="Next">
+                <span aria-hidden="true">&raquo;</span>
+            </a>
+        </li>
+    </ul>
+</nav>
+{% endblock %}
