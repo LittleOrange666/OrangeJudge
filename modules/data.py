@@ -8,3 +8,7 @@ app = server.app
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + datafile
 db = SQLAlchemy(app)
+
+
+def init():
+    pass

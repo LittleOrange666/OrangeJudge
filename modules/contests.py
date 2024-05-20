@@ -16,3 +16,7 @@ def create_contest(name: str, user: str) -> str:
     tools.write_json({}, path, "standings.json")
     tools.append(idx + "\n", "data/public_contests")
     return idx
+
+
+def init():
+    pass

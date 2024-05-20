@@ -5,15 +5,13 @@ import smtplib
 from multiprocessing import Lock
 from multiprocessing.managers import DictProxy
 
-from flask import Flask
-from flask_login import LoginManager, UserMixin
+from flask import Flask, request, abort
+from flask_login import LoginManager, UserMixin, current_user
 from werkzeug.utils import secure_filename
 
-from modules import tools, locks
+from modules import tools, locks, server
 
-login_manager = None
 smtp = smtplib.SMTP('smtp.gmail.com', 587)
-email_sender = ""
 
 
 class UserDataManager:
@@ -84,20 +82,20 @@ class User(UserMixin):
         return self.has("team")
 
 
-def init(app: Flask) -> None:
-    global login_manager, email_sender
-    login_manager = LoginManager(app)
-    login_manager.session_protection = None
-    login_manager.login_view = 'do_login'
-    smtp.ehlo()
-    smtp.starttls()
-    lines = tools.read("secret/smtp").split("\n")
-    email_sender = lines[0]
-    smtp.login(lines[0], lines[1])
+app = server.app
+login_manager = LoginManager(app)
+login_manager.session_protection = None
+login_manager.login_view = 'do_login'
+smtp.ehlo()
+smtp.starttls()
+lines = tools.read("secret/smtp").split("\n")
+email_sender = lines[0]
+smtp.login(lines[0], lines[1])
 
-    @login_manager.user_loader
-    def user_loader(name):
-        return User(name)
+
+@login_manager.user_loader
+def user_loader(name):
+    return User(name)
 
 
 def send_email(target: str, content: str) -> bool:
@@ -181,3 +179,21 @@ def create_team(team_id: str, owner_id: str, permissions: list[str]):
     tools.create(folder, "problems")
     tools.create(folder, "submissions")
     tools.create(folder, "contests")
+
+
+def check_user(require: str | None = None, users: list[str] | None = None) -> User:
+    obj = request.args if request.method == "GET" else request.form
+    username = obj.get('user', current_user.id)
+    user = get_user(username)
+    if user is None:
+        abort(404)
+    if not user.has("admin"):
+        if require is not None and not user.may_has(require):
+            abort(403)
+        if users is not None and not any(user.in_team(name) for name in users):
+            abort(403)
+    return user
+
+
+def init():
+    pass

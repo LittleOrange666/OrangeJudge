@@ -1,6 +1,7 @@
 import sys
 
-from modules import executing, problemsetting, constants, tasks, server
+from modules import contests, constants, data, executing, locks, login, problemsetting, server, tasks, tools
+import modules.routers
 
 
 def main():
@@ -10,9 +11,15 @@ def main():
         raise RuntimeError("The judge server must be run as root")
     problemsetting.system(f"sudo lxc-start {constants.lxc_name}")
     problemsetting.system(f"sudo cp -r -f judge /var/lib/lxc/{constants.lxc_name}/rootfs/")
+    contests.init()
+    data.init()
     executing.init()
+    locks.init()
+    login.init()
     tasks.init()
     problemsetting.init()
+    tools.init()
+    modules.routers.init()
     server.app.run("0.0.0.0", port=8898)
 
 

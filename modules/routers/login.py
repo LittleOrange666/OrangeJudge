@@ -1,0 +1,199 @@
+import os
+import random
+import time
+
+from flask import abort, render_template, redirect, request, Response
+from flask_login import login_required, current_user, login_user, logout_user
+from werkzeug.utils import secure_filename
+from yarl import URL
+
+from modules import tools, server, login, constants
+
+app = server.app
+
+
+@app.route("/log/<uid>", methods=["GET"])
+@login_required
+def log(uid):
+    login.check_user("admin")
+    if not tools.exists("logs", uid + ".log"):
+        abort(404)
+    return render_template("log.html", content=tools.read("logs", uid + ".log"))
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def do_login():
+    if request.method == 'GET':
+        if current_user.is_authenticated:
+            return redirect('/')
+        return render_template("login.html")
+    nxt = request.form.get('next')
+    name = request.form['user_id']
+    user = login.try_login(name, request.form['password'])
+    if user is not None:
+        login_user(user)
+        return redirect(nxt or '/')
+    return redirect('/login')
+
+
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if request.method == 'GET':
+        if current_user.is_authenticated:
+            return redirect('/')
+        return render_template("signup.html")
+    email = secure_filename(request.form["email"])
+    verify = request.form["verify"]
+    user_id = request.form["user_id"]
+    password = request.form["password"]
+    nxt = request.form.get('next')
+    url = URL(request.referrer)
+    err = ""
+    if constants.user_id_reg.match(user_id) is None:
+        err = "ID不合法"
+    elif login.exist(user_id):
+        err = "ID已被使用"
+    elif tools.exists(f"verify/used_email", email):
+        err = "email已被使用"
+    elif len(password) < 6:
+        err = "密碼應至少6個字元"
+    elif not use_code(email, verify):
+        err = "驗證碼錯誤"
+    if err:
+        q = {"msg": err}
+        q.update(url.query)
+        return redirect(str(url.with_query(q)))
+    login.create_account(email, user_id, password)
+    user = login.try_login(user_id, password)
+    if user is None:
+        err = "註冊失敗"
+        q = {"msg": err}
+        q.update(url.query)
+        return redirect(str(url.with_query(q)))
+    login_user(user)
+    return redirect(nxt or '/')
+
+
+@app.route('/get_code', methods=['POST'])
+def get_code():
+    email = request.form["email"]
+    if constants.email_reg.match(email) is None:
+        abort(400)
+    sec_email = secure_filename(email)
+    if os.path.exists(f"verify/email/{sec_email}") and os.path.getmtime(f"verify/email/{sec_email}") > time.time() - 60:
+        abort(409)
+    idx = "".join(str(random.randint(0, 9)) for _ in range(6))
+    tools.write(idx, "verify", "email", sec_email)
+    if not login.send_email(email, constants.email_content.format(idx)):
+        return Response(status=503)
+    return Response(status=200)
+
+
+def use_code(email: str, verify: str) -> bool:
+    fn = "verify/email/" + secure_filename(email)
+    if len(verify) < 6 or not os.path.exists(fn) or os.path.getmtime(fn) < time.time() - 600 or not tools.read(
+            fn).startswith(verify[:6]):
+        return False
+    tools.remove(fn)
+    return True
+
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect("/")
+
+
+@app.route("/user/<name>", methods=["GET"])
+def user_page(name):
+    name = name.lower()
+    if not login.exist(name):
+        abort(404)
+    return render_template("user.html", name=name, data=login.get_user(name).data)
+
+
+@app.route("/settings", methods=["GET", "POST"])
+@login_required
+def settings():
+    data = current_user.data
+    if request.method == "GET":
+        teams = {k: login.get_user(k).data for k in data.get("teams", [])}
+        perms = [(k, v) for k, v in constants.permissions.items() if current_user.has(k) and k != "admin"]
+        return render_template("settings.html", data=data, teams=teams, perms=perms)
+    if request.form["action"] == "general_info":
+        data["DisplayName"] = request.form.get("DisplayName", data["DisplayName"])
+    elif request.form["action"] == "change_password":
+        old_password = request.form.get("old_password", "")
+        new_password = request.form.get("new_password", "")
+        if login.try_hash(old_password) != data["password"]:
+            abort(403)
+        if len(new_password) < 6:
+            abort(400)
+        data["password"] = login.try_hash(new_password)
+    elif request.form["action"] == "create_team":
+        name = request.form["name"].lower()
+        if not name:
+            abort(400)
+        if login.exist(name):
+            abort(409)
+        perms = [k for k in constants.permissions if current_user.has(k) and k != "admin" and
+                 request.form.get("perm_" + k, "") == "on"]
+        login.create_team(name, current_user.id, perms)
+        if "teams" not in data:
+            data["teams"] = []
+        data["teams"].append(name)
+    elif request.form["action"] == "add_member":
+        target = request.form["target"].lower()
+        name = request.form["team"].lower()
+        if not login.exist(target):
+            abort(404)
+        if not login.exist(name) or not login.get_user(name).data["owner"] == current_user.id:
+            abort(403)
+        team = login.get_user(name)
+        user = login.get_user(target)
+        team_data = team.data
+        user_data = user.data
+        if target in team_data["members"]:
+            abort(409)
+        if "teams" not in user_data:
+            user_data["teams"] = []
+        if name in user_data["teams"]:
+            abort(409)
+        team_data["members"].append(target)
+        user_data["teams"].append(name)
+        user.data = user_data
+        team.data = team_data
+    elif request.form["action"] == "leave_team":
+        name = request.form["team"].lower()
+        team = login.get_user(name)
+        team_data = team.data
+        if current_user.id not in team_data["members"]:
+            abort(409)
+        if name not in data.get("teams", []):
+            abort(409)
+        data["teams"].remove(name)
+        team_data["members"].remove(current_user.id)
+        team.data = team_data
+    current_user.data = data
+    return "", 200
+
+
+@app.route("/forget_password", methods=["GET", "POST"])
+def forget_password():
+    if current_user.is_authenticated:
+        abort(409)
+    if request.method == "GET":
+        return render_template("forget_password.html")
+    email = request.form["email"]
+    verify = request.form["verify"]
+    password = request.form["password"]
+    user = login.get_user(email)
+    if user is None:
+        abort(404)
+    if not use_code(email, verify):
+        abort(403)
+    data = user.data
+    data["password"] = login.try_hash(password)
+    user.data = data
+    return "", 200

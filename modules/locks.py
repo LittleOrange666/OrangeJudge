@@ -46,3 +46,7 @@ class AtomicValue(Generic[T]):
     def value(self, value: T):
         with self.lock:
             self._value.value = value
+
+
+def init():
+    pass

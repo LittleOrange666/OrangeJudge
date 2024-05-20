@@ -207,3 +207,7 @@ class TempFile(File):
 
 def random_string() -> str:
     return uuid.uuid4().hex
+
+
+def init():
+    pass
