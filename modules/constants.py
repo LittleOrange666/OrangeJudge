@@ -33,13 +33,14 @@ judge_exit_codes: dict[int, str] = {
 
 lxc_name: str = "lxc-test"
 
-default_problem_info: dict = {"name": "unknown", "timelimit": "1000", "memorylimit": "256", "testcases": [], "users": [],
+default_problem_info: dict = {"name": "unknown", "timelimit": "1000", "memorylimit": "256", "testcases": [],
+                              "users": [],
                               "statement": {"main": "", "input": "", "output": "", "scoring": "", "interaction": ""},
                               "files": [], "checker_source": ["default", "unknown"], "is_interact": False,
                               "public": False, "groups": {"default": {"score": 100, "rule": "min"}},
                               "interactor_source": "unknown", "manual_samples": []}
 
-email_reg: Pattern = re.compile("^[\\w\\-\\.]+@([\\w\\-]+\\.)+[\\w-]{2,4}$")
+email_reg: Pattern = re.compile("^[\\w\\-.]+@([\\w\\-]+\\.)+[\\w-]{2,4}$")
 
 user_id_reg: Pattern = re.compile("^[A-Za-z0-9_]+$")
 
@@ -69,4 +70,7 @@ permissions: dict[str, str] = {"admin": "管理者", "make_problems": "出題者
 
 default_contest_info: dict = {"name": "unknown", "users": [], "problems": [], "start": 0, "elapsed": 0, "type": "icpc",
                               "can_register": False, "standing": {"public": True, "start_freeze": 0, "end_freeze": 0},
-                              "pretest": "no", "practice": True}
+                              "pretest": "no", "practice": "no"}
+# pretest: no all last
+# practice: no private public
+# type: icpc ioi ioic cf

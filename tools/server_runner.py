@@ -3,7 +3,7 @@ import signal
 import subprocess
 import sys
 
-main_cmd = "python3 server.py"
+main_cmd = "python3 main.py"
 
 ask1 = """Server running:
 1. kill

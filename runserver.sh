@@ -5,5 +5,4 @@ else
   chmod +x ./tools/autoinit.sh
   sudo ./tools/autoinit.sh
 fi
-sudo python3 server.py
-pause
+sudo python3 main.py

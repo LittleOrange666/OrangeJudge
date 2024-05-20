@@ -14,5 +14,5 @@ def create_contest(name: str, user: str) -> str:
     tools.write_json(info, path, "info.json")
     tools.write_json({}, path, "submissions")
     tools.write_json({}, path, "standings.json")
-    tools.append(idx+"\n", "data/public_contests")
+    tools.append(idx + "\n", "data/public_contests")
     return idx
