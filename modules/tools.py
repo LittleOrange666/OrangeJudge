@@ -1,5 +1,6 @@
 import json
 import os
+import subprocess
 import time
 import uuid
 from datetime import datetime
@@ -9,6 +10,12 @@ from typing import Callable
 from flask import abort
 
 from modules import locks
+
+
+def system(s: str, cwd: str = "") -> None:
+    cwd = os.path.abspath(cwd)
+    print(f"system command in {cwd!r}:", s)
+    subprocess.call(s.split(), cwd=cwd)
 
 
 def create_truncated(source: str, target: str) -> str:

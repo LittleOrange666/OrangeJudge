@@ -106,20 +106,6 @@ def init() -> None:
     Process(target=runner).start()
 
 
-def system(s: str, cwd: str = "") -> None:
-    cwd = os.path.abspath(cwd)
-    print(f"system command in {cwd!r}:", s)
-    subprocess.call(s.split(), cwd=cwd)
-
-
-def getout(s, cwd: str) -> str:
-    cwd = os.path.abspath(cwd)
-    print(f"get stdout for system command in {cwd!r}:", s)
-    ret = subprocess.run(s, shell=True, cwd=cwd, capture_output=True).stdout.decode("utf-8")
-    print(ret)
-    return ret
-
-
 def create_problem(name: str, user: str) -> str:
     with tools.File("data/problem_count") as f:
         pid = int(f.read())
@@ -153,9 +139,6 @@ def end(success: bool):
 
 def init_problem(pid: str, name: str, user: str):
     path = "preparing_problems/" + pid
-    # system(f"sudo dd if=/dev/zero of={pid}.img bs=1G count=1", "preparing_problems")
-    # system(f"sudo mkfs.ext4 {pid}.img", "preparing_problems")
-    # system(f"sudo mount -o loop {pid}.img ./{pid}", "preparing_problems")
     try:
         making_dir(path + "/testcases")
         making_dir(path + "/file")

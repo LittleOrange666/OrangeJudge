@@ -9,7 +9,7 @@ import mdx_math
 from pygments import highlight, lexers
 from pygments.formatters import HtmlFormatter
 
-from modules import tools, constants, problemsetting
+from modules import tools, constants
 
 prepares = {"language-" + k: lexers.get_lexer_by_name(k) for lexer in lexers.get_all_lexers() for k in lexer[1]}
 the_headers = ("h1", "h2", "h3")
@@ -158,7 +158,7 @@ def run_latex(pid: str, strings: list[str]):
         s = s.replace("\n", "<br>")
         s = constants.latex_begin + s + constants.latex_end
         tools.write(s, os.path.join(folder, "tmp.tex"))
-        problemsetting.system("htxelatex tmp.tex", folder)
+        tools.system("htxelatex tmp.tex", folder)
         out = tools.read_default(folder, "tmp.html")
         if out:
             out = out.replace("&amp;#", "&#").replace("\n", "")
