@@ -1,6 +1,5 @@
 import os
-dirs = ("problems", "preparing_problems", "data", "accounts", "submissions", "sessions", "secret", "verify",
-        "verify/email", "verify/used_email", "tmp", "logs", "contests")
+dirs = ("problems", "preparing_problems", "data", "accounts", "submissions", "sessions", "secret", "tmp", "logs", "contests")
 os.chdir(os.path.dirname(os.path.dirname(__file__)))
 for name in dirs:
     os.makedirs(name, exist_ok=True)

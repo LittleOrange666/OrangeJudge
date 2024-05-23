@@ -1,24 +1,22 @@
 import traceback
 
-from flask import Flask, render_template, request, session
+from flask import Flask, render_template, request
 from flask_session import Session
 from flask_wtf import CSRFProtect
 
 from modules import tools
 
 app = Flask(__name__, static_url_path='/static', static_folder="../static/", template_folder="../templates/")
-app.secret_key = 'HP4xkCix2nf5qCmxSXV0sBwocE2CjECC5z2T9TKQmv8'
+app.config['SECRET_KEY'] = 'HP4xkCix2nf5qCmxSXV0sBwocE2CjECC5z2T9TKQmv8'
 app.config['SESSION_TYPE'] = "filesystem"
 app.config["SESSION_FILE_DIR"] = "sessions"
+# app.config['SESSION_USE_SIGNER'] = True
+# app.config['SECRET_KEY'] = os.urandom(24)
 app.config["SESSION_COOKIE_NAME"] = "OrangeJudgeSession"
+app.config['SESSION_PERMANENT'] = True
 app.config["PERMANENT_SESSION_LIFETIME"] = 3000000
 Session(app)
 CSRFProtect(app)
-
-
-@app.before_request
-def make_session_permanent():
-    session.permanent = True
 
 
 @app.errorhandler(400)

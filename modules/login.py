@@ -2,69 +2,38 @@ import hashlib
 import json
 import os.path
 import smtplib
-from multiprocessing import Lock
-from multiprocessing.managers import DictProxy
 
-from flask import Flask, request, abort
+from flask import request, abort
 from flask_login import LoginManager, UserMixin, current_user
 from werkzeug.utils import secure_filename
 
-from modules import tools, locks, server
+from modules import tools, server, datas
 
 smtp = smtplib.SMTP('smtp.gmail.com', 587)
-
-
-class UserDataManager:
-    def __init__(self):
-        self.mp: DictProxy[str, str] = locks.manager.dict()
-        self.lock = Lock()
-
-    def read(self, name: str) -> dict:
-        with self.lock:
-            if name not in self.mp:
-                self.mp[name] = tools.read(f"accounts/{name}/info.json")
-            return json.loads(self.mp[name])
-
-    def write(self, name: str, value: dict):
-        with self.lock:
-            self.mp[name] = json.dumps(value, indent=2)
-            tools.write(self.mp[name], f"accounts/{name}/info.json")
-
-    def save(self):
-        for name, value in self.mp.items():
-            tools.write(value, f"accounts/{name}/info.json")
-
-    def __del__(self):
-        self.save()
-
-
-user_data_manager = UserDataManager()
 
 
 class User(UserMixin):
     def __init__(self, name: str):
         self.id = secure_filename(name.lower())
+        self.data: datas.User = datas.User.query.filter_by(username=name).first()
 
-    @property
-    def data(self) -> dict:
-        return user_data_manager.read(self.id)
-
-    @data.setter
-    def data(self, value: dict):
-        user_data_manager.write(self.id, value)
+    def save(self):
+        datas.add(self.data)
 
     @property
     def folder(self) -> str:
         return f"accounts/{self.id}/"
 
     def has(self, key: str) -> bool:
-        return key in self.data and bool(self.data[key]) or "admin" in self.data and bool(self.data["admin"])
+        prems = self.data.permission_list()
+        return key in prems or "admin" in prems
 
     def may_has(self, key: str) -> bool:
         if self.has(key):
             return True
-        return "teams" in self.data and any(User(k).has(key) for k in self.data["teams"])
+        return any(User(k).has(key) for k in self.data.team_list())
 
+    """
     def who_has(self, key: str) -> list[str]:
         ret = []
         if self.has(key):
@@ -80,6 +49,7 @@ class User(UserMixin):
 
     def is_team(self) -> bool:
         return self.has("team")
+    """
 
 
 app = server.app
@@ -95,7 +65,7 @@ smtp.login(lines[0], lines[1])
 
 @login_manager.user_loader
 def user_loader(name):
-    return User(name)
+    return get_user(name)
 
 
 def send_email(target: str, content: str) -> bool:
@@ -123,35 +93,45 @@ def try_hash(content: str | None) -> str:
 
 
 def try_login(user_id: str, password: str) -> None | User:
-    user_id = secure_filename(user_id)
+    user_id = user_id.lower()
     if password is None:
         return None
-    if tools.exists(f"verify/used_email", user_id):
-        user_id = tools.read(f"verify/used_email", user_id)
-    file = f"accounts/{user_id.lower()}/info.json"
-    if not os.path.isfile(file):
-        return None
-    data = tools.read_json(file)
-    if try_hash(password) != data["password"]:
+    usr = datas.User.query.filter_by(username=user_id)
+    if usr.count() == 0:
+        usr = datas.User.query.filter_by(email=user_id)
+        if usr.count() == 0:
+            return None
+        user_id = usr.first().username
+    pwd = usr.first().password_sha256_hex
+    if pwd != try_hash(password):
         return None
     return User(user_id)
 
 
 def get_user(user_id: str) -> User | None:
-    if tools.exists(f"verify/used_email", secure_filename(user_id)):
-        user_id = tools.read(f"verify/used_email", secure_filename(user_id))
-    file = f"accounts/{user_id.lower()}/info.json"
-    if not os.path.isfile(file):
-        return None
+    usr = datas.User.query.filter_by(username=user_id)
+    if usr.count() == 0:
+        usr = datas.User.query.filter_by(email=user_id)
+        if usr.count() == 0:
+            return None
+        user_id = usr.first().username
     return User(user_id)
 
 
 def exist(user_id: str) -> bool:
-    user_id = secure_filename(user_id)
-    return os.path.isfile(f"accounts/{user_id.lower()}/info.json")
+    return datas.User.query.filter_by(username=user_id).count() > 0
 
 
 def create_account(email: str, user_id: str, password: str | None, is_team: bool = False) -> None:
+    obj = datas.User(username=user_id.lower(),
+                     display_name=user_id,
+                     email=email,
+                     password_sha256_hex=try_hash(password),
+                     permissions="",
+                     teams="",
+                     is_team=is_team)
+    datas.add(obj)
+    """
     folder = f"accounts/{user_id.lower()}"
     os.makedirs(folder, exist_ok=True)
     dat = {"name": user_id, "DisplayName": user_id, "email": email, "password": try_hash(password),
@@ -165,6 +145,7 @@ def create_account(email: str, user_id: str, password: str | None, is_team: bool
     tools.create(folder, "submissions")
     tools.create(folder, "contests")
     tools.write(user_id, f"verify/used_email", secure_filename(email))
+    """
 
 
 def create_team(team_id: str, owner_id: str, permissions: list[str]):

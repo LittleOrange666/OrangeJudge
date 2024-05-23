@@ -4,7 +4,7 @@ from multiprocessing import Queue, Process
 
 from flask import abort
 
-from modules import executing, constants, tools, locks
+from modules import executing, constants, tools, locks, datas
 
 submissions_queue = Queue()
 
@@ -20,33 +20,37 @@ def create_submission() -> str:
     return count
 
 
-def run_test(idx: str, dat: dict) -> None:
-    lang = executing.langs[dat["lang"]]
+def run_test(dat: datas.Submission) -> None:
+    lang = executing.langs[dat.language]
     env = executing.Environment()
-    source = f"submissions/{idx}/" + dat["source"]
-    in_file = os.path.abspath(f"submissions/{idx}/" + dat["infile"])
-    out_file = os.path.abspath(f"submissions/{idx}/" + dat["outfile"])
+    idx = str(dat.id)
+    source = f"submissions/{idx}/" + dat.source
+    in_file = os.path.abspath(f"submissions/{idx}/" + dat.data["infile"])
+    out_file = os.path.abspath(f"submissions/{idx}/" + dat.data["outfile"])
     result = lang.run(source, env, [(in_file, out_file)])
-    tools.write(result + "\n", f"submissions/{idx}/results")
-    tools.create(f"submissions/{idx}/completed")
+    dat.result = {"simple_result": result}
+    dat.completed = True
+    datas.add(dat)
 
 
-def run_problem(idx: str, dat: dict) -> None:
-    lang = executing.langs[dat["lang"]]
+def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
+    lang = executing.langs[dat.language]
     env = executing.Environment()
-    source = f"submissions/{idx}/" + dat["source"]
-    pid = dat["pid"]
+    idx = str(dat.id)
+    source = f"submissions/{idx}/" + dat.source
+    pid = pdat.pid
     problem_path = f"problems/{pid}/"
-    problem_info = constants.default_problem_info | tools.read_json(problem_path, "info.json")
+    problem_info = constants.default_problem_info | pdat.data
     filename, ce_msg = lang.compile(env.send_file(source), env)
     out_info = {"CE": False}
     results = []
     groups = {}
     simple_result = "AC"
-    top_score = dat.get("top_score", 100)
+    top_score = problem_info.get("top_score", 100)
     total_score = 0
+    exist_gp = set()
     if ce_msg:
-        tools.write(f"submissions/{idx}/ce_msg.txt", ce_msg)
+        dat.ce_msg = ce_msg
         out_info["CE"] = True
         simple_result = "CE"
     else:
@@ -67,7 +71,6 @@ def run_problem(idx: str, dat: dict) -> None:
             groups["default"] = {}
         for o in groups.values():
             o |= {"result": "OK", "time": 0, "mem": 0, "gainscore": top_score if o.get("rule", "min") == "min" else 0}
-        exist_gp = set()
         testcases = problem_info["testcases"]
         if "testcases_gen" in problem_info:
             testcases.extend([o | {"gen": True} for o in problem_info["testcases_gen"]])
@@ -114,8 +117,8 @@ def run_problem(idx: str, dat: dict) -> None:
                 elif "0" != exit_code:
                     if "153" == exit_code:
                         ret = ["OLE", "輸出過多"]
-                    elif exit_code in executing.exit_codes:
-                        ret = ["RE", executing.exit_codes[exit_code]]
+                    elif exit_code in constants.exit_codes:
+                        ret = ["RE", constants.exit_codes[exit_code]]
                     else:
                         ret = ["RE", out[1]]
                 else:
@@ -175,9 +178,10 @@ def run_problem(idx: str, dat: dict) -> None:
     out_info["group_results"] = {k: {key: v[key] for key in keys} for k, v in groups.items() if k in exist_gp}
     out_info["simple_result"] = simple_result
     out_info["total_score"] = total_score
-    out_info["protected"] = dat["user"] not in problem_info["users"]
-    tools.write_json(out_info, f"submissions/{idx}/results.json")
-    tools.create(f"submissions/{idx}/completed")
+    out_info["protected"] = dat.user.username not in problem_info["users"]
+    dat.result = out_info
+    dat.completed = True
+    datas.add(dat)
 
 
 def get_queue_position(idx: str) -> int:
@@ -188,25 +192,23 @@ def get_queue_position(idx: str) -> int:
 
 def runner():
     while True:
-        idx: str = submissions_queue.get()
-        if not tools.exists(f"submissions/{idx}/info.json"):
-            continue
-        dat: dict = tools.read_json(f"submissions/{idx}/info.json")
+        idx: int = int(submissions_queue.get())
+        dat: datas.Submission = datas.Submission.query.get(idx)
         try:
-            last_judged.value = int(idx)
-            match dat["type"]:
-                case "test":
-                    run_test(idx, dat)
-                case "problem":
-                    run_problem(idx, dat)
+            last_judged.value = idx
+            pdat: datas.Problem = dat.problem
+            if pdat.pid == "test":
+                run_test(dat)
+            else:
+                run_problem(pdat, dat)
         except Exception as e:
             traceback.print_exception(e)
-            dat["JE"] = True
+            dat.data["JE"] = True
             log_uuid = tools.random_string()
-            dat["log_uuid"] = log_uuid
+            dat.data["log_uuid"] = log_uuid
             tools.write("".join(traceback.format_exception(e)), "logs", log_uuid + ".log")
-            tools.write_json(dat, f"submissions/{idx}/info.json")
-            tools.create(f"submissions/{idx}/completed")
+            dat.completed = True
+            datas.add(dat)
 
 
 def init():

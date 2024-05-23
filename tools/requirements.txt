@@ -11,3 +11,4 @@ regex
 infix
 yarl
 latex2markdown
+redis

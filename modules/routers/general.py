@@ -1,3 +1,4 @@
+import datetime
 import json
 import os
 from flask import abort, render_template, redirect, request, send_file
@@ -5,11 +6,12 @@ from flask_login import login_required, current_user
 from pygments import highlight, lexers
 from pygments.formatters import HtmlFormatter
 from werkzeug.utils import secure_filename
-from modules import tools, server, constants, executing, tasks
+from modules import tools, server, constants, executing, tasks, datas
 
 app = server.app
 
 prepares = {k: lexers.get_lexer_by_name(k) for lexer in lexers.get_all_lexers() for k in lexer[1]}
+
 
 @app.route("/", methods=["GET"])
 def index():
@@ -18,7 +20,8 @@ def index():
 
 @app.route('/problems', methods=['GET'])
 def problems():
-    return render_template("problems.html", problems=tools.read_json("data/public_problems.json"))
+    return render_template("problems.html",
+                           problems=datas.Problem.query.filter_by(is_public=True).all())
 
 
 @app.route('/test', methods=['GET', 'POST'])
@@ -35,15 +38,18 @@ def test():
         if lang not in executing.langs:
             abort(404)
         ext = executing.langs[lang].data["source_ext"]
-        idx = tasks.create_submission()
+        """
         if tools.elapsed(current_user.folder, "submissions") < 5:
             abort(429)
         tools.append(idx + "\n", current_user.folder, "submissions")
+        """
+        dat = datas.Submission(source="a" + ext, time=datetime.datetime.now(), user=current_user.data,
+                               problem=datas.Problem.query.filter_by(pid="test").first(), language=lang,
+                               data={"infile": "in.txt", "outfile": "out.txt"})
+        datas.add(dat)
+        idx = str(dat.id)
         tools.write(code, f"submissions/{idx}/a{ext}")
         tools.write(inp, f"submissions/{idx}/in.txt")
-        dat = {"type": "test", "source": "a" + ext, "infile": "in.txt", "outfile": "out.txt", "lang": lang,
-               "user": current_user.id, "time": tools.get_timestring()}
-        tools.write_json(dat, f"submissions/{idx}/info.json")
         tasks.submissions_queue.put(idx)
         return redirect("/submission/" + idx)
 
@@ -54,20 +60,20 @@ def submit():
     lang = request.form["lang"]
     code = request.form["code"].replace("\n\n", "\n")
     pid = request.form["pid"]
-    pid = secure_filename(pid)
-    if not tools.exists("problems", pid, "info.json"):
-        abort(404)
+    pdat = datas.Problem.query.filter_by(pid=pid).first_or_404()
     if lang not in executing.langs:
         abort(404)
     ext = executing.langs[lang].data["source_ext"]
-    idx = tasks.create_submission()
+    """
     if tools.elapsed(current_user.folder, "submissions") < 5:
         abort(429)
     tools.append(idx + "\n", current_user.folder, "submissions")
+    """
+    dat = datas.Submission(source="a" + ext, time=datetime.datetime.now(), user=current_user.data,
+                           problem=pdat, language=lang, data={})
+    datas.add(dat)
+    idx = str(dat.id)
     tools.write(code, f"submissions/{idx}/a{ext}")
-    dat = {"type": "problem", "source": "a" + ext, "lang": lang, "pid": pid, "user": current_user.id,
-           "time": tools.get_timestring()}
-    tools.write_json(dat, f"submissions/{idx}/info.json")
     tasks.submissions_queue.put(idx)
     return redirect("/submission/" + idx)
 
@@ -75,81 +81,74 @@ def submit():
 @app.route("/submission/<idx>", methods=['GET'])
 @login_required
 def submission(idx):
-    idx = secure_filename(idx)
+    dat: datas.Submission = datas.Submission.query.get_or_404(idx)
     path = "submissions/" + idx
-    if not os.path.isdir(path):
-        abort(404)
-    dat = tools.read_json(path, "info.json")
-    lang = dat["lang"]
-    source = tools.read(path, dat["source"])
+    lang = dat.language
+    source = tools.read(path, dat.source)
     source = highlight(source, prepares[executing.langs[lang].name], HtmlFormatter())
-    completed = os.path.exists(path + "/completed")
-    ce_msg = tools.read_default(path, "ce_msg.txt")
+    completed = dat.completed
+    ce_msg = dat.ce_msg
     ret = ""
-    match dat["type"]:
-        case "test":
-            if not current_user.has("admin") and dat["user"] != current_user.id:
-                abort(403)
-            inp = tools.read_default(path, dat["infile"])
-            out = tools.read_default(path, dat["outfile"])
-            result = tools.read_default(path, "results")
-            err = tools.read_default(path, "stderr.txt")
-            ret = render_template("submission/test.html", lang=lang, source=source, inp=inp,
-                                  out=out, completed=completed, result=result, pos=tasks.get_queue_position(idx),
-                                  ce_msg=ce_msg, je=dat.get("JE", False), logid=dat.get("log_uuid", ""), err=err)
-        case "problem":
-            pid = dat["pid"]
-            problem_path = f"problems/{pid}/"
-            group_results = {}
-            problem_info = tools.read_json(problem_path, "info.json")
-            if not current_user.has("admin") and dat["user"] != current_user.id and current_user.id not in problem_info[
-                "users"]:
-                abort(403)
-            result = {}
-            if completed and not dat.get("JE", False):
-                result_data = tools.read_json(path, "results.json")
-                result["CE"] = result_data["CE"]
-                results = result_data["results"]
-                result["protected"] = protected = result_data.get("protected", False)
-                if not protected:
-                    for i in range(len(results)):
-                        tcl = len(problem_info["testcases"])
-                        it = i if i < tcl else i - tcl
-                        test_type = "testcases" if i < tcl else "testcases_gen"
-                        results[i] |= problem_info[test_type][it]
-                        if results[i]["result"] != "SKIP":
-                            results[i]["in"] = tools.read(f"{path}/testcases/{i}.in")
-                            results[i]["out"] = tools.read(f"{path}/testcases/{i}.ans")
-                        else:
-                            results[i]["in"] = results[i]["out"] = ""
-                        if results[i].get("has_output", False):
-                            results[i]["user_out"] = tools.read(f"{path}/testcases/{i}.out")
-                result["results"] = results
-                if "group_results" in result_data:
-                    gpr = result_data["group_results"]
-                    if len(gpr) > 0 and type(next(iter(gpr.values()))) == dict:
-                        group_results = gpr
-                        for o in group_results.values():
-                            o["class"] = constants.result_class.get(o["result"], "")
-                if "total_score" in result_data:
-                    result["total_score"] = result_data["total_score"]
-            ret = render_template("submission/problem.html", lang=lang, source=source, completed=completed,
-                                  pname=problem_info["name"], result=result, enumerate=enumerate,
-                                  group_results=group_results, pid=pid, pos=tasks.get_queue_position(idx),
-                                  ce_msg=ce_msg, je=dat.get("JE", False), logid=dat.get("log_uuid", ""))
-        case _:
-            abort(404)
+    pdat: datas.Problem = dat.problem
+    if pdat.pid=="test":
+        if not current_user.has("admin") and dat.user_id != current_user.data.id:
+            abort(403)
+        inp = tools.read_default(path, dat.data["infile"])
+        out = tools.read_default(path, dat.data["outfile"])
+        result = tools.read_default(path, "results")
+        err = tools.read_default(path, "stderr.txt")
+        ret = render_template("submission/test.html", lang=lang, source=source, inp=inp,
+                              out=out, completed=completed, result=result, pos=tasks.get_queue_position(idx),
+                              ce_msg=ce_msg, je=dat.data.get("JE", False), logid=dat.data.get("log_uuid", ""), err=err)
+    else:
+        problem_path = f"problems/{pdat.pid}/"
+        group_results = {}
+        problem_info = tools.read_json(problem_path, "info.json")
+        if not current_user.has("admin") and dat.user_id != current_user.data.id and current_user.id not in problem_info[
+            "users"]:
+            abort(403)
+        result = {}
+        if completed and not dat.data.get("JE", False):
+            result_data = dat.result
+            result["CE"] = result_data["CE"]
+            results = result_data["results"]
+            result["protected"] = protected = result_data.get("protected", False)
+            if not protected:
+                for i in range(len(results)):
+                    tcl = len(problem_info["testcases"])
+                    it = i if i < tcl else i - tcl
+                    test_type = "testcases" if i < tcl else "testcases_gen"
+                    results[i] |= problem_info[test_type][it]
+                    if results[i]["result"] != "SKIP":
+                        results[i]["in"] = tools.read(f"{path}/testcases/{i}.in")
+                        results[i]["out"] = tools.read(f"{path}/testcases/{i}.ans")
+                    else:
+                        results[i]["in"] = results[i]["out"] = ""
+                    if results[i].get("has_output", False):
+                        results[i]["user_out"] = tools.read(f"{path}/testcases/{i}.out")
+            result["results"] = results
+            if "group_results" in result_data:
+                gpr = result_data["group_results"]
+                if len(gpr) > 0 and type(next(iter(gpr.values()))) == dict:
+                    group_results = gpr
+                    for o in group_results.values():
+                        o["class"] = constants.result_class.get(o["result"], "")
+            if "total_score" in result_data:
+                result["total_score"] = result_data["total_score"]
+        ret = render_template("submission/problem.html", lang=lang, source=source, completed=completed,
+                              pname=problem_info["name"], result=result, enumerate=enumerate,
+                              group_results=group_results, pid=pdat.pid, pos=tasks.get_queue_position(idx),
+                              ce_msg=ce_msg, je=dat.data.get("JE", False), logid=dat.data.get("log_uuid", ""))
     return ret
 
 
 @app.route("/problem/<idx>", methods=['GET'])
 def problem(idx):
+    pdat: datas.Problem = datas.Problem.query.filter_by(pid=idx).first_or_404()
     idx = secure_filename(idx)
     path = "problems/" + idx
-    if not os.path.isdir(path):
-        abort(404)
-    dat = tools.read_json(path, "info.json")
-    if not dat.get("public", False):
+    dat = pdat.data
+    if not pdat.is_public:
         if not current_user.is_authenticated:
             abort(403)
         if not current_user.has("admin") and current_user.id not in dat.get("users", []):
@@ -183,9 +182,10 @@ def problem_file(idx, filename):
 @app.route("/my_submissions", methods=['GET'])
 @login_required
 def my_submissions():
-    submission_list = tools.read(current_user.folder, "submissions").split()
+    data: datas.User = current_user.data
+    submission_list = data.submissions
     submit_cnt = len(submission_list)
-    page_cnt = (submit_cnt - 1) // constants.page_size + 1
+    page_cnt = max(1, (submit_cnt - 1) // constants.page_size + 1)
     out = []
     page = request.args.get("page", "1")
     if not page.isdigit():
@@ -195,26 +195,25 @@ def my_submissions():
         abort(404)
     got_data = submission_list[
                max(0, submit_cnt - constants.page_size * page_idx):submit_cnt - constants.page_size * (page_idx - 1)]
-    for idx in reversed(got_data):
-        o = {"name": idx, "time": "blank", "result": "blank"}
-        if not tools.exists(f"submissions/{idx}/info.json"):
-            continue
-        dat = tools.read_json(f"submissions/{idx}/info.json")
-        if "time" in dat:
-            o["time"] = dat["time"]
-        if not os.path.isfile(f"submissions/{idx}/results.json"):
+    for dat in reversed(got_data):
+        dat: datas.Submission
+        idx = str(dat.id)
+        o = {"name": str(dat.id), "time": dat.time, "result": "blank"}
+        if not dat.completed:
             o["result"] = "waiting"
         else:
-            result = tools.read_json(f"submissions/{idx}/results.json")
-            if "simple_result" in result:
+            result = dat.result
+            if result and "simple_result" in result:
                 o["result"] = result["simple_result"]
-        if dat["type"] == "test":
+        if dat.problem is None:
+            continue
+        if dat.problem.pid == "test":
             o["source"] = "/test"
             o["source_name"] = "Simple Testing"
         else:
-            o["source"] = "/problem/" + dat["pid"]
-            source_dat = tools.read_json(f"problems/{dat['pid']}/info.json")
-            o["source_name"] = source_dat["name"]
+            o["source"] = "/problem/" + dat.problem.pid
+            source_dat = dat.problem
+            o["source_name"] = source_dat.name
         out.append(o)
     displays = [1, page_cnt]
     displays.extend(range(max(2, page_idx - 2), min(page_cnt, page_idx + 2) + 1))

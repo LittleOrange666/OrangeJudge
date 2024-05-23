@@ -56,7 +56,7 @@
                     {% if current_user.is_authenticated %}
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button"
-                           aria-expanded="false">{{current_user.data['DisplayName']}}</a>
+                           aria-expanded="false">{{current_user.data.display_name}}</a>
                         <ul class="dropdown-menu">
                             <li><a class="dropdown-item" href="/user/{{current_user.id}}">個人頁面</a></li>
                             <li><a class="dropdown-item" href="/my_submissions">解題列表</a></li>

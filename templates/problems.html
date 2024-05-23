@@ -5,9 +5,9 @@
 {% block main %}
 <h1>Problems: </h1>
 <div class="list-group">
-    {% for k, v in problems.items() %}
-    <a href="/problem/{{ k }}" class="list-group-item list-group-item-action" aria-current="true">
-        {{k}}: {{v}}
+    {% for obj in problems %}
+    <a href="/problem/{{ obj.pid }}" class="list-group-item list-group-item-action" aria-current="true">
+        {{obj.pid}}: {{obj.name}}
     </a>
     {% endfor %}
 </div>
