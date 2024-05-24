@@ -73,4 +73,4 @@ default_contest_info: dict = {"name": "unknown", "users": [], "problems": [], "s
                               "pretest": "no", "practice": "no"}
 # pretest: no all last
 # practice: no private public
-# type: icpc ioi ioic cf
+# type icpc ioi ioic cf

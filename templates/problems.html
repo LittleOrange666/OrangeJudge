@@ -3,12 +3,39 @@
 {% block title %}公開題目{% endblock %}
 
 {% block main %}
-<h1>Problems: </h1>
-<div class="list-group">
-    {% for obj in problems %}
-    <a href="/problem/{{ obj.pid }}" class="list-group-item list-group-item-action" aria-current="true">
-        {{obj.pid}}: {{obj.name}}
-    </a>
+<h1>公開題目: </h1>
+<table class="table table-hover table-striped">
+    <thead>
+    <tr>
+        <th scope="col">#</th>
+        <th scope="col">名稱</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for problem in problems %}
+    <tr>
+        <th scope="row"><a href="/problem/{{ problem.pid }}">{{ problem.pid }}</a></th>
+        <td><a href="/problem/{{ problem.pid }}">{{ problem.name }}</a></td>
+    </tr>
     {% endfor %}
-</div>
+    </tbody>
+</table>
+<nav aria-label="Page navigation example">
+    <ul class="pagination">
+        <li class="page-item" data-disabled="{{ page_idx == 1 }}">
+            <a class="page-link" data-args="page={{ page_idx-1 }}" aria-label="Previous">
+                <span aria-hidden="true">&laquo;</span>
+            </a>
+        </li>
+        {% for page in show_pages %}
+        <li class="page-item" data-active="{{ page==page_idx }}"><a class="page-link" data-args="page={{ page }}">{{
+            page }}</a></li>
+        {% endfor %}
+        <li class="page-item" data-disabled="{{ page_idx == page_cnt }}">
+            <a class="page-link" data-args="page={{ page_idx+1 }}" aria-label="Next">
+                <span aria-hidden="true">&raquo;</span>
+            </a>
+        </li>
+    </ul>
+</nav>
 {% endblock %}

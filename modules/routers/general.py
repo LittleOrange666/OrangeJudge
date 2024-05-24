@@ -1,11 +1,13 @@
 import datetime
 import json
 import os
+
 from flask import abort, render_template, redirect, request, send_file
 from flask_login import login_required, current_user
 from pygments import highlight, lexers
 from pygments.formatters import HtmlFormatter
 from werkzeug.utils import secure_filename
+
 from modules import tools, server, constants, executing, tasks, datas
 
 app = server.app
@@ -20,8 +22,21 @@ def index():
 
 @app.route('/problems', methods=['GET'])
 def problems():
-    return render_template("problems.html",
-                           problems=datas.Problem.query.filter_by(is_public=True).all())
+    public_problems = datas.Problem.query.filter_by(is_public=True)
+    problem_cnt = public_problems.count()
+    page_cnt = max(1, (problem_cnt - 1) // constants.page_size + 1)
+    page = request.args.get("page", "1")
+    if not page.isdigit():
+        abort(404)
+    page_idx = int(page)
+    if page_idx <= 0 or page_idx > page_cnt:
+        abort(404)
+    got_data = public_problems.slice(constants.page_size * (page_idx - 1),
+                                     min(problem_cnt, constants.page_size * page_idx)).all()
+    displays = [1, page_cnt]
+    displays.extend(range(max(2, page_idx - 2), min(page_cnt, page_idx + 2) + 1))
+    return render_template("problems.html", problems=got_data, page_cnt=page_cnt, page_idx=page_idx,
+                           show_pages=sorted(set(displays)))
 
 
 @app.route('/test', methods=['GET', 'POST'])
@@ -45,7 +60,7 @@ def test():
         """
         dat = datas.Submission(source="a" + ext, time=datetime.datetime.now(), user=current_user.data,
                                problem=datas.Problem.query.filter_by(pid="test").first(), language=lang,
-                               data={"infile": "in.txt", "outfile": "out.txt"})
+                               data={"infile": "in.txt", "outfile": "out.txt"}, pid="test")
         datas.add(dat)
         idx = str(dat.id)
         tools.write(code, f"submissions/{idx}/a{ext}")
@@ -70,7 +85,7 @@ def submit():
     tools.append(idx + "\n", current_user.folder, "submissions")
     """
     dat = datas.Submission(source="a" + ext, time=datetime.datetime.now(), user=current_user.data,
-                           problem=pdat, language=lang, data={})
+                           problem=pdat, language=lang, data={}, pid=pid)
     datas.add(dat)
     idx = str(dat.id)
     tools.write(code, f"submissions/{idx}/a{ext}")
@@ -90,7 +105,7 @@ def submission(idx):
     ce_msg = dat.ce_msg
     ret = ""
     pdat: datas.Problem = dat.problem
-    if pdat.pid=="test":
+    if pdat.pid == "test":
         if not current_user.has("admin") and dat.user_id != current_user.data.id:
             abort(403)
         inp = tools.read_default(path, dat.data["infile"])
@@ -104,8 +119,9 @@ def submission(idx):
         problem_path = f"problems/{pdat.pid}/"
         group_results = {}
         problem_info = tools.read_json(problem_path, "info.json")
-        if not current_user.has("admin") and dat.user_id != current_user.data.id and current_user.id not in problem_info[
-            "users"]:
+        if not current_user.has("admin") and dat.user_id != current_user.data.id and current_user.id not in \
+                problem_info[
+                    "users"]:
             abort(403)
         result = {}
         if completed and not dat.data.get("JE", False):
@@ -183,9 +199,12 @@ def problem_file(idx, filename):
 @login_required
 def my_submissions():
     data: datas.User = current_user.data
-    submission_list = data.submissions
-    submit_cnt = len(submission_list)
-    page_cnt = max(1, (submit_cnt - 1) // constants.page_size + 1)
+    submission_obj = data.submissions
+    page_size = constants.page_size
+    if "pid" in request.args:
+        submission_obj = submission_obj.filter_by(pid=request.args.get("pid"))
+    submit_cnt = submission_obj.count()
+    page_cnt = max(1, (submit_cnt - 1) // page_size + 1)
     out = []
     page = request.args.get("page", "1")
     if not page.isdigit():
@@ -193,8 +212,8 @@ def my_submissions():
     page_idx = int(page)
     if page_idx <= 0 or page_idx > page_cnt:
         abort(404)
-    got_data = submission_list[
-               max(0, submit_cnt - constants.page_size * page_idx):submit_cnt - constants.page_size * (page_idx - 1)]
+    got_data = submission_obj.slice(max(0, submit_cnt - page_size * page_idx),
+                                    submit_cnt - page_size * (page_idx - 1)).all()
     for dat in reversed(got_data):
         dat: datas.Submission
         idx = str(dat.id)

@@ -1,4 +1,5 @@
 import os
+
 from flask_sqlalchemy import SQLAlchemy
 
 from modules import server
@@ -12,7 +13,7 @@ db = SQLAlchemy(app)
 
 class User(db.Model):
     __tablename__ = 'users'
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     username = db.Column(db.String(80), unique=True)
     display_name = db.Column(db.String(120), unique=True)
     email = db.Column(db.String(120), unique=True)
@@ -21,7 +22,7 @@ class User(db.Model):
     teams = db.Column(db.Text, default="")
     is_team = db.Column(db.Boolean, default=False)
     owner_id = db.Column(db.Integer, nullable=True)
-    submissions = db.relationship('Submission', backref='user')  # should use lazy='dynamic'
+    submissions = db.relationship('Submission', backref='user', lazy='dynamic')  # should use lazy='dynamic'
     problems = db.relationship('Problem', backref='user')
 
     def __init__(self, **kwargs):
@@ -47,7 +48,7 @@ class User(db.Model):
 
 class Submission(db.Model):
     __tablename__ = 'submissions'
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     source = db.Column(db.String(20))
     time = db.Column(db.DateTime)
     result = db.Column(db.JSON, nullable=True)
@@ -57,6 +58,7 @@ class Submission(db.Model):
     completed = db.Column(db.Boolean, default=False)
     ce_msg = db.Column(db.Text, nullable=True)
     data = db.Column(db.JSON)
+    pid = db.Column(db.String(20))
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -64,7 +66,7 @@ class Submission(db.Model):
 
 class Problem(db.Model):
     __tablename__ = 'problems'
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     pid = db.Column(db.String(20), unique=True)
     name = db.Column(db.String(120))
     data = db.Column(db.JSON)

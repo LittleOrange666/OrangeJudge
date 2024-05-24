@@ -1,8 +1,10 @@
 import os
+
 from flask import abort, render_template, redirect, request
 from flask_login import login_required
 from werkzeug.utils import secure_filename
-from modules import tools, server, login, constants, executing, problemsetting
+
+from modules import tools, server, login, constants, executing, problemsetting, datas
 
 app = server.app
 
@@ -11,16 +13,11 @@ app = server.app
 @login_required
 def my_problems():
     user = login.check_user("make_problems")
-    problem_list = tools.read(user.folder, "problems").split()
+    problem_list = user.data.problems
     problems_dat = []
-    for idx in reversed(problem_list):
-        # if os.path.isfile(f"preparing_problems/{idx}.img") and not os.path.isfile(
-        #         f"preparing_problems/{idx}/info.json"):
-        #     problemsetting.system(f"sudo mount -o loop {idx}.img ./{idx}", "preparing_problems")
-        if not tools.exists(f"preparing_problems/{idx}/info.json"):
-            continue
-        dat = tools.read_json(f"preparing_problems/{idx}/info.json")
-        problems_dat.append({"pid": idx, "name": dat["name"]})
+    for obj in reversed(problem_list):
+        idx = obj.pid
+        problems_dat.append({"pid": idx, "name": obj.name})
     return render_template("my_problems.html", problems=problems_dat, username=user.id)
 
 
@@ -31,8 +28,8 @@ def create_problem():
     if request.method == "GET":
         return render_template("create_problem.html")
     else:
-        idx = problemsetting.create_problem(request.form["name"], user.id)
-        tools.append(idx + "\n", user.folder, "problems")
+        idx = problemsetting.create_problem(request.form["name"], user.data)
+        # tools.append(idx + "\n", user.folder, "problems")
         return redirect(f"/problemsetting/{idx}?user={user.id}")
 
 
@@ -40,14 +37,14 @@ def create_problem():
 @login_required
 def my_problem_page(idx):
     idx = secure_filename(idx)
-    if not os.path.isdir("preparing_problems/" + idx) or not os.path.isfile("preparing_problems/" + idx + "/info.json"):
-        abort(404)
-    # if len(os.listdir("preparing_problems/" + idx)) == 0:
-    #     problemsetting.system(f"sudo mount -o loop {idx}.img ./{idx}", "preparing_problems")
+    pdat: datas.Problem = datas.Problem.query.filter_by(pid=idx).first_or_404()
+    # if not os.path.isdir("preparing_problems/" + idx) or not os.path.isfile("preparing_problems/" + idx +
+    # "/info.json"): abort(404) if len(os.listdir("preparing_problems/" + idx)) == 0: problemsetting.system(f"sudo
+    # mount -o loop {idx}.img ./{idx}", "preparing_problems")
     o = problemsetting.check_background_action(idx)
     if o is not None:
         return render_template("pleasewaitlog.html", action=o[1], log=o[0])
-    dat = tools.read_json("preparing_problems", idx, "info.json")
+    dat = pdat.data
     user = login.check_user("make_problems", dat["users"])
     public_files = os.listdir(f"preparing_problems/{idx}/public_file")
     try:
@@ -63,7 +60,7 @@ def my_problem_page(idx):
             dat["groups"]["default"] = {}
         tools.write_json(dat, "preparing_problems", idx, "info.json")
     return render_template("problemsetting.html", dat=constants.default_problem_info | dat, pid=idx,
-                           versions=problemsetting.query_versions(idx), enumerate=enumerate,
+                           versions=problemsetting.query_versions(pdat), enumerate=enumerate,
                            public_files=public_files, default_checkers=default_checkers,
                            langs=executing.langs.keys(), default_interactors=default_interactors,
                            username=user.id)
@@ -74,13 +71,12 @@ def my_problem_page(idx):
 def problem_action():
     idx = request.form["pid"]
     idx = secure_filename(idx)
-    if not os.path.isfile(f"preparing_problems/{idx}/info.json"):
-        abort(404)
+    pdat = datas.Problem.query.filter_by(pid=idx).first_or_404()
     if os.path.isfile("preparing_problems/" + idx + "/waiting"):
         abort(503)
     if problemsetting.check_background_action(idx) is not None:
         abort(503)
-    dat = tools.read_json(f"preparing_problems/{idx}/info.json")
+    dat = pdat.data
     user = login.check_user("make_problems", dat["users"])
     return problemsetting.action(request.form)
 

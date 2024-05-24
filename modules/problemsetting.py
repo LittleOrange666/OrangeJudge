@@ -1,7 +1,6 @@
 import json
 import os
 import shutil
-import subprocess
 import time
 import traceback
 from multiprocessing import Queue, Process
@@ -14,7 +13,8 @@ from pyzipper.zipfile_aes import AESZipInfo
 from werkzeug.datastructures import ImmutableMultiDict, MultiDict
 from werkzeug.utils import secure_filename
 
-from modules import executing, tools, constants, createhtml
+from modules import executing, tools, constants, createhtml, datas
+from sqlalchemy.orm.attributes import flag_modified
 
 worker_queue = Queue()
 
@@ -44,15 +44,20 @@ def do_compile(path: str, name: str, lang: executing.Language, env: executing.En
     return lang.get_execmd(just_compile(path, name, lang, env))
 
 
-class Problem(tools.Json):
+class Problem:
     def __init__(self, pid: str):
         self.pid = pid
         self.path = "preparing_problems/" + pid
-        super().__init__("preparing_problems", pid, "info.json")
+        self.sql_data: datas.Problem = datas.Problem.query.filter_by(pid=pid).first()
+        self.dat = self.sql_data.data
 
     def __enter__(self):
-        super().__enter__()
         return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.sql_data.data = self.dat
+        flag_modified(self.sql_data, "data")
+        datas.add(self.sql_data)
 
     def __getitem__(self, item):
         if item not in self.dat and item in constants.default_problem_info:
@@ -106,13 +111,24 @@ def init() -> None:
     Process(target=runner).start()
 
 
-def create_problem(name: str, user: str) -> str:
-    with tools.File("data/problem_count") as f:
-        pid = int(f.read())
-        pid = str(pid + 1)
-        f.write(pid)
-    os.mkdir("preparing_problems/" + pid)
-    init_problem(pid, name, user)
+def create_problem(name: str, user: datas.User) -> str:
+    pcnt = datas.Problem.query.count()
+    pidx = pcnt + 1000
+    while datas.Problem.query.filter_by(pid=str(pidx)).count():
+        pidx += 1
+    pid = str(pidx)
+    dat = datas.Problem(id=pcnt + 1, pid=pid, name=name, data={}, user=user)
+    path = "preparing_problems/" + pid
+    os.mkdir(path)
+    try:
+        making_dir(path + "/testcases")
+        making_dir(path + "/file")
+        making_dir(path + "/public_file")
+    except FileExistsError:
+        pass
+    info = constants.default_problem_info | {"name": name, "users": [user.username]}
+    dat.data = info
+    datas.add(dat)
     return pid
 
 
@@ -135,18 +151,6 @@ def end(success: bool):
         dat["success"] = success
         dat["completed"] = True
     raise StopActionException()
-
-
-def init_problem(pid: str, name: str, user: str):
-    path = "preparing_problems/" + pid
-    try:
-        making_dir(path + "/testcases")
-        making_dir(path + "/file")
-        making_dir(path + "/public_file")
-    except FileExistsError:
-        pass
-    info = constants.default_problem_info | {"name": name, "users": [user]}
-    tools.write_json(info, path + "/info.json")
 
 
 @background_actions.bind
@@ -415,7 +419,7 @@ def action_not_found(*args):
 
 
 @actions.bind
-def save_general_info(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
+def save_general_info(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
     dat["name"] = form["title"]
     ml = form["memorylimit"]
     tl = form["timelimit"]
@@ -429,14 +433,14 @@ def save_general_info(form: ImmutableMultiDict[str, str], pid: str, path: str, d
 
 
 @actions.bind
-def create_version(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
+def create_version(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
     description = form["description"]
     add_background_action({"action": "creating_version", "pid": pid, "description": description})
     return "versions"
 
 
 @actions.bind
-def save_statement(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
+def save_statement(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
     dat["manual_samples"] = tools.form_json(form["samples"])
     obj = dat["statement"]
     obj["main"] = form["statement_main"]
@@ -461,7 +465,7 @@ def save_statement(form: ImmutableMultiDict[str, str], pid: str, path: str, dat:
 
 
 @actions.bind
-def upload_zip(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
+def upload_zip(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
     input_ext = form["input_ext"]
     output_ext = form["output_ext"]
     file = request.files["zip_file"]
@@ -497,7 +501,7 @@ def upload_zip(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dic
 
 
 @actions.bind
-def upload_public_file(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
+def upload_public_file(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
     get_files = request.files.getlist("files")
     for file in get_files:
         fn = secure_filename(file.filename)
@@ -512,7 +516,7 @@ def upload_public_file(form: ImmutableMultiDict[str, str], pid: str, path: str, 
 
 
 @actions.bind
-def remove_public_file(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
+def remove_public_file(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
     filename = form["filename"]
     filepath = path + "/public_file/" + secure_filename(filename)
     if os.path.exists(filepath):
@@ -523,7 +527,7 @@ def remove_public_file(form: ImmutableMultiDict[str, str], pid: str, path: str, 
 
 
 @actions.bind
-def upload_file(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
+def upload_file(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
     get_files = request.files.getlist("files")
     for file in get_files:
         if secure_filename(file.filename) == "":
@@ -536,7 +540,7 @@ def upload_file(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: di
 
 
 @actions.bind
-def create_file(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
+def create_file(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
     filename = secure_filename(form["filename"])
     if tools.exists(path, "file", filename):
         abort(409)
@@ -546,7 +550,7 @@ def create_file(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: di
 
 
 @actions.bind
-def remove_file(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
+def remove_file(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
     filename = secure_filename(form["filename"])
     filepath = path + "/file/" + filename
     target = None
@@ -565,7 +569,7 @@ def remove_file(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: di
 
 
 @actions.bind
-def save_file_content(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
+def save_file_content(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
     filename = form["filename"]
     filename = secure_filename(filename)
     content = form["content"]
@@ -585,7 +589,7 @@ def save_file_content(form: ImmutableMultiDict[str, str], pid: str, path: str, d
 
 
 @actions.bind
-def choose_checker(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
+def choose_checker(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
     tp = form["checker_type"]
     if tp not in ("my", "default"):
         abort(400)
@@ -598,7 +602,7 @@ def choose_checker(form: ImmutableMultiDict[str, str], pid: str, path: str, dat:
 
 
 @actions.bind
-def choose_interactor(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
+def choose_interactor(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
     tp = "my"
     name = secure_filename(form[tp + "_interactor"])
     use = form.get("enable_interactor", "off") == "on"
@@ -610,7 +614,7 @@ def choose_interactor(form: ImmutableMultiDict[str, str], pid: str, path: str, d
 
 
 @actions.bind
-def save_testcase(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
+def save_testcase(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
     try:
         modify = json.loads(form["modify"])
     except json.decoder.JSONDecodeError:
@@ -634,7 +638,7 @@ def save_testcase(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: 
 
 
 @actions.bind
-def save_testcase_gen(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
+def save_testcase_gen(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
     try:
         modify = json.loads(form["modify"])
     except json.decoder.JSONDecodeError:
@@ -658,7 +662,7 @@ def save_testcase_gen(form: ImmutableMultiDict[str, str], pid: str, path: str, d
 
 
 @actions.bind
-def set_generator(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
+def set_generator(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
     generator = form["generator"]
     solution = form["solution"]
     if not any(o["name"] == generator for o in dat["files"]):
@@ -676,13 +680,13 @@ def set_generator(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: 
 
 
 @actions.bind
-def do_generate(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
+def do_generate(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
     add_background_action({"action": "generate_testcase", "pid": pid})
     return "tests"
 
 
 @actions.bind
-def create_group(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
+def create_group(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
     name = secure_filename(form["name"])
     if name in dat["groups"]:
         abort(409)
@@ -691,7 +695,7 @@ def create_group(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: d
 
 
 @actions.bind
-def remove_group(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
+def remove_group(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
     name = secure_filename(form["name"])
     if name not in dat["groups"]:
         abort(404)
@@ -702,7 +706,7 @@ def remove_group(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: d
 
 
 @actions.bind
-def save_groups(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
+def save_groups(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
     d = {}
     for k in dat["groups"]:
         d[k] = form["score_" + k]
@@ -714,13 +718,11 @@ def save_groups(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: di
 
 
 @actions.bind
-def protect_problem(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
+def protect_problem(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
     if not dat.get("public", False):
         abort(409)
     dat["public"] = False
-    if tools.exists(f"problems/{pid}/info.json"):
-        with tools.Json(f"problems/{pid}/info.json") as obj:
-            obj["public"] = False
+    dat.sql_data.is_public = False
     with tools.Json("data/public_problems.json") as pubs:
         if pid in pubs:
             del pubs[pid]
@@ -728,20 +730,18 @@ def protect_problem(form: ImmutableMultiDict[str, str], pid: str, path: str, dat
 
 
 @actions.bind
-def public_problem(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
+def public_problem(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
     if dat.get("public", False):
         abort(409)
     dat["public"] = True
-    if tools.exists(f"problems/{pid}/info.json"):
-        with tools.Json(f"problems/{pid}/info.json") as obj:
-            obj["public"] = True
+    dat.sql_data.is_public = True
     with tools.Json("data/public_problems.json") as pubs:
         pubs[pid] = dat["name"]
     return "general_info"
 
 
 @actions.bind
-def import_polygon(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: dict):
+def import_polygon(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
     file = request.files["zip_file"]
     filename = f"tmp/{tools.random_string()}.zip"
     file.save(filename)
@@ -752,7 +752,7 @@ def import_polygon(form: ImmutableMultiDict[str, str], pid: str, path: str, dat:
 def action(form: ImmutableMultiDict[str, str]) -> Response:
     pid = secure_filename(form["pid"])
     path = f"preparing_problems/{pid}"
-    with tools.Json(path, "info.json") as dat:
+    with Problem(pid) as dat:
         tp = actions.call(form["action"], form, pid, path, dat)
         return redirect(f"/problemsetting/{pid}#{tp}")
 
@@ -792,10 +792,9 @@ def preview(args: MultiDict[str, str]) -> Response:
     abort(404)
 
 
-def query_versions(pid):
-    path = f"preparing_problems/{pid}/"
+def query_versions(pdat: datas.Problem):
     out = []
-    info = tools.read_json(path, "info.json")
+    info = pdat.data
     for o in info.get("versions", []):
         out.append({
             "date": str(int(float(o["time"]) * 1000)),

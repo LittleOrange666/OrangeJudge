@@ -8,7 +8,7 @@ from modules import executing, constants, tools, locks, datas
 
 submissions_queue = Queue()
 
-last_judged = locks.AtomicValue(int(tools.read("data/submission_count")))
+last_judged = 0
 
 
 def create_submission() -> str:
@@ -213,3 +213,4 @@ def runner():
 
 def init():
     Process(target=runner).start()
+    datas.Submission.query.count()

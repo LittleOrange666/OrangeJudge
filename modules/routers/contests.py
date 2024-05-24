@@ -1,5 +1,6 @@
 from flask import abort, render_template, request
 from flask_login import login_required, current_user
+
 from modules import tools, server, login, constants, contests
 
 app = server.app
