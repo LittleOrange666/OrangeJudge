@@ -116,9 +116,8 @@ def submission(idx):
                               out=out, completed=completed, result=result, pos=tasks.get_queue_position(idx),
                               ce_msg=ce_msg, je=dat.data.get("JE", False), logid=dat.data.get("log_uuid", ""), err=err)
     else:
-        problem_path = f"problems/{pdat.pid}/"
         group_results = {}
-        problem_info = tools.read_json(problem_path, "info.json")
+        problem_info = pdat.data
         if not current_user.has("admin") and dat.user_id != current_user.data.id and current_user.id not in \
                 problem_info[
                     "users"]:

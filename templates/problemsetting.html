@@ -61,14 +61,14 @@
         <div class="container-fluid">
             <div class="row">
                 <span class="col">目前狀態：
-                {% if dat.get("public",False) %}
+                {% if pdat.is_public %}
                 公開
                 {% else %}
                 不公開
                 {% endif %}
                 </span>
             </div>
-            {% if dat.get("public",False) %}
+            {% if pdat.is_public %}
             <form the_action="protect_problem">
                 <button class="btn btn-primary submitter">保密題目</button>
             </form>
@@ -407,6 +407,7 @@
                     <th scope="col">輸出檔</th>
                     <th scope="col">Group</th>
                     <th scope="col">範測</th>
+                    <th scope="col">pretest</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -419,8 +420,12 @@
                            target="_blank">{{ testcase['out'] }}</a></td>
                     <td>{{ testcase['group'] if "group" in testcase else "default" }}</td>
                     <td>
-                        <input class="form-check-input" type="checkbox" name="sample_{{ i }}" value="yes"
+                        <input class="form-check-input is_sample" type="checkbox" name="sample_{{ i }}" value="yes"
                                data-checked="{{testcase['sample']}}">
+                    </td>
+                    <td>
+                        <input class="form-check-input is_pretest" type="checkbox" name="pretest_{{ i }}" value="yes"
+                               data-checked="{{testcase['pretest']}}">
                     </td>
                 </tr>
                 {% endfor %}

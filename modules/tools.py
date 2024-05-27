@@ -5,7 +5,7 @@ import time
 import uuid
 from datetime import datetime
 from functools import partial
-from typing import Callable
+from typing import Callable, Any
 
 from flask import abort
 
@@ -151,7 +151,10 @@ class Switcher:
         self._default = func
         return func
 
-    def call(self, key, *args, **kwargs) -> Callable:
+    def get(self, key: str) -> Callable:
+        return self.table.get(key, self._default)
+
+    def call(self, key: str, *args, **kwargs) -> Any:
         return self.table.get(key, self._default)(*args, **kwargs)
 
 

@@ -15,7 +15,7 @@ class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     username = db.Column(db.String(80), unique=True)
-    display_name = db.Column(db.String(120), unique=True)
+    display_name = db.Column(db.String(120))
     email = db.Column(db.String(120), unique=True)
     password_sha256_hex = db.Column(db.String(64))
     permissions = db.Column(db.String(100), default="")
@@ -70,9 +70,12 @@ class Problem(db.Model):
     pid = db.Column(db.String(20), unique=True)
     name = db.Column(db.String(120))
     data = db.Column(db.JSON)
+    new_data = db.Column(db.JSON)
     is_public = db.Column(db.Boolean, default=False)
     submissions = db.relationship('Submission', backref='problem')
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    editing = db.Column(db.Boolean, default=False)
+    edit_time = db.Column(db.DateTime)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

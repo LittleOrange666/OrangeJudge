@@ -1,9 +1,11 @@
+import datetime
 import json
 import os
 import shutil
 import time
 import traceback
 from multiprocessing import Queue, Process
+from typing import Callable
 from xml.etree import ElementTree
 from xml.etree.ElementTree import Element
 
@@ -23,6 +25,11 @@ background_actions = tools.Switcher()
 actions = tools.Switcher()
 current_pid = ""
 current_idx = 0
+
+
+def make_important(func: Callable) -> Callable:
+    func.important = True
+    return func
 
 
 class StopActionException(Exception):
@@ -45,17 +52,29 @@ def do_compile(path: str, name: str, lang: executing.Language, env: executing.En
 
 
 class Problem:
-    def __init__(self, pid: str):
+    def __init__(self, pid: str, is_important_editing_now: bool = True):
         self.pid = pid
         self.path = "preparing_problems/" + pid
+        self.is_important_editing_now = is_important_editing_now
         self.sql_data: datas.Problem = datas.Problem.query.filter_by(pid=pid).first()
-        self.dat = self.sql_data.data
+        if self.is_important_editing_now:
+            self.sql_data.editing = True
+            datas.add(self.sql_data)
+        self.dat = self.sql_data.new_data
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.sql_data.data = self.dat
+        self.sql_data.new_data = self.dat
+        flag_modified(self.sql_data, "new_data")
+        if self.is_important_editing_now:
+            self.sql_data.editing = False
+            self.sql_data.edit_time = datetime.datetime.now()
+        datas.add(self.sql_data)
+
+    def save(self):
+        self.sql_data.data = self.sql_data.new_data
         flag_modified(self.sql_data, "data")
         datas.add(self.sql_data)
 
@@ -127,7 +146,7 @@ def create_problem(name: str, user: datas.User) -> str:
     except FileExistsError:
         pass
     info = constants.default_problem_info | {"name": name, "users": [user.username]}
-    dat.data = info
+    dat.data = dat.new_data = info
     datas.add(dat)
     return pid
 
@@ -205,8 +224,8 @@ def generate_testcase(pid: str):
                 end(False)
             env.get_file(out_file)
         log(f"generate complete")
-        gen_list += [{"in": test[0] + ".in", "out": test[0] + ".out", "sample": False, "group": test[1][1]}
-                     for test in tests]
+        gen_list += [{"in": test[0] + ".in", "out": test[0] + ".out", "sample": False, "pretest": False,
+                      "group": test[1][1]} for test in tests]
     if "ex_gen_msg" in problem:
         sol = problem["ex_gen_msg"]["solution"]
         cmds = problem["ex_gen_msg"]["cmds"]
@@ -248,7 +267,7 @@ def generate_testcase(pid: str):
                 log(out[1])
                 end(False)
             env.get_file(out_file)
-        gen_list += [{"in": f"{i}_exgen.in", "out": f"{i}_exgen.out", "sample": False, "group": test[1]}
+        gen_list += [{"in": f"{i}_exgen.in", "out": f"{i}_exgen.out", "sample": False, "pretest": False, "group": test[1]}
                      for i, test in enumerate(cmds)]
     problem["testcases_gen"] = gen_list
 
@@ -464,6 +483,7 @@ def save_statement(form: ImmutableMultiDict[str, str], pid: str, path: str, dat:
     return "statement"
 
 
+@make_important
 @actions.bind
 def upload_zip(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
     input_ext = form["input_ext"]
@@ -495,7 +515,8 @@ def upload_zip(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Pro
         with open(path + "/testcases/" + secure_filename(o[1].filename), "wb") as f:
             f.write(zip_file.read(o[1]))
         dat["testcases"].append({"in": secure_filename(o[0].filename), "out": secure_filename(o[1].filename),
-                                 "sample": "sample" in secure_filename(o[0].filename)})
+                                 "sample": "sample" in secure_filename(o[0].filename),
+                                 "pretest": "pretest" in secure_filename(o[0].filename)                                 })
     os.remove(filename)
     return "tests"
 
@@ -632,6 +653,7 @@ def save_testcase(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: 
         s.add(o[0])
         obj = testcases[o[0]]
         obj["sample"] = o[1]
+        obj["pretest"] = o[2]
         new_testcases.append(obj)
     dat["testcases"] = new_testcases
     return "tests"
@@ -723,9 +745,9 @@ def protect_problem(form: ImmutableMultiDict[str, str], pid: str, path: str, dat
         abort(409)
     dat["public"] = False
     dat.sql_data.is_public = False
-    with tools.Json("data/public_problems.json") as pubs:
-        if pid in pubs:
-            del pubs[pid]
+    # with tools.Json("data/public_problems.json") as pubs:
+    #    if pid in pubs:
+    #        del pubs[pid]
     return "general_info"
 
 
@@ -735,8 +757,8 @@ def public_problem(form: ImmutableMultiDict[str, str], pid: str, path: str, dat:
         abort(409)
     dat["public"] = True
     dat.sql_data.is_public = True
-    with tools.Json("data/public_problems.json") as pubs:
-        pubs[pid] = dat["name"]
+    # with tools.Json("data/public_problems.json") as pubs:
+    #    pubs[pid] = dat["name"]
     return "general_info"
 
 
@@ -752,27 +774,28 @@ def import_polygon(form: ImmutableMultiDict[str, str], pid: str, path: str, dat:
 def action(form: ImmutableMultiDict[str, str]) -> Response:
     pid = secure_filename(form["pid"])
     path = f"preparing_problems/{pid}"
-    with Problem(pid) as dat:
+    func = actions.get(form["action"])
+    important = hasattr(func, "important") and getattr(func, "important")
+    with Problem(pid, important) as dat:
         tp = actions.call(form["action"], form, pid, path, dat)
         return redirect(f"/problemsetting/{pid}#{tp}")
 
 
 def sending_file(file: str) -> Response:
+    file = os.path.abspath(file)
     if not os.path.exists(file):
         abort(404)
     return send_file(file)
 
 
-def preview(args: MultiDict[str, str]) -> Response:
+def preview(args: MultiDict[str, str], pdat: datas.Problem) -> Response:
     pid = args["pid"]
     path = f"preparing_problems/{pid}"
     match args["type"]:
         case "statement":
-            if not tools.exists(path + "/info.json"):
-                abort(404)
             if not tools.exists(path + "/statement.html"):
                 abort(404)
-            dat = tools.read_json(path + "/info.json")
+            dat = pdat.new_data
             statement = tools.read(path + "/statement.html")
             lang_exts = json.dumps({k: v.data["source_ext"] for k, v in executing.langs.items()})
             samples = [[tools.read(path, k, o["in"]), tools.read(path, k, o["out"])]

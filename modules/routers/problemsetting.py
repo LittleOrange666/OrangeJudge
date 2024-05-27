@@ -44,7 +44,7 @@ def my_problem_page(idx):
     o = problemsetting.check_background_action(idx)
     if o is not None:
         return render_template("pleasewaitlog.html", action=o[1], log=o[0])
-    dat = pdat.data
+    dat = pdat.new_data
     user = login.check_user("make_problems", dat["users"])
     public_files = os.listdir(f"preparing_problems/{idx}/public_file")
     try:
@@ -63,7 +63,7 @@ def my_problem_page(idx):
                            versions=problemsetting.query_versions(pdat), enumerate=enumerate,
                            public_files=public_files, default_checkers=default_checkers,
                            langs=executing.langs.keys(), default_interactors=default_interactors,
-                           username=user.id)
+                           username=user.id,pdat=pdat)
 
 
 @app.route("/problemsetting_action", methods=['POST'])
@@ -85,11 +85,9 @@ def problem_action():
 @login_required
 def problem_preview():
     idx = request.args["pid"]
-    idx = secure_filename(idx)
-    if not os.path.isfile(f"preparing_problems/{idx}/info.json"):
-        abort(404)
+    pdat = datas.Problem.query.filter_by(pid=idx).first_or_404()
     if os.path.isfile("preparing_problems/" + idx + "/waiting"):
         return render_template("pleasewait.html", action=tools.read("preparing_problems", idx, "waiting"))
-    dat = tools.read_json(f"preparing_problems/{idx}/info.json")
+    dat = pdat.new_data
     user = login.check_user("make_problems", dat["users"])
-    return problemsetting.preview(request.args)
+    return problemsetting.preview(request.args, pdat)

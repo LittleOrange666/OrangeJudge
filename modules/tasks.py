@@ -8,7 +8,7 @@ from modules import executing, constants, tools, locks, datas
 
 submissions_queue = Queue()
 
-last_judged = 0
+last_judged = locks.AtomicValue(0)
 
 
 def create_submission() -> str:
