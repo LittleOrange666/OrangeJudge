@@ -237,3 +237,14 @@ def my_submissions():
     displays.extend(range(max(2, page_idx - 2), min(page_cnt, page_idx + 2) + 1))
     return render_template("my_submissions.html", submissions=out, page_cnt=page_cnt, page_idx=page_idx,
                            show_pages=sorted(set(displays)))
+
+
+@app.route('/admin', methods=['GET', 'POST'])
+@login_required
+def admin():
+    if not current_user.has("admin"):
+        abort(403)
+    if request.method == 'GET':
+        return render_template("admin.html")
+    else:
+        abort(404)

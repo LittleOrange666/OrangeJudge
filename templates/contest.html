@@ -1,7 +1,33 @@
 {% extends "base.html" %}
 
-{% block title %}競賽{% endblock %}
+{% block title %}競賽 - {{data['name']}}{% endblock %}
 
 {% block main %}
-
+<ul class="nav nav-tabs">
+    <li class="nav-item" role="presentation">
+        <a class="nav-link active" id="index_page_tab" data-bs-toggle="tab" data-bs-target="#index_page"
+           type="button" role="tab" aria-controls="index_page" aria-selected="true">首頁</a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link" id="standing_tab" data-bs-toggle="tab" data-bs-target="#standing" type="button" role="tab"
+           aria-controls="standing" aria-selected="false">記分板</a>
+    </li>
+    {% if current_user.is_authenticated and current_user.id in data["users"] %}
+    <li class="nav-item" role="presentation">
+        <a class="nav-link" id="edit_tab" data-bs-toggle="tab" data-bs-target="#edit" type="button" role="tab"
+           aria-controls="edit" aria-selected="false">管理</a>
+    </li>
+    {% endif %}
+</ul>
+<div class="tab-content">
+    <div id="index_page" class="tab-pane fade show active">
+    </div>
+    <div id="standing" class="tab-pane fade">
+    </div>
+    {% if current_user.is_authenticated and current_user.id in data["users"] %}
+    <div id="edit" class="tab-pane fade">
+    </div>
+    {% endif %}
+</div>
+<script src="/static/tab_memory.js"></script>
 {% endblock %}

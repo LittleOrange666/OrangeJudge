@@ -28,9 +28,9 @@
     <tbody>
     {% for contest in contests %}
     <tr>
-        <th scope="row"><a href="/contest/{{ contest['idx'] }}">{{ contest['name'] }}</a></th>
-        <td class="date-string">{{ contest["start"] }}</td>
-        <td class="time-string">{{ contest["elapsed"] }}</td>
+        <th scope="row"><a href="/contest/{{ contest.cid }}">{{ contest.name }}</a></th>
+        <td class="date-string">{{ contest.data["start"] }}</td>
+        <td class="time-string">{{ contest.data["elapsed"] }}</td>
         <td></td>
     </tr>
     {% endfor %}

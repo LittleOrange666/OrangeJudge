@@ -13,7 +13,7 @@ app = server.app
 @login_required
 def my_problems():
     user = login.check_user("make_problems")
-    problem_list = user.data.problems
+    problem_list = user.data.problems.all()
     problems_dat = []
     for obj in reversed(problem_list):
         idx = obj.pid
@@ -63,7 +63,7 @@ def my_problem_page(idx):
                            versions=problemsetting.query_versions(pdat), enumerate=enumerate,
                            public_files=public_files, default_checkers=default_checkers,
                            langs=executing.langs.keys(), default_interactors=default_interactors,
-                           username=user.id,pdat=pdat)
+                           username=user.id, pdat=pdat)
 
 
 @app.route("/problemsetting_action", methods=['POST'])

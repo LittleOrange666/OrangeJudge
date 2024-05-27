@@ -22,8 +22,9 @@ class User(db.Model):
     teams = db.Column(db.Text, default="")
     is_team = db.Column(db.Boolean, default=False)
     owner_id = db.Column(db.Integer, nullable=True)
-    submissions = db.relationship('Submission', backref='user', lazy='dynamic')  # should use lazy='dynamic'
-    problems = db.relationship('Problem', backref='user')
+    submissions = db.relationship('Submission', backref='user', lazy='dynamic')
+    problems = db.relationship('Problem', backref='user', lazy='dynamic')
+    contests = db.relationship('Contest', backref='user', lazy='dynamic')
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -54,6 +55,7 @@ class Submission(db.Model):
     result = db.Column(db.JSON, nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     problem_id = db.Column(db.Integer, db.ForeignKey('problems.id'))
+    contest_id = db.Column(db.Integer, db.ForeignKey('contests.id'), nullable=True)
     language = db.Column(db.String(20))
     completed = db.Column(db.Boolean, default=False)
     ce_msg = db.Column(db.Text, nullable=True)
@@ -72,13 +74,23 @@ class Problem(db.Model):
     data = db.Column(db.JSON)
     new_data = db.Column(db.JSON)
     is_public = db.Column(db.Boolean, default=False)
-    submissions = db.relationship('Submission', backref='problem')
+    submissions = db.relationship('Submission', backref='problem', lazy='dynamic')
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     editing = db.Column(db.Boolean, default=False)
     edit_time = db.Column(db.DateTime)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+
+class Contest(db.Model):
+    __tablename__ = 'contests'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    cid = db.Column(db.String(20), unique=True)
+    name = db.Column(db.String(120))
+    submissions = db.relationship('Submission', backref='contest', lazy='dynamic')
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    data = db.Column(db.JSON)
 
 
 def init():
