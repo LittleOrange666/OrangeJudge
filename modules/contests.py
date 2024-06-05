@@ -1,6 +1,13 @@
 import os
 
+from flask import Response, redirect, abort
+from flask_login import current_user
+from sqlalchemy.orm.attributes import flag_modified
+from werkzeug.datastructures import ImmutableMultiDict
+
 from modules import tools, constants, datas
+
+actions = tools.Switcher()
 
 
 def create_contest(name: str, user: datas.User) -> str:
@@ -15,6 +22,46 @@ def create_contest(name: str, user: datas.User) -> str:
     os.mkdir("contests/" + cid)
     tools.write_json({}, f"contests/{cid}/standings.json")
     return cid
+
+
+def calidx(idx: int) -> str:
+    s = ""
+    if idx >= 26:
+        s = calidx(idx // 26 - 1)
+        idx %= 26
+    return s + chr(ord('A') + idx)
+
+
+@actions.bind
+def add_problem(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Contest, dat: dict) -> str:
+    pid = form["pid"]
+    pdat: datas.Problem = datas.Problem.query.filter_by(pid=pid).first_or_404()
+    if not current_user.has("admin") and current_user.id not in pdat.data["users"]:
+        abort(403)
+    idxs = []
+    for obj in dat["problems"]:
+        if obj["pid"] == pid:
+            abort(409)
+        idxs.append(obj["idx"])
+    idx = 0
+    while calidx(idx) in idxs:
+        idx += 1
+    dat["problems"].append({"pid": pid, "name": pdat.name, "idx": calidx(idx)})
+    return "index_page"
+
+
+@actions.default
+def action_not_found(*args):
+    abort(404)
+
+
+def action(form: ImmutableMultiDict[str, str], cdat: datas.Contest) -> Response:
+    dat = cdat.data
+    cid = cdat.cid
+    tp = actions.call(form["action"], form, cid, cdat, dat)
+    flag_modified(cdat, "data")
+    datas.add(cdat)
+    return redirect(f"/contest/{cid}#{tp}")
 
 
 def init():

@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 
-{% block title %}問題{% if preview %}(預覽){% endif %} - {{ dat["name"] }}{% endblock %}
+{% block title %}{% if is_contest %}競賽 - {{ cname }} - {{ pidx }}{% else %}問題{% if preview %}(預覽){% endif %}{% endif %} - {{ dat["name"] }}{% endblock %}
 
 {% block main %}
-<h1 class="text-center">{{ dat["name"] }}</h1>
+<h1 class="text-center">{% if is_contest %}{{ pidx }}. {% endif %}{{ dat["name"] }}</h1>
 <p class="text-center">Time Limit:{{ dat["timelimit"] }}ms</p>
 <p class="text-center">Memory Limit:{{ dat["memorylimit"] }}MB</p>
 {{ statement|safe }}
@@ -27,6 +27,10 @@
 <br>
 <form action="/submit" method="post" target="_self">
     <input name="pid" value="{{ pid }}" hidden>
+    {% if is_contest %}
+    <input name="cid" value="{{ cid }}" hidden>
+    <input name="pidx" value="{{ pidx }}" hidden>
+    {% endif %}
     <select class="form-select" aria-label="Default select example" name="lang" id="langoption">
         {% for lang in langs %}
         <option value="{{ lang }}">{{ lang }}</option>

@@ -1,10 +1,10 @@
 import traceback
 
 from flask import Flask, render_template, request
-from flask_session import Session
-from flask_wtf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask_session import Session
+from flask_wtf import CSRFProtect
 
 from modules import tools
 
@@ -42,7 +42,7 @@ def error_403(error):
     if request.method == "GET":
         return render_template("403.html"), 403
     else:
-        return "403 Forbidden", 400
+        return "403 Forbidden", 403
 
 
 @app.errorhandler(404)
@@ -50,7 +50,7 @@ def error_404(error):
     if request.method == "GET":
         return render_template("404.html"), 404
     else:
-        return "404 Not Found", 400
+        return "404 Not Found", 404
 
 
 @app.errorhandler(409)

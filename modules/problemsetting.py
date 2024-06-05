@@ -12,11 +12,11 @@ from xml.etree.ElementTree import Element
 from flask import Response, abort, render_template, request, redirect, send_file
 from pyzipper import AESZipFile
 from pyzipper.zipfile_aes import AESZipInfo
+from sqlalchemy.orm.attributes import flag_modified
 from werkzeug.datastructures import ImmutableMultiDict, MultiDict
 from werkzeug.utils import secure_filename
 
 from modules import executing, tools, constants, createhtml, datas
-from sqlalchemy.orm.attributes import flag_modified
 
 worker_queue = Queue()
 
@@ -267,8 +267,9 @@ def generate_testcase(pid: str):
                 log(out[1])
                 end(False)
             env.get_file(out_file)
-        gen_list += [{"in": f"{i}_exgen.in", "out": f"{i}_exgen.out", "sample": False, "pretest": False, "group": test[1]}
-                     for i, test in enumerate(cmds)]
+        gen_list += [
+            {"in": f"{i}_exgen.in", "out": f"{i}_exgen.out", "sample": False, "pretest": False, "group": test[1]}
+            for i, test in enumerate(cmds)]
     problem["testcases_gen"] = gen_list
 
 
@@ -516,7 +517,7 @@ def upload_zip(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Pro
             f.write(zip_file.read(o[1]))
         dat["testcases"].append({"in": secure_filename(o[0].filename), "out": secure_filename(o[1].filename),
                                  "sample": "sample" in secure_filename(o[0].filename),
-                                 "pretest": "pretest" in secure_filename(o[0].filename)                                 })
+                                 "pretest": "pretest" in secure_filename(o[0].filename)})
     os.remove(filename)
     return "tests"
 

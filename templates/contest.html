@@ -16,7 +16,7 @@
         <a class="nav-link" id="standing_tab" data-bs-toggle="tab" data-bs-target="#standing" type="button" role="tab"
            aria-controls="standing" aria-selected="false">記分板</a>
     </li>
-    {% if current_user.is_authenticated and current_user.id in data["users"] %}
+    {% if can_edit %}
     <li class="nav-item" role="presentation">
         <a class="nav-link" id="edit_tab" data-bs-toggle="tab" data-bs-target="#edit" type="button" role="tab"
            aria-controls="edit" aria-selected="false">管理</a>
@@ -36,22 +36,35 @@
             {% for problem in data["problems"] %}
             <tr>
                 <th scope="row"><a href="/contest/{{ cid }}/{{ problem['idx'] }}" target="_blank">{{ problem['idx'] }}</a></th>
-                <td><a href="/contest/{{ cid }}/{{ problem['idx'] }}" target="_blank">{{ problem['idx'] }}</a></td>
+                <td><a href="/contest/{{ cid }}/{{ problem['idx'] }}" target="_blank">{{ problem['name'] }}</a></td>
             </tr>
             {% endfor %}
             </tbody>
         </table>
+        {% if can_edit %}
+        <form the_action="add_problem">
+            <div class="row">
+                <div class="col-auto">
+                    <input type="text" class="form-control" name="pid" placeholder="題目編號" required>
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-primary submitter" data-redirect="true">添加題目</button>
+                </div>
+            </div>
+        </form>
+        {% endif %}
     </div>
     <div id="status" class="tab-pane fade">
         未開放
     </div>
     <div id="standing" class="tab-pane fade">
     </div>
-    {% if current_user.is_authenticated and current_user.id in data["users"] %}
+    {% if can_edit %}
     <div id="edit" class="tab-pane fade">
     </div>
     {% endif %}
 </div>
 <script src="/static/tab_memory.js"></script>
+<script src="/static/contest.js"></script>
 <input id="cid" value="{{ cid }}" hidden>
 {% endblock %}

@@ -86,6 +86,9 @@ def submit():
     """
     dat = datas.Submission(source="a" + ext, time=datetime.datetime.now(), user=current_user.data,
                            problem=pdat, language=lang, data={}, pid=pid)
+    if "cid" in request.form:
+        cdat = datas.Contest.query.filter_by(cid=request.form["cid"]).first_or_404()
+        dat.contest = cdat
     datas.add(dat)
     idx = str(dat.id)
     tools.write(code, f"submissions/{idx}/a{ext}")
@@ -175,7 +178,7 @@ def problem(idx):
                                                o.get("sample", False)]
     return render_template("problem.html", dat=dat, statement=statement,
                            langs=executing.langs.keys(), lang_exts=lang_exts, pid=idx,
-                           preview=False, samples=enumerate(samples))
+                           preview=False, samples=enumerate(samples), is_contest=False)
 
 
 @app.route("/problem_file/<idx>/<filename>", methods=['GET'])
