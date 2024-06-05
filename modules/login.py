@@ -119,44 +119,29 @@ def exist(user_id: str) -> bool:
     return datas.User.query.filter_by(username=user_id).count() > 0
 
 
-def create_account(email: str, user_id: str, password: str | None, is_team: bool = False) -> None:
+def create_account(email: str, user_id: str, password: str | None) -> None:
     obj = datas.User(username=user_id.lower(),
                      display_name=user_id,
                      email=email,
                      password_sha256_hex=try_hash(password),
                      permissions="",
                      teams="",
-                     is_team=is_team)
+                     is_team=False)
     datas.add(obj)
-    """
-    folder = f"accounts/{user_id.lower()}"
-    os.makedirs(folder, exist_ok=True)
-    dat = {"name": user_id, "DisplayName": user_id, "email": email, "password": try_hash(password),
-           "team": is_team}
-    if tools.exists(folder, "info.json"):
-        return
-    if tools.exists(f"verify/used_email", secure_filename(email)):
-        return
-    tools.write_json(dat, folder, "info.json")
-    tools.create(folder, "problems")
-    tools.create(folder, "submissions")
-    tools.create(folder, "contests")
-    tools.write(user_id, f"verify/used_email", secure_filename(email))
-    """
 
 
 def create_team(team_id: str, owner_id: str, permissions: list[str]):
-    folder = f"accounts/{team_id.lower()}"
-    os.makedirs(folder, exist_ok=True)
-    dat = {"name": team_id, "DisplayName": team_id, "owner": owner_id, "members": [owner_id]}
-    for k in permissions:
-        dat[k] = True
-    if tools.exists(folder, "info.json"):
-        return
-    tools.write_json(dat, folder, "info.json")
-    tools.create(folder, "problems")
-    tools.create(folder, "submissions")
-    tools.create(folder, "contests")
+    user: datas.User = datas.User.query.filter_by(username=owner_id).first()
+    obj = datas.User(username=team_id.lower(),
+                     display_name=team_id,
+                     email="",
+                     password_sha256_hex="",
+                     permissions=";".join(permissions),
+                     teams="",
+                     is_team=True,
+                     owner_id=user.id)
+    user.add_team(team_id.lower())
+    datas.add(obj, user)
 
 
 def check_user(require: str | None = None, users: list[str] | None = None) -> User:

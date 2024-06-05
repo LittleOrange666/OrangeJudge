@@ -4,6 +4,7 @@ sudo apt-get -y install python3
 sudo apt-get -y install python3-pip
 sudo apt-get -y install lxc
 sudo apt-get -y install lxc-templates
+sudo apt-get -y install redis
 # sudo apt-get -y install texlive-binaries
 sudo apt-get -y install texlive-latex-generic
 # sudo apt-get -y install texlive-latex-extra

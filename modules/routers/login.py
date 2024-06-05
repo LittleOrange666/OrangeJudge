@@ -79,6 +79,7 @@ verify_codes = locks.manager.dict()
 
 
 @app.route('/get_code', methods=['POST'])
+@server.limiter.limit("1/20second", override_defaults=False)
 def get_code():
     email = request.form["email"]
     if constants.email_reg.match(email) is None:
@@ -129,7 +130,10 @@ def settings():
         perms = [(k, v) for k, v in constants.permissions.items() if current_user.has(k) and k != "admin"]
         return render_template("settings.html", data=data, teams=teams, perms=perms)
     if request.form["action"] == "general_info":
-        data.display_name = request.form.get("DisplayName", data.display_name)
+        display_name = request.form["DisplayName"]
+        if len(display_name) > 120 or len(display_name) < 1:
+            abort(400)
+        data.display_name = display_name
         current_user.save()
     elif request.form["action"] == "change_password":
         old_password = request.form.get("old_password", "")

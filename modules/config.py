@@ -51,6 +51,7 @@ verify_str("smtp.host")
 verify_int("smtp.port")
 verify_str("smtp.user")
 verify_str("smtp.password")
+verify_int("server.port")
 
 
 def init():

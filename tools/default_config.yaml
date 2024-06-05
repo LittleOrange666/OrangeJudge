@@ -3,3 +3,6 @@ smtp:
   port: 587
   user: user@gmail.com
   password: password
+
+server:
+  port: 8080

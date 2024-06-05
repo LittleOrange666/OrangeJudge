@@ -22,7 +22,7 @@ def main():
         contests.init()
         problemsetting.init()
         modules.routers.init()
-    server.app.run("0.0.0.0", port=8898)
+    server.app.run("0.0.0.0", port=config.get("server.port"))
 
 
 if __name__ == '__main__':

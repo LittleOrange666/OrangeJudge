@@ -42,7 +42,7 @@ default_problem_info: dict = {"name": "unknown", "timelimit": "1000", "memorylim
 
 email_reg: Pattern = re.compile("^[\\w\\-.]+@([\\w\\-]+\\.)+[\\w-]{2,4}$")
 
-user_id_reg: Pattern = re.compile("^[A-Za-z0-9_]+$")
+user_id_reg: Pattern = re.compile("^[A-Za-z0-9_]{2,80}$")
 
 email_content: str = """Subject: OrangeJudge verification code ({0})
 

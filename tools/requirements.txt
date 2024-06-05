@@ -3,6 +3,7 @@ flask_login
 flask_session
 flask_wtf
 flask_sqlalchemy
+flask_limiter
 pygments
 pyzipper
 markdown
