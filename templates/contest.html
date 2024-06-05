@@ -9,6 +9,10 @@
            type="button" role="tab" aria-controls="index_page" aria-selected="true">首頁</a>
     </li>
     <li class="nav-item" role="presentation">
+        <a class="nav-link" id="status_tab" data-bs-toggle="tab" data-bs-target="#status" type="button" role="tab"
+           aria-controls="status" aria-selected="false">status</a>
+    </li>
+    <li class="nav-item" role="presentation">
         <a class="nav-link" id="standing_tab" data-bs-toggle="tab" data-bs-target="#standing" type="button" role="tab"
            aria-controls="standing" aria-selected="false">記分板</a>
     </li>
@@ -21,6 +25,25 @@
 </ul>
 <div class="tab-content">
     <div id="index_page" class="tab-pane fade show active">
+        <table class="table table-hover table-striped">
+            <thead>
+            <tr>
+                <th scope="col">#</th>
+                <th scope="col">名稱</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for problem in data["problems"] %}
+            <tr>
+                <th scope="row"><a href="/contest/{{ cid }}/{{ problem['idx'] }}" target="_blank">{{ problem['idx'] }}</a></th>
+                <td><a href="/contest/{{ cid }}/{{ problem['idx'] }}" target="_blank">{{ problem['idx'] }}</a></td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div id="status" class="tab-pane fade">
+        未開放
     </div>
     <div id="standing" class="tab-pane fade">
     </div>
@@ -30,4 +53,5 @@
     {% endif %}
 </div>
 <script src="/static/tab_memory.js"></script>
+<input id="cid" value="{{ cid }}" hidden>
 {% endblock %}

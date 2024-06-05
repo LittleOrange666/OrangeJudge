@@ -6,9 +6,9 @@ from flask import request, abort
 from flask_login import LoginManager, UserMixin, current_user
 from werkzeug.utils import secure_filename
 
-from modules import tools, server, datas
+from modules import tools, server, datas, config
 
-smtp = smtplib.SMTP('smtp.gmail.com', 587)
+smtp = smtplib.SMTP(config.get("smtp.host"), config.get("smtp.port"))
 
 
 class User(UserMixin):
@@ -57,9 +57,8 @@ login_manager.session_protection = None
 login_manager.login_view = 'do_login'
 smtp.ehlo()
 smtp.starttls()
-lines = tools.read("secret/smtp").split("\n")
-email_sender = lines[0]
-smtp.login(lines[0], lines[1])
+email_sender = config.get("smtp.user")
+smtp.login(config.get("smtp.user"), config.get("smtp.password"))
 
 
 @login_manager.user_loader
@@ -71,11 +70,10 @@ def send_email(target: str, content: str) -> bool:
     try:
         smtp.sendmail(email_sender, target, content)
     except smtplib.SMTPException:
-        smtp.connect('smtp.gmail.com', 587)
+        smtp.connect(config.get("smtp.host"), config.get("smtp.port"))
         smtp.ehlo()
         smtp.starttls()
-        lines = tools.read("secret/smtp").split("\n")
-        smtp.login(lines[0], lines[1])
+        smtp.login(config.get("smtp.user"), config.get("smtp.password"))
         try:
             smtp.sendmail(email_sender, target, content)
         except smtplib.SMTPException:

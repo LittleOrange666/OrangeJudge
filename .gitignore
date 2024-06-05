@@ -13,3 +13,4 @@ tmp/
 logs/
 tools/inited
 contests/
+config.yaml

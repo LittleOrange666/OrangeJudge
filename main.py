@@ -1,6 +1,6 @@
 import sys
 
-from modules import contests, constants, datas, executing, locks, login, problemsetting, server, tasks, tools
+from modules import contests, constants, datas, executing, locks, login, problemsetting, server, tasks, tools, config
 import modules.routers
 
 
@@ -12,14 +12,15 @@ def main():
     tools.system(f"sudo lxc-start {constants.lxc_name}")
     tools.system(f"sudo cp -r -f judge /var/lib/lxc/{constants.lxc_name}/rootfs/")
     with server.app.app_context():
-        contests.init()
-        datas.init()
-        executing.init()
+        config.init()
         locks.init()
-        login.init()
-        tasks.init()
-        problemsetting.init()
         tools.init()
+        datas.init()
+        login.init()
+        executing.init()
+        tasks.init()
+        contests.init()
+        problemsetting.init()
         modules.routers.init()
     server.app.run("0.0.0.0", port=8898)
 

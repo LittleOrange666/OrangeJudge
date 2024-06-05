@@ -29,8 +29,8 @@ def contests_list():
 @login_required
 def create_contest():
     login.check_user("make_problems")
-    name = request.form["contest_name"]
-    if not name:
+    name = request.form.get("contest_name")
+    if not name or len(name) > 120:
         abort(400)
     idx = contests.create_contest(name, current_user.data)
     return "/contest/" + idx, 200
@@ -40,4 +40,4 @@ def create_contest():
 def contest_page(idx):
     dat: datas.Problem = datas.Contest.query.filter_by(cid=idx).first_or_404()
     info = dat.data
-    return render_template("contest.html", data=info)
+    return render_template("contest.html", cid=idx, data=info)

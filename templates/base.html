@@ -17,12 +17,6 @@
         {% block style %}{% endblock %}
 
 
-
-
-
-
-
-
     </style>
 </head>
 
@@ -107,13 +101,11 @@
     </div>
 </div>
 <script type="text/x-mathjax-config">
-MathJax.Hub.Config({
-    config: ["MMLorHTML.js"],
-    jax: ["input/TeX", "output/HTML-CSS", "output/NativeMML"],
-    extensions: ["MathMenu.js", "MathZoom.js"]
-});
-
-
+    MathJax.Hub.Config({
+        config: ["MMLorHTML.js"],
+        jax: ["input/TeX", "output/HTML-CSS", "output/NativeMML"],
+        extensions: ["MathMenu.js", "MathZoom.js"]
+    });
 
 
 </script>
@@ -122,9 +114,7 @@ MathJax.Hub.Config({
 <script src="/static/main.js"></script>
 </body>
 <script>
-{% block script %}{% endblock %}
-
-
+    {% block script %}{% endblock %}
 
 
 </script>
