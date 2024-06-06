@@ -46,14 +46,14 @@ $("textarea").on('keydown', function(e) {
   }
 });
 $(".date-string").each(function(){
-    $(this).text(new Date(+$(this).text()).toLocaleString());
+    $(this).text(new Date(+$(this).text()*1000).toLocaleString());
 });
 $("input[type='datetime-local'][data-value]").each(function(){
     let s = new Date(+$(this).data("value")*1000).toISOString();
     $(this).val(s.substr(0,s.length-1));
 });
 $(".time-string").each(function(){
-    let t = Math.floor(+$(this).text()/60000);
+    let t = Math.floor(+$(this).text());
     let d = Math.floor(t/1440);
     let h = Math.floor((t%1440)/60);
     let m = t%60;

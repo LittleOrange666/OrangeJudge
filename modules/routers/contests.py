@@ -35,9 +35,23 @@ def create_contest():
     return "/contest/" + idx, 200
 
 
+def check_access(dat: datas.Contest):
+    per: datas.Period = datas.Period.query.get_or_404(dat.main_period_id)
+    if current_user.is_authenticated:
+        if current_user.has("admin") or current_user.id in dat.data["users"]:
+            return
+        if current_user.id in dat.data["participants"]:
+            if per.is_running() or per.is_over() and dat.data["practice"] != "no":
+                return
+    if dat.data["practice"] == "public" and per.is_over():
+        return
+    abort(403)
+
+
 @app.route("/contest/<idx>", methods=["GET"])
 def contest_page(idx):
     dat: datas.Contest = datas.Contest.query.filter_by(cid=idx).first_or_404()
+    check_access(dat)
     info = dat.data
     can_edit = current_user.is_authenticated and current_user.id in info["users"]
     return render_template("contest.html", cid=idx, data=info, can_edit=can_edit)
@@ -46,6 +60,7 @@ def contest_page(idx):
 @app.route("/contest/<cid>/problem/<pid>", methods=["GET"])
 def contest_problem(cid, pid):
     cdat: datas.Contest = datas.Contest.query.filter_by(cid=cid).first_or_404()
+    check_access(cdat)
     info = cdat.data
     idx = ""
     if pid not in info["problems"]:

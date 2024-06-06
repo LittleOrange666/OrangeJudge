@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 
 from flask_sqlalchemy import SQLAlchemy
 
@@ -93,7 +94,7 @@ class Contest(db.Model):
     periods = db.relationship('Period', backref='contest', lazy='dynamic')
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     data = db.Column(db.JSON)
-    main_period_id = db.Column(db.Integer, default=0)
+    main_period_id = db.Column(db.Integer, nullable=True)
 
 
 class Period(db.Model):
@@ -105,6 +106,18 @@ class Period(db.Model):
     ended = db.Column(db.Boolean, default=False)
     contest_id = db.Column(db.Integer, db.ForeignKey('contests.id'))
     submissions = db.relationship('Submission', backref='period', lazy='dynamic')
+
+    def is_running(self):
+        now = datetime.now()
+        return self.start_time <= now <= self.end_time
+
+    def is_over(self):
+        now = datetime.now()
+        return now > self.end_time
+
+    def is_started(self):
+        now = datetime.now()
+        return now >= self.start_time
 
 
 def init():

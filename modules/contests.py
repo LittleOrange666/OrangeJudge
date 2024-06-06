@@ -82,13 +82,20 @@ def change_settings(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Co
     pretest_type = form["pretest_type"]
     if pretest_type not in ("all", "last", "no"):
         abort(400)
+    practice_type = form["practice_type"]
+    if practice_type not in ("no", "private", "public"):
+        abort(400)
     register_type = form["register_type"]
     if register_type not in ("no", "yes"):
         abort(400)
+    per: datas.Period = datas.Period.query.get(cdat.main_period_id)
+    per.start_time = datetime.fromtimestamp(start_time)
+    per.end_time = datetime.fromtimestamp(start_time+elapsed_time*60)
     dat["start"] = start_time
     dat["elapsed"] = elapsed_time
     dat["type"] = rule_type
     dat["pretest"] = pretest_type
+    dat["practice"] = practice_type
     dat["can_register"] = (register_type == "yes")
     return "edit"
 
@@ -103,7 +110,7 @@ def action(form: ImmutableMultiDict[str, str], cdat: datas.Contest):
     cid = cdat.cid
     tp = actions.call(form["action"], form, cid, cdat, dat)
     flag_modified(cdat, "data")
-    datas.add(cdat)
+    datas.add(cdat, datas.Period.query.get(cdat.main_period_id))
     return f"/contest/{cid}#{tp}"
 
 
