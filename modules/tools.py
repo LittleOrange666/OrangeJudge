@@ -221,3 +221,9 @@ def random_string() -> str:
 
 def init():
     pass
+
+
+def to_int(text: str) -> int:
+    if not text.isdigit():
+        abort(400)
+    return int(text)

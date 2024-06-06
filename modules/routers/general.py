@@ -235,6 +235,7 @@ def my_submissions():
             o["source"] = "/problem/" + dat.problem.pid
             source_dat = dat.problem
             o["source_name"] = source_dat.name
+        o["lang"] = dat.language
         out.append(o)
     displays = [1, page_cnt]
     displays.extend(range(max(2, page_idx - 2), min(page_cnt, page_idx + 2) + 1))

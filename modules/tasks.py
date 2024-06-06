@@ -4,7 +4,7 @@ from multiprocessing import Queue, Process
 
 from flask import abort
 
-from modules import executing, constants, tools, locks, datas
+from modules import executing, constants, tools, locks, datas, config
 
 submissions_queue = Queue()
 
@@ -194,6 +194,8 @@ def runner():
     while True:
         idx: int = int(submissions_queue.get())
         dat: datas.Submission = datas.Submission.query.get(idx)
+        if dat is None:
+            continue
         try:
             last_judged.value = idx
             pdat: datas.Problem = dat.problem
@@ -212,5 +214,7 @@ def runner():
 
 
 def init():
+    for _ in range(config.get("judge.workers")):
+        submissions_queue.put(0)
     Process(target=runner).start()
-    datas.Submission.query.count()
+    last_judged.value = datas.Submission.query.count()

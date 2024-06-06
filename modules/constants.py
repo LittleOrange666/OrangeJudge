@@ -68,7 +68,7 @@ latex_end = "\n\\end{document}"
 
 permissions: dict[str, str] = {"admin": "管理者", "make_problems": "出題者"}
 
-default_contest_info: dict = {"name": "unknown", "users": [], "problems": [], "start": 0, "elapsed": 0, "type": "icpc",
+default_contest_info: dict = {"name": "unknown", "users": [], "problems": {}, "start": 0, "elapsed": 0, "type": "icpc",
                               "can_register": False, "standing": {"public": True, "start_freeze": 0, "end_freeze": 0},
                               "pretest": "no", "practice": "no", "participants": []}
 # pretest: no all last

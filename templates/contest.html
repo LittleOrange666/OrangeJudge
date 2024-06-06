@@ -10,7 +10,7 @@
     </li>
     <li class="nav-item" role="presentation">
         <a class="nav-link" id="status_tab" data-bs-toggle="tab" data-bs-target="#status" type="button" role="tab"
-           aria-controls="status" aria-selected="false">status</a>
+           aria-controls="status" aria-selected="false">解題動態</a>
     </li>
     <li class="nav-item" role="presentation">
         <a class="nav-link" id="standing_tab" data-bs-toggle="tab" data-bs-target="#standing" type="button" role="tab"
@@ -30,13 +30,24 @@
             <tr>
                 <th scope="col">#</th>
                 <th scope="col">名稱</th>
+                {% if can_edit %}
+                <th scope="col"></th>
+                {% endif %}
             </tr>
             </thead>
             <tbody>
-            {% for problem in data["problems"] %}
+            {% for idx, problem in data["problems"].items() %}
             <tr>
-                <th scope="row"><a href="/contest/{{ cid }}/{{ problem['idx'] }}" target="_blank">{{ problem['idx'] }}</a></th>
-                <td><a href="/contest/{{ cid }}/{{ problem['idx'] }}" target="_blank">{{ problem['name'] }}</a></td>
+                <th scope="row"><a href="/contest/{{ cid }}/problem/{{ idx }}" target="_blank">{{ idx }}</a></th>
+                <td><a href="/contest/{{ cid }}/problem/{{ idx }}" target="_blank">{{ problem['name'] }}</a></td>
+                {% if can_edit %}
+                <td>
+                    <form the_action="remove_problem">
+                        <input name="idx" value="{{ idx }}" hidden>
+                        <button class="btn btn-danger submitter">刪除題目</button>
+                    </form>
+                </td>
+                {% endif %}
             </tr>
             {% endfor %}
             </tbody>
@@ -48,14 +59,31 @@
                     <input type="text" class="form-control" name="pid" placeholder="題目編號" required>
                 </div>
                 <div class="col-auto">
-                    <button class="btn btn-primary submitter" data-redirect="true">添加題目</button>
+                    <button class="btn btn-primary submitter">添加題目</button>
                 </div>
             </div>
         </form>
         {% endif %}
     </div>
     <div id="status" class="tab-pane fade">
-        未開放
+        <table class="table table-hover table-striped">
+            <thead>
+            <tr>
+                <th scope="col">解題編號</th>
+                <th scope="col">時間</th>
+                <th scope="col">提交者</th>
+                <th scope="col">題目</th>
+                <th scope="col">語言</th>
+                <th scope="col">結果</th>
+            </tr>
+            </thead>
+            <tbody id="status_table">
+            </tbody>
+        </table>
+        <nav aria-label="Page navigation example">
+            <ul class="pagination" id="status_page">
+            </ul>
+        </nav>
     </div>
     <div id="standing" class="tab-pane fade">
     </div>
@@ -67,4 +95,5 @@
 <script src="/static/tab_memory.js"></script>
 <script src="/static/contest.js"></script>
 <input id="cid" value="{{ cid }}" hidden>
+<input id="username" value="{{ current_user.id }}" hidden>
 {% endblock %}

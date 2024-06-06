@@ -1,6 +1,6 @@
 import json
 
-from flask import abort, render_template, request
+from flask import abort, render_template, request, jsonify
 from flask_login import login_required, current_user
 
 from modules import server, login, constants, contests, datas, tools, executing
@@ -13,10 +13,7 @@ def contests_list():
     public_contests = datas.Contest.query
     contest_cnt = public_contests.count()
     page_cnt = max(1, (contest_cnt - 1) // constants.page_size + 1)
-    page = request.args.get("page", "1")
-    if not page.isdigit():
-        abort(404)
-    page_idx = int(page)
+    page_idx = tools.to_int(request.args.get("page", "1"))
     if page_idx <= 0 or page_idx > page_cnt:
         abort(404)
     got_data = public_contests.slice(constants.page_size * (page_idx - 1),
@@ -46,17 +43,14 @@ def contest_page(idx):
     return render_template("contest.html", cid=idx, data=info, can_edit=can_edit)
 
 
-@app.route("/contest/<cid>/<pid>", methods=["GET"])
+@app.route("/contest/<cid>/problem/<pid>", methods=["GET"])
 def contest_problem(cid, pid):
     cdat: datas.Contest = datas.Contest.query.filter_by(cid=cid).first_or_404()
     info = cdat.data
     idx = ""
-    for obj in info["problems"]:
-        if obj["idx"] == pid:
-            idx = obj["pid"]
-            break
-    else:
+    if pid not in info["problems"]:
         abort(404)
+    idx = info["problems"][pid]["pid"]
     pdat: datas.Problem = datas.Problem.query.filter_by(pid=idx).first_or_404()
     path = "problems/" + idx
     dat = pdat.data
@@ -69,6 +63,49 @@ def contest_problem(cid, pid):
                            langs=executing.langs.keys(), lang_exts=lang_exts, pid=idx,
                            preview=False, samples=enumerate(samples), is_contest=True, cid=cid,
                            cname=cdat.name, pidx=pid)
+
+
+@app.route("/contest/<cid>/status/<page_str>", methods=["GET", "POST"])
+def contest_status(cid, page_str):
+    dat: datas.Contest = datas.Contest.query.filter_by(cid=cid).first_or_404()
+    page = tools.to_int(page_str)
+    page_size = constants.page_size
+    status = dat.submissions
+    status_count = status.count()
+    page_cnt = max(1, (status_count - 1) // page_size + 1)
+    if page <= 0 or page > page_cnt:
+        abort(404)
+    got_data: list[datas.Submission] = status.slice(page_size * (page - 1),
+                                                    min(status_count, constants.page_size * page)).all()
+    displays = [1, page_cnt]
+    displays.extend(range(max(2, page - 2), min(page_cnt, page + 2) + 1))
+    displays = sorted(set(displays))
+    out = []
+    for obj in reversed(got_data):
+        pid = obj.pid
+        problem = "?"
+        problem_name = "?"
+        for k, v in dat.data["problems"].items():
+            if v["pid"] == pid:
+                problem = k
+                problem_name = v["name"]
+        result = "blank"
+        if not obj.completed:
+            result = "waiting"
+        else:
+            res = obj.result
+            if res and "simple_result" in res:
+                result = res["simple_result"]
+        out.append({"idx": str(obj.id),
+                    "time": obj.time,
+                    "user_id": obj.user.username,
+                    "user_name": obj.user.display_name,
+                    "problem": problem,
+                    "problem_name": problem_name,
+                    "lang": obj.language,
+                    "result": result})
+    ret = {"show_pages": displays, "page_cnt": page_cnt, "page": page, "data": out}
+    return jsonify(ret)
 
 
 @app.route("/contest_action", methods=['POST'])

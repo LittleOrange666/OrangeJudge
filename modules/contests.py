@@ -1,6 +1,6 @@
 import os
 
-from flask import Response, redirect, abort
+from flask import abort
 from flask_login import current_user
 from sqlalchemy.orm.attributes import flag_modified
 from werkzeug.datastructures import ImmutableMultiDict
@@ -34,19 +34,27 @@ def calidx(idx: int) -> str:
 
 @actions.bind
 def add_problem(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Contest, dat: dict) -> str:
+    print("add_problem", form)
     pid = form["pid"]
     pdat: datas.Problem = datas.Problem.query.filter_by(pid=pid).first_or_404()
     if not current_user.has("admin") and current_user.id not in pdat.data["users"]:
         abort(403)
-    idxs = []
-    for obj in dat["problems"]:
+    for idx, obj in dat["problems"].items():
         if obj["pid"] == pid:
             abort(409)
-        idxs.append(obj["idx"])
     idx = 0
-    while calidx(idx) in idxs:
+    while calidx(idx) in dat["problems"]:
         idx += 1
-    dat["problems"].append({"pid": pid, "name": pdat.name, "idx": calidx(idx)})
+    dat["problems"][calidx(idx)] = {"pid": pid, "name": pdat.name}
+    return "index_page"
+
+
+@actions.bind
+def remove_problem(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Contest, dat: dict) -> str:
+    idx = form["idx"]
+    if idx not in dat["problems"]:
+        abort(409)
+    del dat["problems"][idx]
     return "index_page"
 
 
@@ -55,13 +63,13 @@ def action_not_found(*args):
     abort(404)
 
 
-def action(form: ImmutableMultiDict[str, str], cdat: datas.Contest) -> Response:
+def action(form: ImmutableMultiDict[str, str], cdat: datas.Contest):
     dat = cdat.data
     cid = cdat.cid
     tp = actions.call(form["action"], form, cid, cdat, dat)
     flag_modified(cdat, "data")
     datas.add(cdat)
-    return redirect(f"/contest/{cid}#{tp}")
+    return f"/contest/{cid}#{tp}"
 
 
 def init():

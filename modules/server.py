@@ -53,6 +53,11 @@ def error_404(error):
         return "404 Not Found", 404
 
 
+@app.errorhandler(405)
+def error_405(error):
+    return "405 Method not Allowed", 405
+
+
 @app.errorhandler(409)
 def error_409(error):
     if request.method == "GET":

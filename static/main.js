@@ -59,16 +59,18 @@ var myModal = new bootstrap.Modal(document.getElementById('myModal'));
 function show_modal(title, text, refresh, next_page){
     $("#myModalTitle").text(title);
     $("#myModalText").text(text);
-    myModal.show();
     if (next_page) {
+        console.log("branch 1");
         $("#myModal").on("hidden.bs.modal", function(){
             location.href = next_page;
         });
     }else if (refresh) {
+        console.log("branch 2");
         $("#myModal").on("hidden.bs.modal", function(){
             location.reload();
         });
     }
+    myModal.show();
 }
 $("input[data-checked]").each(function(){
     $(this).prop("checked",$(this).data("checked")==="True")
