@@ -89,6 +89,72 @@
     </div>
     {% if can_edit %}
     <div id="edit" class="tab-pane fade">
+        <form the_action="change_settings">
+            <h4>比賽時間</h4>
+            <div class="mb-3">
+              <label for="start_time" class="form-label">開始時間</label>
+              <input type="datetime-local" class="form-control" id="start_time" name="start_time" data-value="{{ data['start'] }}">
+            </div>
+            <div class="mb-3">
+              <label for="elapsed_time" class="form-label">持續時間(分鐘)</label>
+              <input type="number" class="form-control" id="elapsed_time" name="elapsed_time" placeholder="持續時間"
+              value="{{ data['elapsed'] }}">
+            </div>
+            <div class="radio-selector" data-value="{{ data['type'] }}">
+                <h4>計分規則</h4>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="rule_type" id="rule_type1" value="icpc">
+                    <label class="form-check-label" for="rule_type1">
+                        ACM ICPC
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="rule_type" id="rule_type2" value="ioi">
+                    <label class="form-check-label" for="rule_type2">
+                        IOI style
+                    </label>
+                </div>
+            </div>
+            <div class="radio-selector" data-value="{{ data['pretest'] }}">
+                <h4>後測</h4>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="pretest_type" id="pretest_type1" value="no">
+                    <label class="form-check-label" for="pretest_type1">
+                        無後測
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="pretest_type" id="pretest_type2" value="all">
+                    <label class="form-check-label" for="pretest_type2">
+                        對所有提交計分
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="pretest_type" id="pretest_type3" value="last">
+                    <label class="form-check-label" for="pretest_type3">
+                        對最後提交計分
+                    </label>
+                </div>
+            </div>
+            <div class="radio-selector" data-value="{{ 'yes' if data['can_register'] else 'no' }}">
+                <h4>自行報名</h4>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="register_type" id="register_type1" value="yes">
+                    <label class="form-check-label" for="register_type1">
+                        是
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="register_type" id="register_type2" value="no">
+                    <label class="form-check-label" for="register_type2">
+                        否
+                    </label>
+                </div>
+            </div>
+            <div class="row">
+                <button class="btn btn-primary submitter">儲存設定</button>
+            </div>
+        </form>
     </div>
     {% endif %}
 </div>

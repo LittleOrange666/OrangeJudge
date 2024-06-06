@@ -282,7 +282,7 @@ $(function() {
     $("#upload_zipfile").click(function(){
         $(this).prop("disabled",true);
         $(this).find("span").removeClass("visually-hidden");
-        fetching($(this).parent()).then(()=>location.reload());
+        fetching($(this).parent().parent()).then(()=>location.reload());
     });
     var moveing_testcase = null;
     $("tr.testcase").attr("draggable","true");

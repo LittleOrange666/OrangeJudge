@@ -48,6 +48,10 @@ $("textarea").on('keydown', function(e) {
 $(".date-string").each(function(){
     $(this).text(new Date(+$(this).text()).toLocaleString());
 });
+$("input[type='datetime-local'][data-value]").each(function(){
+    let s = new Date(+$(this).data("value")*1000).toISOString();
+    $(this).val(s.substr(0,s.length-1));
+});
 $(".time-string").each(function(){
     let t = Math.floor(+$(this).text()/60000);
     let d = Math.floor(t/1440);
@@ -74,6 +78,10 @@ function show_modal(title, text, refresh, next_page){
 }
 $("input[data-checked]").each(function(){
     $(this).prop("checked",$(this).data("checked")==="True")
+});
+$("div.radio-selector[data-value]").each(function(){
+    let val = $(this).data("value");
+    $(this).find("input[value="+val+"]").prop("checked",true);
 });
 $("*[data-disabled]").each(function(){
     if($(this).data("disabled")==="True"){
@@ -166,9 +174,7 @@ $(".submitter").click(function(e){
                 if(!!$this.data("redirect")) link = text;
                 show_modal("成功","成功"+action_name, !$this.data("no-refresh"), $this.data("next") || link);
             }else if (response.status==500){
-                response.text().then(function(text){
-                    show_modal("失敗", "伺服器內部錯誤，log uid="+text);
-                });
+                show_modal("失敗", "伺服器內部錯誤，log uid="+text);
             }else {
                 let msg = $this.data("msg-"+response.status);
                 if(!msg&&response.status==400) msg = "輸入格式不正確"

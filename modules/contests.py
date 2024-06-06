@@ -1,4 +1,5 @@
 import os
+from datetime import datetime, timedelta
 
 from flask import abort
 from flask_login import current_user
@@ -18,6 +19,13 @@ def create_contest(name: str, user: datas.User) -> str:
     cid = str(cidx)
     info = constants.default_contest_info | {"name": name, "users": [user.username]}
     dat = datas.Contest(id=cidx, cid=cid, name=name, data=info, user=user)
+    per = datas.Period(start_time=datetime.now()+timedelta(days=1),
+                       end_time=datetime.now()+timedelta(days=2),
+                       ended=False,
+                       running=False,
+                       contest_id=dat.id)
+    datas.add(dat, per)
+    dat.main_period_id = per.id
     datas.add(dat)
     os.mkdir("contests/" + cid)
     tools.write_json({}, f"contests/{cid}/standings.json")
@@ -56,6 +64,33 @@ def remove_problem(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Con
         abort(409)
     del dat["problems"][idx]
     return "index_page"
+
+
+@actions.bind
+def change_settings(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Contest, dat: dict) -> str:
+    start_time = 0
+    try:
+        start_time = datetime.fromisoformat(form["start_time"]).timestamp()
+    except ValueError:
+        abort(400)
+    if not form["elapsed_time"].isdigit():
+        abort(400)
+    elapsed_time = int(form["elapsed_time"])
+    rule_type = form["rule_type"]
+    if rule_type not in ("icpc", "ioi"):
+        abort(400)
+    pretest_type = form["pretest_type"]
+    if pretest_type not in ("all", "last", "no"):
+        abort(400)
+    register_type = form["register_type"]
+    if register_type not in ("no", "yes"):
+        abort(400)
+    dat["start"] = start_time
+    dat["elapsed"] = elapsed_time
+    dat["type"] = rule_type
+    dat["pretest"] = pretest_type
+    dat["can_register"] = (register_type == "yes")
+    return "edit"
 
 
 @actions.default

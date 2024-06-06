@@ -56,6 +56,7 @@ class Submission(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     problem_id = db.Column(db.Integer, db.ForeignKey('problems.id'))
     contest_id = db.Column(db.Integer, db.ForeignKey('contests.id'), nullable=True)
+    period_id = db.Column(db.Integer, db.ForeignKey('periods.id'), nullable=True)
     language = db.Column(db.String(20))
     completed = db.Column(db.Boolean, default=False)
     ce_msg = db.Column(db.Text, nullable=True)
@@ -89,8 +90,21 @@ class Contest(db.Model):
     cid = db.Column(db.String(20), unique=True)
     name = db.Column(db.String(120))
     submissions = db.relationship('Submission', backref='contest', lazy='dynamic')
+    periods = db.relationship('Period', backref='contest', lazy='dynamic')
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     data = db.Column(db.JSON)
+    main_period_id = db.Column(db.Integer, default=0)
+
+
+class Period(db.Model):
+    __tablename__ = 'periods'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    start_time = db.Column(db.DateTime)
+    end_time = db.Column(db.DateTime)
+    running = db.Column(db.Boolean, default=False)
+    ended = db.Column(db.Boolean, default=False)
+    contest_id = db.Column(db.Integer, db.ForeignKey('contests.id'))
+    submissions = db.relationship('Submission', backref='period', lazy='dynamic')
 
 
 def init():
