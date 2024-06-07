@@ -42,7 +42,6 @@ def calidx(idx: int) -> str:
 
 @actions.bind
 def add_problem(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Contest, dat: dict) -> str:
-    print("add_problem", form)
     pid = form["pid"]
     pdat: datas.Problem = datas.Problem.query.filter_by(pid=pid).first_or_404()
     if not current_user.has("admin") and current_user.id not in pdat.data["users"]:
@@ -67,6 +66,24 @@ def remove_problem(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Con
 
 
 @actions.bind
+def add_participant(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Contest, dat: dict) -> str:
+    user: datas.User = datas.User.query.filter_by(username=form["username"].lower()).first_or_404()
+    if user.username in dat["participants"]:
+        abort(409)
+    dat["participants"].append(user.username)
+    return "participants"
+
+
+@actions.bind
+def remove_participant(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Contest, dat: dict) -> str:
+    user: datas.User = datas.User.query.filter_by(username=form["username"].lower()).first_or_404()
+    if user.username not in dat["participants"]:
+        abort(409)
+    dat["participants"].remove(user.username)
+    return "participants"
+
+
+@actions.bind
 def change_settings(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Contest, dat: dict) -> str:
     start_time = 0
     try:
@@ -88,6 +105,15 @@ def change_settings(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Co
     register_type = form["register_type"]
     if register_type not in ("no", "yes"):
         abort(400)
+    show_standing = form["show_standing"]
+    if show_standing not in ("no", "yes"):
+        abort(400)
+    if not form["freeze_time"].isdigit():
+        abort(400)
+    freeze_time = int(form["freeze_time"])
+    if not form["unfreeze_time"].isdigit():
+        abort(400)
+    unfreeze_time = int(form["unfreeze_time"])
     per: datas.Period = datas.Period.query.get(cdat.main_period_id)
     per.start_time = datetime.fromtimestamp(start_time)
     per.end_time = datetime.fromtimestamp(start_time + elapsed_time * 60)
@@ -97,6 +123,9 @@ def change_settings(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Co
     dat["pretest"] = pretest_type
     dat["practice"] = practice_type
     dat["can_register"] = (register_type == "yes")
+    dat['standing']['public'] = (show_standing == "yes")
+    dat['standing']['start_freeze'] = freeze_time
+    dat['standing']['end_freeze'] = unfreeze_time
     return "edit"
 
 

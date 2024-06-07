@@ -47,6 +47,7 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
     else:
         tl = float(problem_info["timelimit"]) / 1000
         ml = int(problem_info["memorylimit"])
+        just_pretest: bool = dat.just_pretest
         int_exec = []
         if problem_info["is_interact"]:
             int_file = env.send_file(problem_path + "/" + problem_info["interactor"][0], env.judge_executable)
@@ -78,74 +79,78 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
                 results.append({"time": 0, "mem": 0, "result": "SKIP", "info": "Skipped",
                                 "has_output": False})
                 continue
+            timeusage = 0
+            memusage = 0
+            has_output = False
+            score = 0
             tt = "testcases_gen/" if testcase.get("gen", False) else "testcases/"
             in_file = os.path.abspath(problem_path + tt + testcase["in"])
             ans_file = os.path.abspath(problem_path + tt + testcase["out"])
             out_file = os.path.abspath(f"submissions/{idx}/testcases/{i}.out")
             tools.create_truncated(in_file, f"submissions/{idx}/testcases/{i}.in")
             tools.create_truncated(ans_file, f"submissions/{idx}/testcases/{i}.ans")
-            env.send_file(in_file)
-            if problem_info["is_interact"]:
-                env.judge_readable(in_file)
-                env.judge_writeable(out_file)
-                out = env.runwithinteractshell(exec_cmd, int_exec, env.filepath(in_file), env.filepath(out_file), tl,
-                                               ml, lang.base_exec_cmd)
+            if just_pretest and not testcase.get("pretest", False):
+                ret = ["OK", "Skip by pretest policy"]
+                score = top_score
             else:
-                out = env.runwithshell(exec_cmd, env.filepath(in_file), env.filepath(out_file), tl, ml,
-                                       lang.base_exec_cmd)
-            timeusage = 0
-            memusage = 0
-            has_output = False
-            score = 0
-            if executing.is_tle(out):
-                ret = ["TLE", "執行時間過長"]
-            else:
-                result = {o[0]: o[1] for o in (s.split("=") for s in out[0].split("\n")) if len(o) == 2}
-                print(result)
-                exit_code = result.get("WEXITSTATUS", "0")
-                if "1" == result.get("WIFSIGNALED", None):
-                    ret = ["RE", "您的程式無法正常執行"]
-                elif "0" != exit_code:
-                    if "153" == exit_code:
-                        ret = ["OLE", "輸出過多"]
-                    elif exit_code in constants.exit_codes:
-                        ret = ["RE", constants.exit_codes[exit_code]]
-                    else:
-                        ret = ["RE", out[1]]
+                env.send_file(in_file)
+                if problem_info["is_interact"]:
+                    env.judge_readable(in_file)
+                    env.judge_writeable(out_file)
+                    out = env.runwithinteractshell(exec_cmd, int_exec, env.filepath(in_file), env.filepath(out_file), tl,
+                                                   ml, lang.base_exec_cmd)
                 else:
-                    if "time" in result and float(result["time"]) >= 0:
-                        timeusage = int((float(result["time"]) + float(result["basetime"])) * 1000)
-                    if "mem" in result and float(result["mem"]) >= 0:
-                        memusage = (int(result["mem"]) - int(result["basemem"])) * int(result["pagesize"]) // 1000
-                    groups[gp]["time"] = max(groups[gp]["time"], timeusage)
-                    groups[gp]["mem"] = max(groups[gp]["mem"], memusage)
-                    if timeusage > tl * 950:
-                        ret = ["TLE", "執行時間過長"]
-                    elif memusage > ml * 1024:
-                        ret = ["MLE", "記憶體超出限制"]
-                    else:
-                        has_output = True
-                        full_checker_cmd = checker_cmd + [env.filepath(in_file), env.filepath(out_file),
-                                                          env.send_file(ans_file)]
-                        env.judge_readable(ans_file, in_file, out_file)
-                        checker_out = env.judge_run(full_checker_cmd)
-                        env.protected(ans_file, in_file, out_file)
-                        env.get_file(out_file)
-                        tools.create_truncated(out_file, out_file)
-                        if checker_out[1].startswith("partially correct"):
-                            score = checker_out[2]
-                            name = "OK" if score >= top_score else "PARTIAL"
+                    out = env.runwithshell(exec_cmd, env.filepath(in_file), env.filepath(out_file), tl, ml,
+                                           lang.base_exec_cmd)
+                if executing.is_tle(out):
+                    ret = ["TLE", "執行時間過長"]
+                else:
+                    result = {o[0]: o[1] for o in (s.split("=") for s in out[0].split("\n")) if len(o) == 2}
+                    print(result)
+                    exit_code = result.get("WEXITSTATUS", "0")
+                    if "1" == result.get("WIFSIGNALED", None):
+                        ret = ["RE", "您的程式無法正常執行"]
+                    elif "0" != exit_code:
+                        if "153" == exit_code:
+                            ret = ["OLE", "輸出過多"]
+                        elif exit_code in constants.exit_codes:
+                            ret = ["RE", constants.exit_codes[exit_code]]
                         else:
-                            name = constants.judge_exit_codes.get(checker_out[2], "JE")
-                            if name == "OK":
-                                score = top_score
-                            elif name == "POINTS":
-                                st = checker_out[1].split(" ")
-                                if len(st) > 1 and st[1].replace(".", "", 1).isdigit():
-                                    score = float(st[1])
+                            ret = ["RE", out[1]]
+                    else:
+                        if "time" in result and float(result["time"]) >= 0:
+                            timeusage = int((float(result["time"]) + float(result["basetime"])) * 1000)
+                        if "mem" in result and float(result["mem"]) >= 0:
+                            memusage = (int(result["mem"]) - int(result["basemem"])) * int(result["pagesize"]) // 1000
+                        groups[gp]["time"] = max(groups[gp]["time"], timeusage)
+                        groups[gp]["mem"] = max(groups[gp]["mem"], memusage)
+                        if timeusage > tl * 950:
+                            ret = ["TLE", "執行時間過長"]
+                        elif memusage > ml * 1024:
+                            ret = ["MLE", "記憶體超出限制"]
+                        else:
+                            has_output = True
+                            full_checker_cmd = checker_cmd + [env.filepath(in_file), env.filepath(out_file),
+                                                              env.send_file(ans_file)]
+                            env.judge_readable(ans_file, in_file, out_file)
+                            checker_out = env.judge_run(full_checker_cmd)
+                            env.protected(ans_file, in_file, out_file)
+                            env.get_file(out_file)
+                            tools.create_truncated(out_file, out_file)
+                            if checker_out[1].startswith("partially correct"):
+                                score = checker_out[2]
                                 name = "OK" if score >= top_score else "PARTIAL"
-                        score = max(score, 0)
-                        ret = [name, checker_out[1]]
+                            else:
+                                name = constants.judge_exit_codes.get(checker_out[2], "JE")
+                                if name == "OK":
+                                    score = top_score
+                                elif name == "POINTS":
+                                    st = checker_out[1].split(" ")
+                                    if len(st) > 1 and st[1].replace(".", "", 1).isdigit():
+                                        score = float(st[1])
+                                    name = "OK" if score >= top_score else "PARTIAL"
+                            score = max(score, 0)
+                            ret = [name, checker_out[1]]
             if ret[0] == "TLE":
                 timeusage = tl * 1000
             results.append({"time": timeusage, "mem": memusage, "result": ret[0], "info": ret[1],

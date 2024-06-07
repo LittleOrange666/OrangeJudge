@@ -121,12 +121,12 @@
             <div class="mb-3">
                 <label for="start_time" class="form-label">開始時間</label>
                 <input type="datetime-local" class="form-control" id="start_time" name="start_time"
-                       data-value="{{ data['start'] }}">
+                       data-value="{{ data['start'] }}" required>
             </div>
             <div class="mb-3">
                 <label for="elapsed_time" class="form-label">持續時間(分鐘)</label>
                 <input type="number" class="form-control" id="elapsed_time" name="elapsed_time" placeholder="持續時間"
-                       value="{{ data['elapsed'] }}">
+                       value="{{ data['elapsed'] }}" required>
             </div>
             <div class="radio-selector" data-value="{{ data['type'] }}">
                 <h4>計分規則</h4>
@@ -202,6 +202,31 @@
                     </label>
                 </div>
             </div>
+            <div class="radio-selector" data-value="{{ 'yes' if data['standing']['public'] else 'no' }}">
+                <h4>記分板可見</h4>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="show_standing" id="show_standing1" value="yes">
+                    <label class="form-check-label" for="show_standing1">
+                        是
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="show_standing" id="show_standing2" value="no">
+                    <label class="form-check-label" for="show_standing2">
+                        否
+                    </label>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label for="freeze_time" class="form-label">封版時間(分鐘)</label>
+                <input type="number" class="form-control" id="freeze_time" name="freeze_time" placeholder="封版時間"
+                       value="{{ data['standing']['start_freeze'] }}" required>
+            </div>
+            <div class="mb-3">
+                <label for="unfreeze_time" class="form-label">解封時間(分鐘)</label>
+                <input type="number" class="form-control" id="unfreeze_time" name="unfreeze_time" placeholder="解封時間"
+                       value="{{ data['standing']['end_freeze'] }}" required>
+            </div>
             <div class="row">
                 <button class="btn btn-primary submitter">儲存設定</button>
             </div>
@@ -209,6 +234,46 @@
     </div>
     {% endif %}
     <div id="participants" class="tab-pane fade">
+        {% if can_edit %}
+        <br>
+        <form the_action="add_participant">
+            <div class="row">
+                <div class="col-auto">
+                    <input type="text" class="form-control" name="username" placeholder="參賽者id" required>
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-primary submitter" data-msg-404="找不到該使用者id" data-msg-409="該使用者已被添加">添加參賽者</button>
+                </div>
+            </div>
+        </form>
+        {% endif %}
+        <table class="table table-hover table-striped">
+            <thead>
+            <tr>
+                <th scope="col">#</th>
+                <th scope="col">ID</th>
+                {% if can_edit %}
+                <th scope="col"></th>
+                {% endif %}
+            </tr>
+            </thead>
+            <tbody>
+            {% for user in data["participants"] %}
+            <tr>
+                <th scope="row">{{ loop.index }}</th>
+                <td><a href="/user/{{ user }}" target="_blank">{{ user }}</a></td>
+                {% if can_edit %}
+                <td>
+                    <form the_action="remove_participant">
+                        <input name="username" value="{{ user }}" hidden>
+                        <button class="btn btn-danger submitter">移除參賽者</button>
+                    </form>
+                </td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
 <script src="/static/tab_memory.js"></script>
