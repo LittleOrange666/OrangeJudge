@@ -63,6 +63,7 @@ class Submission(db.Model):
     ce_msg = db.Column(db.Text, nullable=True)
     data = db.Column(db.JSON)
     pid = db.Column(db.String(20))
+    just_pretest = db.Column(db.Boolean, default=False)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

@@ -11,15 +11,6 @@ submissions_queue = Queue()
 last_judged = locks.AtomicValue(0)
 
 
-def create_submission() -> str:
-    with tools.File("data/submission_count") as f:
-        count = int(f.read())
-        count = str(count + 1)
-        f.write(count)
-    os.mkdir(f"submissions/{count}")
-    return count
-
-
 def run_test(dat: datas.Submission) -> None:
     lang = executing.langs[dat.language]
     env = executing.Environment()

@@ -8,7 +8,7 @@ from pygments import highlight, lexers
 from pygments.formatters import HtmlFormatter
 from werkzeug.utils import secure_filename
 
-from modules import tools, server, constants, executing, tasks, datas
+from modules import tools, server, constants, executing, tasks, datas, contests
 
 app = server.app
 
@@ -87,8 +87,14 @@ def submit():
     dat = datas.Submission(source="a" + ext, time=datetime.datetime.now(), user=current_user.data,
                            problem=pdat, language=lang, data={}, pid=pid)
     if "cid" in request.form:
-        cdat = datas.Contest.query.filter_by(cid=request.form["cid"]).first_or_404()
+        cdat: datas.Contest = datas.Contest.query.filter_by(cid=request.form["cid"]).first_or_404()
+        contests.check_access(cdat)
+        per_id = contests.check_period(cdat)
         dat.contest = cdat
+        if per_id:
+            dat.period_id = per_id
+            if cdat.data["pretest"] != "no":
+                dat.just_pretest = True
     datas.add(dat)
     idx = str(dat.id)
     tools.write(code, f"submissions/{idx}/a{ext}")
@@ -106,7 +112,6 @@ def submission(idx):
     source = highlight(source, prepares[executing.langs[lang].name], HtmlFormatter())
     completed = dat.completed
     ce_msg = dat.ce_msg
-    ret = ""
     pdat: datas.Problem = dat.problem
     if pdat.pid == "test":
         if not current_user.has("admin") and dat.user_id != current_user.data.id:
@@ -153,9 +158,16 @@ def submission(idx):
                         o["class"] = constants.result_class.get(o["result"], "")
             if "total_score" in result_data:
                 result["total_score"] = result_data["total_score"]
+        link = f"/problem/{pdat.pid}"
+        if dat.contest_id:
+            cdat: datas.Contest = dat.contest
+            for k, v in cdat.data["problems"].items():
+                if v["pid"] == pdat.pid:
+                    link = f"/contest/{cdat.cid}/problem/{k}"
+                    break
         ret = render_template("submission/problem.html", lang=lang, source=source, completed=completed,
                               pname=problem_info["name"], result=result, enumerate=enumerate,
-                              group_results=group_results, pid=pdat.pid, pos=tasks.get_queue_position(idx),
+                              group_results=group_results, link=link, pos=tasks.get_queue_position(idx),
                               ce_msg=ce_msg, je=dat.data.get("JE", False), logid=dat.data.get("log_uuid", ""))
     return ret
 

@@ -19,8 +19,8 @@ def create_contest(name: str, user: datas.User) -> str:
     cid = str(cidx)
     info = constants.default_contest_info | {"name": name, "users": [user.username]}
     dat = datas.Contest(id=cidx, cid=cid, name=name, data=info, user=user)
-    per = datas.Period(start_time=datetime.now()+timedelta(days=1),
-                       end_time=datetime.now()+timedelta(days=2),
+    per = datas.Period(start_time=datetime.now() + timedelta(days=1),
+                       end_time=datetime.now() + timedelta(days=2),
                        ended=False,
                        running=False,
                        contest_id=dat.id)
@@ -90,7 +90,7 @@ def change_settings(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Co
         abort(400)
     per: datas.Period = datas.Period.query.get(cdat.main_period_id)
     per.start_time = datetime.fromtimestamp(start_time)
-    per.end_time = datetime.fromtimestamp(start_time+elapsed_time*60)
+    per.end_time = datetime.fromtimestamp(start_time + elapsed_time * 60)
     dat["start"] = start_time
     dat["elapsed"] = elapsed_time
     dat["type"] = rule_type
@@ -112,6 +112,31 @@ def action(form: ImmutableMultiDict[str, str], cdat: datas.Contest):
     flag_modified(cdat, "data")
     datas.add(cdat, datas.Period.query.get(cdat.main_period_id))
     return f"/contest/{cid}#{tp}"
+
+
+def check_access(dat: datas.Contest):
+    per: datas.Period = datas.Period.query.get_or_404(dat.main_period_id)
+    if current_user.is_authenticated:
+        if current_user.has("admin") or current_user.id in dat.data["users"]:
+            return
+        if current_user.id in dat.data["participants"]:
+            if per.is_running() or per.is_over() and dat.data["practice"] != "no":
+                return
+    if dat.data["practice"] == "public" and per.is_over():
+        return
+    abort(403)
+
+
+def check_period(dat: datas.Contest) -> int:
+    main_per: datas.Period = datas.Period.query.get_or_404(dat.main_period_id)
+    if current_user.id in dat.data["participants"] and main_per.is_running():
+        return dat.main_period_id
+    if current_user.id in dat.data["virtual_participants"]:
+        per_id = dat.data["virtual_participants"][current_user.id]
+        cur_per: datas.Period = datas.Period.query.get_or_404(per_id)
+        if cur_per.is_running():
+            return per_id
+    return 0
 
 
 def init():

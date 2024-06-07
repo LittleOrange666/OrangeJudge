@@ -2,6 +2,7 @@ import json
 
 from flask import abort, render_template, request, jsonify
 from flask_login import login_required, current_user
+from sqlalchemy.orm.attributes import flag_modified
 
 from modules import server, login, constants, contests, datas, tools, executing
 
@@ -35,23 +36,10 @@ def create_contest():
     return "/contest/" + idx, 200
 
 
-def check_access(dat: datas.Contest):
-    per: datas.Period = datas.Period.query.get_or_404(dat.main_period_id)
-    if current_user.is_authenticated:
-        if current_user.has("admin") or current_user.id in dat.data["users"]:
-            return
-        if current_user.id in dat.data["participants"]:
-            if per.is_running() or per.is_over() and dat.data["practice"] != "no":
-                return
-    if dat.data["practice"] == "public" and per.is_over():
-        return
-    abort(403)
-
-
 @app.route("/contest/<idx>", methods=["GET"])
 def contest_page(idx):
     dat: datas.Contest = datas.Contest.query.filter_by(cid=idx).first_or_404()
-    check_access(dat)
+    contests.check_access(dat)
     info = dat.data
     can_edit = current_user.is_authenticated and current_user.id in info["users"]
     return render_template("contest.html", cid=idx, data=info, can_edit=can_edit)
@@ -60,7 +48,7 @@ def contest_page(idx):
 @app.route("/contest/<cid>/problem/<pid>", methods=["GET"])
 def contest_problem(cid, pid):
     cdat: datas.Contest = datas.Contest.query.filter_by(cid=cid).first_or_404()
-    check_access(cdat)
+    contests.check_access(cdat)
     info = cdat.data
     idx = ""
     if pid not in info["problems"]:
@@ -80,12 +68,15 @@ def contest_problem(cid, pid):
                            cname=cdat.name, pidx=pid)
 
 
-@app.route("/contest/<cid>/status/<page_str>", methods=["GET", "POST"])
+@app.route("/contest/<cid>/status/<page_str>", methods=["POST"])
 def contest_status(cid, page_str):
     dat: datas.Contest = datas.Contest.query.filter_by(cid=cid).first_or_404()
     page = tools.to_int(page_str)
     page_size = constants.page_size
     status = dat.submissions
+    if "user" in request.form:
+        user: datas.User = datas.User.query.filter_by(username=request.form["user"]).first_or_404()
+        status = status.filter_by(user=user)
     status_count = status.count()
     page_cnt = max(1, (status_count - 1) // page_size + 1)
     if page <= 0 or page > page_cnt:
@@ -131,3 +122,31 @@ def contest_action():
     if not current_user.id in cdat.data["users"]:
         abort(403)
     return contests.action(request.form, cdat)
+
+
+@app.route("/contest/<cid>/register", methods=['POST'])
+@login_required
+def contest_register(cid):
+    dat: datas.Contest = datas.Contest.query.filter_by(cid=cid).first_or_404()
+    if not dat.data["can_register"]:
+        abort(403)
+    if current_user.id in dat.data["participants"]:
+        abort(409)
+    dat.data["participants"].append(current_user.id)
+    flag_modified(dat, "data")
+    datas.add(dat)
+    return "OK", 200
+
+
+@app.route("/contest/<cid>/unregister", methods=['POST'])
+@login_required
+def contest_unregister(cid):
+    dat: datas.Contest = datas.Contest.query.filter_by(cid=cid).first_or_404()
+    if not dat.data["can_register"]:
+        abort(403)
+    if current_user.id not in dat.data["participants"]:
+        abort(409)
+    dat.data["participants"].remove(current_user.id)
+    flag_modified(dat, "data")
+    datas.add(dat)
+    return "OK", 200

@@ -13,6 +13,10 @@
            aria-controls="status" aria-selected="false">解題動態</a>
     </li>
     <li class="nav-item" role="presentation">
+        <a class="nav-link" id="my_status_tab" data-bs-toggle="tab" data-bs-target="#my_status" type="button" role="tab"
+           aria-controls="my_status" aria-selected="false">我的解題動態</a>
+    </li>
+    <li class="nav-item" role="presentation">
         <a class="nav-link" id="standing_tab" data-bs-toggle="tab" data-bs-target="#standing" type="button" role="tab"
            aria-controls="standing" aria-selected="false">記分板</a>
     </li>
@@ -22,6 +26,10 @@
            aria-controls="edit" aria-selected="false">管理</a>
     </li>
     {% endif %}
+    <li class="nav-item" role="presentation">
+        <a class="nav-link" id="participants_tab" data-bs-toggle="tab" data-bs-target="#participants" type="button" role="tab"
+           aria-controls="participants" aria-selected="false">參賽者</a>
+    </li>
 </ul>
 <div class="tab-content">
     <div id="index_page" class="tab-pane fade show active">
@@ -85,6 +93,25 @@
             </ul>
         </nav>
     </div>
+    <div id="my_status" class="tab-pane fade">
+        <table class="table table-hover table-striped">
+            <thead>
+            <tr>
+                <th scope="col">解題編號</th>
+                <th scope="col">時間</th>
+                <th scope="col">題目</th>
+                <th scope="col">語言</th>
+                <th scope="col">結果</th>
+            </tr>
+            </thead>
+            <tbody id="my_status_table">
+            </tbody>
+        </table>
+        <nav aria-label="Page navigation example">
+            <ul class="pagination" id="my_status_page">
+            </ul>
+        </nav>
+    </div>
     <div id="standing" class="tab-pane fade">
     </div>
     {% if can_edit %}
@@ -92,13 +119,14 @@
         <form the_action="change_settings">
             <h4>比賽時間</h4>
             <div class="mb-3">
-              <label for="start_time" class="form-label">開始時間</label>
-              <input type="datetime-local" class="form-control" id="start_time" name="start_time" data-value="{{ data['start'] }}">
+                <label for="start_time" class="form-label">開始時間</label>
+                <input type="datetime-local" class="form-control" id="start_time" name="start_time"
+                       data-value="{{ data['start'] }}">
             </div>
             <div class="mb-3">
-              <label for="elapsed_time" class="form-label">持續時間(分鐘)</label>
-              <input type="number" class="form-control" id="elapsed_time" name="elapsed_time" placeholder="持續時間"
-              value="{{ data['elapsed'] }}">
+                <label for="elapsed_time" class="form-label">持續時間(分鐘)</label>
+                <input type="number" class="form-control" id="elapsed_time" name="elapsed_time" placeholder="持續時間"
+                       value="{{ data['elapsed'] }}">
             </div>
             <div class="radio-selector" data-value="{{ data['type'] }}">
                 <h4>計分規則</h4>
@@ -160,13 +188,15 @@
                     </label>
                 </div>
                 <div class="form-check">
-                    <input class="form-check-input" type="radio" name="practice_type" id="practice_type2" value="private">
+                    <input class="form-check-input" type="radio" name="practice_type" id="practice_type2"
+                           value="private">
                     <label class="form-check-label" for="practice_type2">
-                        需報名
+                        僅參賽者
                     </label>
                 </div>
                 <div class="form-check">
-                    <input class="form-check-input" type="radio" name="practice_type" id="practice_type3" value="public">
+                    <input class="form-check-input" type="radio" name="practice_type" id="practice_type3"
+                           value="public">
                     <label class="form-check-label" for="practice_type3">
                         公開
                     </label>
@@ -178,9 +208,11 @@
         </form>
     </div>
     {% endif %}
+    <div id="participants" class="tab-pane fade">
+    </div>
 </div>
 <script src="/static/tab_memory.js"></script>
 <script src="/static/contest.js"></script>
 <input id="cid" value="{{ cid }}" hidden>
-<input id="username" value="{{ current_user.id }}" hidden>
+<input id="username" value="{{ current_user.id if current_user.is_authenticated else 'unknow' }}" hidden>
 {% endblock %}

@@ -129,6 +129,7 @@ $("form").each(function(){
 function fetching(form){
     return fetch(form.attr("action"),{
         method: form.attr("method"),
+        headers: {"x-csrf-token": $("#csrf_token").val()},
         body: new FormData(form[0])
     });
 }
