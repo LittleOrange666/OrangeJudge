@@ -48,8 +48,7 @@
 </table>
 {% endif %}
 {% for i,testcase in enumerate(result["results"]) %}
-{% if not result["protected"] %}
-{% if testcase["result"] != "SKIP" %}
+{% if testcase["result"] != "SKIP" and not result["protected"]  %}
 <div class="test-case">
     <div>Input {{ i+1 }}:</div>
     <pre>{{ testcase["in"] }}</pre>
@@ -64,7 +63,6 @@
     <div>Answer {{ i+1 }}:</div>
     <pre>{{ testcase["out"] }}</pre>
 </div>
-{% endif %}
 {% endif %}
 <div class="test-case">
     <div>Result {{ i+1 }}: {{ testcase["result"] }}</div>

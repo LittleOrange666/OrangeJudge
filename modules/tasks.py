@@ -36,7 +36,8 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
     out_info = {"CE": False}
     results = []
     groups = {}
-    simple_result = "AC"
+    just_pretest: bool = dat.just_pretest
+    simple_result = "pretest passed" if just_pretest else "AC"
     top_score = problem_info.get("top_score", 100)
     total_score = 0
     exist_gp = set()
@@ -47,7 +48,6 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
     else:
         tl = float(problem_info["timelimit"]) / 1000
         ml = int(problem_info["memorylimit"])
-        just_pretest: bool = dat.just_pretest
         int_exec = []
         if problem_info["is_interact"]:
             int_file = env.send_file(problem_path + "/" + problem_info["interactor"][0], env.judge_executable)
@@ -56,7 +56,7 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
         checker = env.send_file(problem_path + problem_info["checker"][0], env.judge_executable)
         checker_cmd = executing.langs[problem_info["checker"][1]].get_execmd(checker)
         exec_cmd = lang.get_execmd(filename)
-        os.mkdir(f"submissions/{idx}/testcases")
+        os.makedirs(f"submissions/{idx}/testcases", exist_ok=True)
         if "groups" in problem_info:
             groups = problem_info["groups"]
         if "default" not in groups:
@@ -174,7 +174,7 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
     out_info["group_results"] = {k: {key: v[key] for key in keys} for k, v in groups.items() if k in exist_gp}
     out_info["simple_result"] = simple_result
     out_info["total_score"] = total_score
-    out_info["protected"] = dat.user.username not in problem_info["users"]
+    out_info["protected"] = bool(dat.period_id) and dat.user.username not in problem_info["users"]
     dat.result = out_info
     dat.completed = True
     datas.add(dat)
@@ -211,6 +211,5 @@ def runner():
 
 def init():
     for _ in range(config.get("judge.workers")):
-        submissions_queue.put(0)
-    Process(target=runner).start()
+        Process(target=runner).start()
     last_judged.value = datas.Submission.query.count()
