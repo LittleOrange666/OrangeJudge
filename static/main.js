@@ -49,7 +49,7 @@ $(".date-string").each(function(){
     $(this).text(new Date(+$(this).text()*1000).toLocaleString());
 });
 $("input[type='datetime-local'][data-value]").each(function(){
-    let s = new Date(+$(this).data("value")*1000).toISOString();
+    let s = new Date(+$(this).data("value")*1000 - (new Date()).getTimezoneOffset() * 60000).toISOString();
     $(this).val(s.substr(0,s.length-1));
 });
 $(".time-string").each(function(){

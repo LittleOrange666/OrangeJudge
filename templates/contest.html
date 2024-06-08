@@ -27,7 +27,8 @@
     </li>
     {% endif %}
     <li class="nav-item" role="presentation">
-        <a class="nav-link" id="participants_tab" data-bs-toggle="tab" data-bs-target="#participants" type="button" role="tab"
+        <a class="nav-link" id="participants_tab" data-bs-toggle="tab" data-bs-target="#participants" type="button"
+           role="tab"
            aria-controls="participants" aria-selected="false">參賽者</a>
     </li>
 </ul>
@@ -117,6 +118,11 @@
     {% if can_edit %}
     <div id="edit" class="tab-pane fade">
         <form the_action="change_settings">
+            <div class="mb-3">
+                <label for="contest_title" class="form-label">比賽名稱</label>
+                <input type="text" class="form-control" id="contest_title" name="contest_title" placeholder="比賽名稱"
+                       value="{{ data['name'] }}" required pattern=".{1,120}">
+            </div>
             <h4>比賽時間</h4>
             <div class="mb-3">
                 <label for="start_time" class="form-label">開始時間</label>
@@ -242,7 +248,9 @@
                     <input type="text" class="form-control" name="username" placeholder="參賽者id" required>
                 </div>
                 <div class="col-auto">
-                    <button class="btn btn-primary submitter" data-msg-404="找不到該使用者id" data-msg-409="該使用者已被添加">添加參賽者</button>
+                    <button class="btn btn-primary submitter" data-msg-404="找不到該使用者id"
+                            data-msg-409="該使用者已被添加">添加參賽者
+                    </button>
                 </div>
             </div>
         </form>

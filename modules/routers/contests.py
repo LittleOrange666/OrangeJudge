@@ -1,4 +1,5 @@
 import json
+from datetime import datetime, timedelta
 
 from flask import abort, render_template, request, jsonify
 from flask_login import login_required, current_user
@@ -152,10 +153,33 @@ def contest_unregister(cid):
     return "OK", 200
 
 
-@app.route("/contest/<cid>/virtual", methods=['GET'])
+@app.route("/contest/<cid>/virtual", methods=['GET', 'POST'])
 @login_required
 def virtual_register(cid):
     dat: datas.Contest = datas.Contest.query.filter_by(cid=cid).first_or_404()
     if not dat.can_virtual():
         abort(403)
-    return render_template("virtual_register.html", name=dat.name)
+    if current_user.id in dat.data["virtual_participants"]:
+        abort(409)
+    if request.method == "GET":
+        return render_template("virtual_register.html", cid=cid, name=dat.name)
+    else:
+        start_time: datetime
+        try:
+            start_time = datetime.fromisoformat(request.form["start_time"])
+            per = datas.Period.query.filter_by(start_time=start_time, contest=dat)
+            idx = 0
+            if per.count():
+                idx = per.first().id
+            else:
+                nw_per = datas.Period(start_time=start_time,
+                                      end_time=start_time+timedelta(minutes=dat.data["elapsed"]),
+                                      contest=dat)
+                datas.add(nw_per)
+                idx = nw_per.id
+            dat.data["virtual_participants"][current_user.id] = idx
+            flag_modified(dat, "data")
+            datas.add(dat)
+        except ValueError:
+            abort(400)
+        return "OK", 200

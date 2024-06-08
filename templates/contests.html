@@ -31,20 +31,27 @@
         <th scope="row"><a href="/contest/{{ contest.cid }}">{{ contest.name }}</a></th>
         <td class="date-string">{{ contest.data["start"] }}</td>
         <td class="time-string">{{ contest.data["elapsed"] }}</td>
-        <td>{% if current_user.is_authenticated and contest.data["can_register"]%}
-            {% if current_user.id not in contest.data["participants"] %}
-            <form method="post" action="/contest/{{ contest.cid }}/register">
-                <button class="btn btn-primary submitter">註冊</button>
-            </form>
-            {% else %}
-            <form method="post" action="/contest/{{ contest.cid }}/unregister">
-                <button class="btn btn-danger submitter">取消註冊</button>
-            </form>
-            {% endif %}
-            {% endif %}
-            {% if current_user.is_authenticated and contest.can_virtual()%}
-            <a class="btn btn-primary" href="/contest/{{ contest.cid }}/virtual">模擬註冊</a>
-            {% endif %}</td>
+        <td>
+            <div class="row">{% if current_user.is_authenticated and contest.data["can_register"]%}
+                <div class="col-auto">
+                    {% if current_user.id not in contest.data["participants"] %}
+                    <form method="post" action="/contest/{{ contest.cid }}/register">
+                        <button class="btn btn-primary submitter">註冊</button>
+                    </form>
+                    {% else %}
+                    <form method="post" action="/contest/{{ contest.cid }}/unregister">
+                        <button class="btn btn-danger submitter">取消註冊</button>
+                    </form>
+                    {% endif %}
+                </div>
+                {% endif %}
+                {% if current_user.is_authenticated and contest.can_virtual() and current_user.id not in contest.data["virtual_participants"] %}
+                <div class="col-auto">
+                    <a class="btn btn-primary" href="/contest/{{ contest.cid }}/virtual">模擬註冊</a>
+                </div>
+                {% endif %}
+            </div>
+        </td>
     </tr>
     {% endfor %}
     </tbody>

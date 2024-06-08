@@ -97,7 +97,8 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
                 if problem_info["is_interact"]:
                     env.judge_readable(in_file)
                     env.judge_writeable(out_file)
-                    out = env.runwithinteractshell(exec_cmd, int_exec, env.filepath(in_file), env.filepath(out_file), tl,
+                    out = env.runwithinteractshell(exec_cmd, int_exec, env.filepath(in_file), env.filepath(out_file),
+                                                   tl,
                                                    ml, lang.base_exec_cmd)
                 else:
                     out = env.runwithshell(exec_cmd, env.filepath(in_file), env.filepath(out_file), tl, ml,

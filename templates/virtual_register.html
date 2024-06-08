@@ -1,6 +1,24 @@
 {% extends "base.html" %}
 
-{% block title %}模擬報名競賽 - {% endblock %}
+{% block title %}模擬報名競賽 - {{ name }}{% endblock %}
 
 {% block main %}
+<form method="post" action="/contest/{{ cid }}/virtual">
+<div class="mb-3">
+    <label for="start_time" class="form-label">開始時間</label>
+    <input type="datetime-local" class="form-control" id="start_time" name="start_time" required>
+</div>
+    <button class="btn btn-primary submitter">確定</button>
+</form>
+{% endblock %}
+
+
+{% block script %}
+(function(){
+    let d = new Date(Date.now() - (new Date()).getTimezoneOffset() * 60000 + 600000);
+    d.setSeconds(0);
+    d.setMilliseconds(0);
+    let s = d.toISOString();
+    $("#start_time").val(s.substr(0,s.length-1));
+})();
 {% endblock %}

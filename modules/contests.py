@@ -87,6 +87,9 @@ def remove_participant(form: ImmutableMultiDict[str, str], cid: str, cdat: datas
 
 @actions.bind
 def change_settings(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Contest, dat: dict) -> str:
+    contest_title = form["contest_title"]
+    if len(contest_title) < 1 or len(contest_title) > 120:
+        abort(400)
     start_time = 0
     try:
         start_time = datetime.fromisoformat(form["start_time"]).timestamp()
@@ -119,6 +122,8 @@ def change_settings(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Co
     per: datas.Period = datas.Period.query.get(cdat.main_period_id)
     per.start_time = datetime.fromtimestamp(start_time)
     per.end_time = datetime.fromtimestamp(start_time + elapsed_time * 60)
+    cdat.name = contest_title
+    dat["name"] = contest_title
     dat["start"] = start_time
     dat["elapsed"] = elapsed_time
     dat["type"] = rule_type

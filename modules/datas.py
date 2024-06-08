@@ -98,6 +98,8 @@ class Contest(db.Model):
     main_period_id = db.Column(db.Integer, nullable=True)
 
     def can_virtual(self) -> bool:
+        if not self.main_period_id:
+            return False
         per: Period = Period.query.get(self.main_period_id)
         return (self.data["practice"] == "public") and per and per.is_over()
 
