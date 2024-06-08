@@ -41,6 +41,9 @@
                 <button class="btn btn-danger submitter">取消註冊</button>
             </form>
             {% endif %}
+            {% endif %}
+            {% if current_user.is_authenticated and contest.can_virtual()%}
+            <a class="btn btn-primary" href="/contest/{{ contest.cid }}/virtual">模擬註冊</a>
             {% endif %}</td>
     </tr>
     {% endfor %}

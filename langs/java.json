@@ -1,0 +1,18 @@
+{
+  "name": "Java",
+  "require_compile": true,
+  "source_ext": ".java",
+  "exec_name": "{0}.class",
+  "compile_cmd": ["/usr/lib/jvm/{arg}/bin/javac", "{0}"],
+  "exec_cmd": ["/usr/lib/jvm/{arg}/bin/java","-classpath","{folder}","{1}"],
+  "base_name": "BaseJava",
+  "branches": {
+    "Java8": {
+      "arg": "java-8-openjdk-amd64"
+    },
+    "Java17": {
+      "arg": "java-17-openjdk-amd64"
+    }
+  },
+  "default_branch": "Java8"
+}

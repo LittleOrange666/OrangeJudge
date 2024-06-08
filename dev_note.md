@@ -17,7 +17,6 @@
 + server 不應使用root user
 
 ## 未實裝特性
-+ contests (重要)
 + problem set
 + exam
 + custom languages
@@ -39,7 +38,6 @@
 + latex/md題敘 (只支持Polygon import 且後續修改困難)
 + Two-steps
 + Output-Only
-+ config.yaml
 + 驗題者(readonly)
 + 出題者可看submissions
 

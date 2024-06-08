@@ -156,8 +156,11 @@ class Language:
         self.data = tools.read_json(f"langs/{name}.json")
         self.branch = self.data["default_branch"] if branch is None else branch
         self.kwargs = self.data["branches"][self.branch]
+        base_name = "base_" + self.name
+        if "base_name" in self.data:
+            base_name = self.data["base_name"]
         self.base_exec_cmd = self.get_execmd(
-            "/judge/" + self.data["exec_name"].format("base_" + self.name, **self.kwargs))
+            "/judge/" + self.data["exec_name"].format(base_name, **self.kwargs))
         call(["sudo", "lxc-attach", "-n", constants.lxc_name, "--"] + ["chmod", "755", self.base_exec_cmd[-1]])
 
     def compile(self, filename: str, env: Environment) -> tuple[str, str]:
@@ -182,7 +185,9 @@ class Language:
     def get_execmd(self, filename: str) -> list[str]:
         exec_cmd = self.data["exec_cmd"][:]
         for i in range(len(exec_cmd)):
-            exec_cmd[i] = exec_cmd[i].format(filename, **self.kwargs)
+            exec_cmd[i] = exec_cmd[i].format(filename,
+                                             os.path.basename(os.path.splitext(filename)[0]),
+                                             folder=os.path.dirname(filename), **self.kwargs)
         return exec_cmd
 
     def run(self, file: str, env: Environment, tasks: list[tuple[str, str]]) -> str:

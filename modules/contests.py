@@ -1,12 +1,14 @@
 import os
 from datetime import datetime, timedelta
+from multiprocessing import Process
+from time import sleep
 
 from flask import abort
 from flask_login import current_user
 from sqlalchemy.orm.attributes import flag_modified
 from werkzeug.datastructures import ImmutableMultiDict
 
-from modules import tools, constants, datas
+from modules import tools, constants, datas, tasks
 
 actions = tools.Switcher()
 
@@ -168,5 +170,56 @@ def check_period(dat: datas.Contest) -> int:
     return 0
 
 
+def break_result(dat: datas.Submission):
+    dat.result["simple_result"] = "ignored"
+    dat.result["total_score"] = 0
+    flag_modified(dat, "result")
+
+
+def resubmit(dat: datas.Submission):
+    dat.result["simple_result"] = "wait system test"
+    dat.completed = False
+    tasks.submissions_queue.put(str(dat.id))
+    flag_modified(dat, "result")
+
+
+def contest_worker():
+    while True:
+        mod = []
+        for dat in datas.Period.query.filter_by(running=True):
+            dat: datas.Period
+            if dat.is_over():
+                dat.running = False
+                dat.ended = True
+                cdat: datas.Contest = dat.contest
+                pretest = cdat.data["pretest"]
+                if pretest != "no":
+                    submissions = dat.submissions.filter_by(just_pretest=True).all()
+                    dic: dict[int, datas.Submission] = {}
+                    for submission in submissions:
+                        submission.just_pretest = False
+                        if submission.result["simple_result"].lower() in ("pretest passed", "ac"):
+                            break_result(submission)
+                            if pretest == "all":
+                                resubmit(submission)
+                            else:
+                                dic[submission.user_id] = submission
+                    if pretest == "last":
+                        for v in dic.values():
+                            resubmit(v)
+                    datas.add(*submissions)
+                mod.append(dat)
+        datas.add(*mod)
+        sleep(10)
+        mod = []
+        for dat in datas.Period.query.filter_by(running=False, ended=False):
+            dat: datas.Period
+            if dat.is_running():
+                dat.running = True
+                mod.append(dat)
+        datas.add(*mod)
+        sleep(10)
+
+
 def init():
-    pass
+    Process(target=contest_worker).start()

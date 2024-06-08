@@ -58,12 +58,12 @@ def test():
             abort(429)
         tools.append(idx + "\n", current_user.folder, "submissions")
         """
-        dat = datas.Submission(source="a" + ext, time=datetime.datetime.now(), user=current_user.data,
+        dat = datas.Submission(source="Main" + ext, time=datetime.datetime.now(), user=current_user.data,
                                problem=datas.Problem.query.filter_by(pid="test").first(), language=lang,
                                data={"infile": "in.txt", "outfile": "out.txt"}, pid="test")
         datas.add(dat)
         idx = str(dat.id)
-        tools.write(code, f"submissions/{idx}/a{ext}")
+        tools.write(code, f"submissions/{idx}/Main{ext}")
         tools.write(inp, f"submissions/{idx}/in.txt")
         tasks.submissions_queue.put(idx)
         return redirect("/submission/" + idx)
@@ -84,7 +84,7 @@ def submit():
         abort(429)
     tools.append(idx + "\n", current_user.folder, "submissions")
     """
-    dat = datas.Submission(source="a" + ext, time=datetime.datetime.now(), user=current_user.data,
+    dat = datas.Submission(source="Main" + ext, time=datetime.datetime.now(), user=current_user.data,
                            problem=pdat, language=lang, data={}, pid=pid)
     if "cid" in request.form:
         cdat: datas.Contest = datas.Contest.query.filter_by(cid=request.form["cid"]).first_or_404()
@@ -97,7 +97,7 @@ def submit():
                 dat.just_pretest = True
     datas.add(dat)
     idx = str(dat.id)
-    tools.write(code, f"submissions/{idx}/a{ext}")
+    tools.write(code, f"submissions/{idx}/Main{ext}")
     tasks.submissions_queue.put(idx)
     return redirect("/submission/" + idx)
 

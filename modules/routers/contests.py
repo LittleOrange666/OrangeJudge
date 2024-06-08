@@ -150,3 +150,12 @@ def contest_unregister(cid):
     flag_modified(dat, "data")
     datas.add(dat)
     return "OK", 200
+
+
+@app.route("/contest/<cid>/virtual", methods=['GET'])
+@login_required
+def virtual_register(cid):
+    dat: datas.Contest = datas.Contest.query.filter_by(cid=cid).first_or_404()
+    if not dat.can_virtual():
+        abort(403)
+    return render_template("virtual_register.html", name=dat.name)

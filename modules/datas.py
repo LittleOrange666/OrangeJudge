@@ -97,6 +97,10 @@ class Contest(db.Model):
     data = db.Column(db.JSON)
     main_period_id = db.Column(db.Integer, nullable=True)
 
+    def can_virtual(self) -> bool:
+        per: Period = Period.query.get(self.main_period_id)
+        return (self.data["practice"] == "public") and per and per.is_over()
+
 
 class Period(db.Model):
     __tablename__ = 'periods'
