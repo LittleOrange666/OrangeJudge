@@ -157,7 +157,7 @@ def making_dir(path: str):
 
 
 def log(s: str, success: bool | None = None):
-    print(s)
+    tools.log(s)
     if not s.endswith("\n"):
         s += "\n"
     tools.append(s, f"preparing_problems/{current_pid}/actions/{current_idx}.log")
@@ -233,8 +233,8 @@ def generate_testcase(pid: str):
         sol_lang = problem.lang(sol)
         gens = list({cmd[0].split()[0] for cmd in cmds})
         gen_exec = {}
-        print(problem["files"])
-        print(gens)
+        tools.log(problem["files"])
+        tools.log(gens)
         for k in gens:
             if not any(file["name"].startswith(k + ".") for file in problem["files"]):
                 log(f"unknown generator {k!r}")
@@ -342,7 +342,7 @@ def do_import_polygon(pid: str, filename: str):
                 dat["testcases"].append({"in": fn, "out": fn + ".out", "group": group, "uncomplete": True})
             else:
                 gen_cmds.append([test.get("cmd"), group])
-    print(gen_cmds)
+    tools.log(gen_cmds)
     assets = root.find("assets")
     checker = assets.find("checker").find("source")
     fn = "checker_" + os.path.basename(checker.get("path"))
@@ -365,7 +365,7 @@ def do_import_polygon(pid: str, filename: str):
         dat["files"].append({"name": fn, "type": constants.polygon_type.get(source.get("type"), "C++17")})
         if solution.get("tag") == "main":
             main_sol = fn
-        print(source.get("path"), solution.get("tag"))
+        tools.log(source.get("path"), solution.get("tag"))
     if main_sol:
         dat["ex_gen_msg"] = {"solution": main_sol, "cmds": gen_cmds}
     for executable in root.iter("executable"):
@@ -388,7 +388,7 @@ def runner():
     while True:
         action_data = worker_queue.get()
         try:
-            print(f"{action_data=}")
+            tools.log(f"{action_data=}")
             action_name = action_data.pop("action")
             current_idx = -1
             if "idx" in action_data:
@@ -400,7 +400,7 @@ def runner():
                 background_actions.call(action_name, **action_data)
             end(True)
         except StopActionException:
-            print("Stop Action")
+            tools.log("Stop Action")
         except Exception as e:
             traceback.print_exception(e)
             try:
@@ -505,19 +505,19 @@ def upload_zip(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Pro
             ps.append((mp[o.filename], o))
     if len(ps) == 0:
         abort(400)
-    dat["testcases"].clear()
+    fps = [(o["in"], o["out"]) for o in dat["testcases"]]
     if os.path.isdir(path + "/testcases/"):
         shutil.rmtree(path + "/testcases/")
         os.makedirs(path + "/testcases/", exist_ok=True)
     for o in ps:
-        print(o[0].filename, o[1].filename)
-        with open(path + "/testcases/" + secure_filename(o[0].filename), "wb") as f:
+        f0 = secure_filename(o[0].filename)
+        f1 = secure_filename(o[1].filename)
+        with open(path + "/testcases/" + f0, "wb") as f:
             f.write(zip_file.read(o[0]))
-        with open(path + "/testcases/" + secure_filename(o[1].filename), "wb") as f:
+        with open(path + "/testcases/" + f1, "wb") as f:
             f.write(zip_file.read(o[1]))
-        dat["testcases"].append({"in": secure_filename(o[0].filename), "out": secure_filename(o[1].filename),
-                                 "sample": "sample" in secure_filename(o[0].filename),
-                                 "pretest": "pretest" in secure_filename(o[0].filename)})
+        if (f0, f1) not in fps:
+            dat["testcases"].append({"in": f0, "out": f1, "sample": "sample" in f0, "pretest": "pretest" in f0})
     os.remove(filename)
     return "tests"
 
@@ -730,6 +730,9 @@ def remove_group(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: P
     if name == "default":
         abort(400)
     del dat["groups"][name]
+    for o in dat["testcases"]:
+        if o["group"] == name:
+            o["group"] = "default"
     return "tests"
 
 

@@ -118,7 +118,7 @@ def submission(idx):
             abort(403)
         inp = tools.read_default(path, dat.data["infile"])
         out = tools.read_default(path, dat.data["outfile"])
-        result = dat.result.get("simple_result","") if dat.result else ""
+        result = dat.result.get("simple_result", "") if dat.result else ""
         err = tools.read_default(path, "stderr.txt")
         ret = render_template("submission/test.html", lang=lang, source=source, inp=inp,
                               out=out, completed=completed, result=result, pos=tasks.get_queue_position(idx),

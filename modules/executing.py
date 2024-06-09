@@ -7,7 +7,7 @@ from modules import constants, tools
 
 
 def call(cmd: list[str], stdin: str = "", timeout: float | None = None) -> tuple[str, str, int]:
-    print(" ".join(cmd))
+    tools.log(*cmd)
     process = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     ret = process.communicate(stdin.encode("utf8"), timeout=timeout)
     return ret[0].decode("utf8"), ret[1].decode("utf8"), process.returncode
@@ -30,7 +30,7 @@ class Environment:
         self.judge: list[str] = ["sudo", "-u", "judge"]
 
     def send_file(self, filepath: str, nxt: Callable[[str], None] | None = None) -> str:
-        print("send", filepath)
+        tools.log("send", filepath)
         file_abspath = os.path.abspath(filepath)
         cmd = ["sudo", "cp", file_abspath, f"/var/lib/lxc/{self.lxc_name}/rootfs/{self.dirname}"]
         call(cmd)
@@ -176,7 +176,7 @@ class Language:
             env.executable(new_filename)
             new_filename = os.path.join(dirname, new_filename)
             if out[1] and out[2] != 0:
-                print(out[1])
+                tools.log(out[1])
                 return new_filename, out[1]
             return new_filename, ""
         env.executable(filename)
@@ -204,7 +204,7 @@ class Language:
             if is_tle(out):
                 return "TLE: Testing is limited by 10 seconds"
             result = {o[0]: o[1] for o in (s.split("=") for s in out[0].split("\n")) if len(o) == 2}
-            print(out)
+            tools.log(out)
             tools.write(out[1], os.path.dirname(file), "stderr.txt")
             if "1" == result.get("WIFSIGNALED", None):
                 return "RE: " + "您的程式無法正常執行"

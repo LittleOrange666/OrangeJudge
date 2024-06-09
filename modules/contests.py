@@ -121,6 +121,9 @@ def change_settings(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Co
     if not form["unfreeze_time"].isdigit():
         abort(400)
     unfreeze_time = int(form["unfreeze_time"])
+    if not form["penalty"].isdigit():
+        abort(400)
+    penalty = int(form["penalty"])
     per: datas.Period = datas.Period.query.get(cdat.main_period_id)
     per.start_time = datetime.fromtimestamp(start_time)
     cdat.name = contest_title
@@ -134,6 +137,7 @@ def change_settings(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Co
     dat['standing']['public'] = (show_standing == "yes")
     dat['standing']['start_freeze'] = freeze_time
     dat['standing']['end_freeze'] = unfreeze_time
+    dat['penalty'] = penalty
     return "edit"
 
 
@@ -184,6 +188,9 @@ def check_period(dat: datas.Contest) -> int:
 def break_result(dat: datas.Submission):
     dat.result["simple_result"] = "ignored"
     dat.result["total_score"] = 0
+    if "group_results" in dat.result:
+        for k in dat.result["group_results"]:
+            dat.result["group_results"][k]["gainscore"] = 0
     flag_modified(dat, "result")
 
 

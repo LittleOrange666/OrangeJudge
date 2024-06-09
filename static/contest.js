@@ -10,7 +10,7 @@ $(function() {
         $this.prepend($('<input name="cid" value="'+cid+'" hidden>'));
         $this.prepend($('<input name="action" value="'+$(this).attr("the_action")+'" hidden>'));
     });
-    (function(){
+    {
         let current_page = 1;
         function change_page(page){
             current_page = page;
@@ -61,9 +61,16 @@ $(function() {
                 pagination.append(last);
             });
         }
-        change_page(current_page);
-    })();
-    (function(){
+        let inited = false;
+        $("#status_tab").click(function(){
+            if(!inited){
+                inited = true;
+                change_page(current_page);
+            }
+        });
+        if (location.hash=="#status") $("#status_tab").click();
+    };
+    {
         let current_page = 1;
         function change_page(page){
             current_page = page;
@@ -117,6 +124,100 @@ $(function() {
                 pagination.append(last);
             });
         }
-        change_page(current_page);
-    })();
+        let inited = false;
+        $("#my_status_tab").click(function(){
+            if(!inited){
+                inited = true;
+                change_page(current_page);
+            }
+        });
+        if (location.hash=="#my_status") $("#my_status_tab").click();
+    }
+    {
+        function load_standing(){
+            fetch("/contest/"+cid+"/standing",{
+                method: "POST",
+                headers: {"x-csrf-token": $("#csrf_token").val()}
+            }).then(function(response){
+                return response.json();
+            }).then(function(data){
+                if (data['rule']=="ioi"){
+                    let out = {};
+                    for(let obj of data['submissions']){
+                        if (out[obj["user"]] === undefined){
+                            out[obj["user"]] = {"scores":{},"total_score":0,"last_update":0}
+                            for(let pid of data["pids"]) out[obj["user"]]["scores"][pid] = {}
+                        }
+                        for (let k in obj["scores"]){
+                            out[obj["user"]]["scores"][obj["pid"]][k] = Math.max(out[obj["user"]]["scores"][obj["pid"]][k] || 0, obj["scores"][k]);
+                        }
+                        let tot = 0;
+                        for(let pid of data["pids"]){
+                            for (let k in out[obj["user"]]["scores"][pid]){
+                                tot += out[obj["user"]]["scores"][pid][k];
+                            }
+                        }
+                        if (Number(tot) != Number(out[obj["user"]]["total_score"])){
+                            out[obj["user"]]["total_score"] = tot;
+                            out[obj["user"]]["last_update"] = obj["time"];
+                        }
+                    }
+                    let arr = [];
+                    for (let k in out){
+                        let obj = out[k];
+                        obj["user"]  = k;
+                        arr.push(obj);
+                    }
+                    function le(x, y){
+                        if (x["total_score"]>y["total_score"]) return true;
+                        if (x["total_score"]<y["total_score"]) return false;
+                        return x["last_update"]<y["last_update"];
+                    }
+                    arr.sort(function(x, y) {
+                      if (le(x,y)) {
+                        return -1;
+                      }
+                      if (le(y,x)) {
+                        return 1;
+                      }
+                      return 0;
+                    });
+                    console.log(arr);
+                    let tb = $("#standing_table");
+                    let tl = tb.find("tr");
+                    tl.append($('<th scope="col">').text("#"));
+                    tl.append($('<th scope="col">').text("User"));
+                    tl.append($('<th scope="col">').text("Score"));
+                    for(let pid of data["pids"]){
+                        tl.append($('<th scope="col">').text(pid));
+                    }
+                    tl.append($('<th scope="col">').text("Time"));
+                    for(let i in arr){
+                        let obj = arr[i];
+                        let tr = $("<tr>");
+                        tr.append($('<th scope="row">').text(""+(+i+1)));
+                        tr.append($('<td>').text(obj["user"]));
+                        tr.append($('<td>').text(obj["total_score"]));
+                        for(let pid of data["pids"]){
+                            let cur = 0;
+                            for(let k in obj["scores"][pid]) cur += obj["scores"][pid][k];
+                            tr.append($('<td>').text(""+cur));
+                        }
+                        tr.append($('<td>').text(""+Math.floor((obj["last_update"]-data["start_time"])/60)));
+                        tb.find("tbody").append(tr);
+                    }
+                }else if(data['rule']=="icpc"){
+
+                }
+            });
+        }
+        let inited = false;
+        $("#standing_tab").click(function(){
+            if(!inited){
+                inited = true;
+                load_standing();
+            }
+        });
+        if (location.hash=="#standing") $("#standing_tab").click();
+    }
 });

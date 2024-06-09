@@ -6,7 +6,11 @@ smtp:
 
 server:
   port: 8080
-
+  workers: 4
+  timeout: 120
 
 judge:
   workers: 1
+
+debug:
+  log: false

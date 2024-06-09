@@ -7,7 +7,7 @@ class ConfigError(Exception):
 
 with open("config.yaml", "r") as f:
     config = yaml.load(f, yaml.loader.SafeLoader)
-print("config=", config)
+# print("config=", config)
 
 
 def get(path: str):
@@ -52,7 +52,10 @@ verify_int("smtp.port")
 verify_str("smtp.user")
 verify_str("smtp.password")
 verify_int("server.port")
+verify_int("server.workers")
+verify_int("server.timeout")
 verify_int("judge.workers")
+verify_bool("debug.log")
 
 
 def init():

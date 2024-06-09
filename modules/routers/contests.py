@@ -183,3 +183,29 @@ def virtual_register(cid):
         except ValueError:
             abort(400)
         return "OK", 200
+
+
+@app.route("/contest/<cid>/standing", methods=['GET', 'POST'])
+def contest_standing(cid):
+    cdat: datas.Contest = datas.Contest.query.filter_by(cid=cid).first_or_404()
+    per: datas.Period = datas.Period.query.get_or_404(cdat.main_period_id)
+    ret = []
+    mp = {}
+    rmp = {}
+    for k, v in cdat.data["problems"].items():
+        rmp[v["pid"]] = k
+    for dat in per.submissions:
+        dat: datas.Submission
+        if dat.completed and "group_results" in dat.result:
+            if dat.user_id not in mp:
+                mp[dat.user_id] = dat.user.display_name
+            scores = {k: v["gainscore"] for k, v in dat.result["group_results"].items()}
+            ret.append({"user": mp[dat.user_id],
+                        "pid": rmp[dat.pid],
+                        "scores": scores,
+                        "total_score": dat.result["total_score"],
+                        "time": dat.time.timestamp()})
+    return jsonify({"submissions": ret,
+                    "start_time": per.start_time.timestamp(),
+                    "rule": cdat.data["type"],
+                    "pids": list(cdat.data["problems"].keys())})

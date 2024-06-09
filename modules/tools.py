@@ -9,12 +9,12 @@ from typing import Callable, Any
 
 from flask import abort
 
-from modules import locks
+from modules import locks, config
 
 
 def system(s: str, cwd: str = "") -> None:
     cwd = os.path.abspath(cwd)
-    print(f"system command in {cwd!r}:", s)
+    log(f"system command in {cwd!r}:", s)
     subprocess.call(s.split(), cwd=cwd)
 
 
@@ -227,3 +227,11 @@ def to_int(text: str) -> int:
     if not text.isdigit():
         abort(400)
     return int(text)
+
+
+has_log: bool = config.get("debug.log")
+
+
+def log(*args):
+    if has_log:
+        print(*args)

@@ -107,7 +107,7 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
                     ret = ["TLE", "執行時間過長"]
                 else:
                     result = {o[0]: o[1] for o in (s.split("=") for s in out[0].split("\n")) if len(o) == 2}
-                    print(result)
+                    tools.log(result)
                     exit_code = result.get("WEXITSTATUS", "0")
                     if "1" == result.get("WIFSIGNALED", None):
                         ret = ["RE", "您的程式無法正常執行"]

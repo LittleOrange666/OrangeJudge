@@ -114,6 +114,14 @@
         </nav>
     </div>
     <div id="standing" class="tab-pane fade">
+        <table class="table table-hover table-striped" id="standing_table">
+            <thead>
+            <tr>
+            </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
     </div>
     {% if can_edit %}
     <div id="edit" class="tab-pane fade">
@@ -148,6 +156,11 @@
                         IOI style
                     </label>
                 </div>
+            </div>
+            <div class="mb-3">
+                <label for="penalty" class="form-label">罰時(分鐘)</label>
+                <input type="number" class="form-control" id="penalty" name="penalty" placeholder="罰時"
+                       value="{{ data['penalty'] }}" required>
             </div>
             <div class="radio-selector" data-value="{{ data['pretest'] }}">
                 <h4>後測</h4>

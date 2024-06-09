@@ -13,3 +13,4 @@ infix
 yarl
 latex2markdown
 redis
+gunicorn
