@@ -10,6 +10,6 @@ $(function() {
             new bootstrap.Tab(this).show();
         });
     }else{
-        history.pushState({}, '', "#"+$("div.tab-pane.fade.show.active")[0].id);
+        history.replaceState({}, '', "#"+$("div.tab-pane.fade.show.active")[0].id);
     }
 });

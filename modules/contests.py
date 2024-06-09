@@ -19,10 +19,12 @@ def create_contest(name: str, user: datas.User) -> str:
     while datas.Contest.query.filter_by(cid=str(cidx)).count():
         cidx += 1
     cid = str(cidx)
-    info = constants.default_contest_info | {"name": name, "users": [user.username]}
+    start_timestamp = (datetime.now() + timedelta(days=1)).timestamp()
+    info = constants.default_contest_info | {"name": name, "users": [user.username], "start": start_timestamp,
+                                             "elapsed": 60}
     dat = datas.Contest(id=cidx, cid=cid, name=name, data=info, user=user)
     per = datas.Period(start_time=datetime.now() + timedelta(days=1),
-                       end_time=datetime.now() + timedelta(days=2),
+                       end_time=datetime.now() + timedelta(days=1, hours=1),
                        ended=False,
                        running=False,
                        contest_id=dat.id)
@@ -121,7 +123,6 @@ def change_settings(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Co
     unfreeze_time = int(form["unfreeze_time"])
     per: datas.Period = datas.Period.query.get(cdat.main_period_id)
     per.start_time = datetime.fromtimestamp(start_time)
-    per.end_time = datetime.fromtimestamp(start_time + elapsed_time * 60)
     cdat.name = contest_title
     dat["name"] = contest_title
     dat["start"] = start_time
@@ -146,7 +147,12 @@ def action(form: ImmutableMultiDict[str, str], cdat: datas.Contest):
     cid = cdat.cid
     tp = actions.call(form["action"], form, cid, cdat, dat)
     flag_modified(cdat, "data")
-    datas.add(cdat, datas.Period.query.get(cdat.main_period_id))
+    datas.add(cdat)
+    if form["action"] == "change_settings":
+        for the_per in cdat.periods:
+            the_per: datas.Period
+            the_per.end_time = the_per.start_time + timedelta(minutes=dat["elapsed"])
+        datas.add(*cdat.periods)
     return f"/contest/{cid}#{tp}"
 
 
