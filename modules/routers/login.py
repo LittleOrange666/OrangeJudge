@@ -127,7 +127,8 @@ def settings():
     data: datas.User = current_user.data
     if request.method == "GET":
         teams = {k: login.get_user(k).data for k in data.team_list()}
-        perms = [(k, v) for k, v in constants.permissions.items() if current_user.has(k) and k != "admin"]
+        perms = [(k, v) for k, v in constants.permissions.items() if current_user.has(k) and k != "admin"
+                 and k != "root"]
         return render_template("settings.html", data=data, teams=teams, perms=perms)
     if request.form["action"] == "general_info":
         display_name = request.form["DisplayName"]

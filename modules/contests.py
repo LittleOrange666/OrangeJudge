@@ -216,7 +216,7 @@ def contest_worker():
                     dic: dict[int, datas.Submission] = {}
                     for submission in submissions:
                         submission.just_pretest = False
-                        if submission.result["simple_result"].lower() in ("pretest passed", "ac"):
+                        if submission.result["simple_result"].lower() not in ("jc", "ce"):
                             break_result(submission)
                             if pretest == "all":
                                 resubmit(submission)

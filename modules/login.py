@@ -5,7 +5,7 @@ from flask import request, abort
 from flask_login import LoginManager, UserMixin, current_user
 from werkzeug.utils import secure_filename
 
-from modules import server, datas, config
+from modules import server, datas, config, tools
 
 smtp = smtplib.SMTP(config.get("smtp.host"), config.get("smtp.port"))
 
@@ -135,7 +135,7 @@ def create_team(team_id: str, owner_id: str, permissions: list[str]):
     user: datas.User = datas.User.query.filter_by(username=owner_id).first()
     obj = datas.User(username=team_id.lower(),
                      display_name=team_id,
-                     email="",
+                     email=tools.random_string(),
                      password_sha256_hex="",
                      permissions=";".join(permissions),
                      teams="",
@@ -160,4 +160,8 @@ def check_user(require: str | None = None, users: list[str] | None = None) -> Us
 
 
 def init():
-    pass
+    if not exist("root"):
+        create_account(tools.random_string(), "root", "root")
+        root: datas.User = datas.User.query.filter_by(username="root").first()
+        root.permissions = "root"
+        datas.add(root)

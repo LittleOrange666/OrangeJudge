@@ -43,7 +43,7 @@ def contest_page(idx):
     dat: datas.Contest = datas.Contest.query.filter_by(cid=idx).first_or_404()
     contests.check_access(dat)
     info = dat.data
-    can_edit = current_user.is_authenticated and current_user.id in info["users"]
+    can_edit = current_user.is_authenticated and (current_user.has("admin") or current_user.id in info["users"])
     return render_template("contest.html", cid=idx, data=info, can_edit=can_edit)
 
 
@@ -83,8 +83,8 @@ def contest_status(cid, page_str):
     page_cnt = max(1, (status_count - 1) // page_size + 1)
     if page <= 0 or page > page_cnt:
         abort(404)
-    got_data: list[datas.Submission] = status.slice(page_size * (page - 1),
-                                                    min(status_count, constants.page_size * page)).all()
+    got_data: list[datas.Submission] = status.slice(max(0, status_count - page_size * page),
+                                                    status_count - page_size * (page - 1)).all()
     displays = [1, page_cnt]
     displays.extend(range(max(2, page - 2), min(page_cnt, page + 2) + 1))
     displays = sorted(set(displays))
@@ -189,11 +189,12 @@ def virtual_register(cid):
 @app.route("/contest/<cid>/standing", methods=['POST'])
 def contest_standing(cid):
     cdat: datas.Contest = datas.Contest.query.filter_by(cid=cid).first_or_404()
-    dt = time.time()-cdat.data["start"]
-    dt = dt/60 - cdat.data["elapsed"]
+    dt = time.time() - cdat.data["start"]
+    dt = dt / 60 - cdat.data["elapsed"]
     can_see = (cdat.data["standing"]["public"] and
                (dt <= -cdat.data["standing"]["start_freeze"] or dt >= cdat.data["standing"]["end_freeze"]))
-    if not can_see and not (current_user.is_authenticated and (current_user.has("admin") or current_user.id in cdat.data["users"])):
+    if not can_see and not (
+            current_user.is_authenticated and (current_user.has("admin") or current_user.id in cdat.data["users"])):
         abort(403)
     per: datas.Period = datas.Period.query.get_or_404(cdat.main_period_id)
     ret = []
