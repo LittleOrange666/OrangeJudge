@@ -181,7 +181,8 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
         simple_result += f" {total_score}%"
     out_info["simple_result"] = simple_result
     out_info["total_score"] = total_score
-    out_info["protected"] = bool(dat.period_id) and dat.user.username not in problem_info["users"]
+    out_info["protected"] = ((not dat.get('public_testcase', False) or bool(dat.period_id))
+                             and dat.user.username not in problem_info["users"])
     dat.result = out_info
     dat.completed = True
     datas.add(dat)

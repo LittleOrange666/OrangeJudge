@@ -43,8 +43,8 @@
         {% for lang in langs %}
         {% if dat["languages"].get(lang,True) %}
         <option value="{{ lang }}">{{ lang }}
-        {% endif %}
-        {% endfor %}
+            {% endif %}
+            {% endfor %}
     </select>
     <div class="mb-3">
         <label for="codeTextarea" class="form-label">Code:</label>

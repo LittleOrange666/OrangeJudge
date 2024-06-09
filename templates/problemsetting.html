@@ -58,6 +58,21 @@
                     <span class="input-group-text">MB</span>
                 </div>
             </div>
+            <div class="radio-selector" data-value="{{ 'yes' if dat.get('public_testcase',False) else 'no' }}">
+                <h4>公開測資</h4>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="show_testcase" id="show_testcase1" value="yes">
+                    <label class="form-check-label" for="show_testcase1">
+                        是
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="show_testcase" id="show_testcase2" value="no">
+                    <label class="form-check-label" for="show_testcase2">
+                        否
+                    </label>
+                </div>
+            </div>
             <button class="btn btn-primary data-saver" id="save_general_info">儲存</button>
         </div>
         <br>
@@ -102,11 +117,11 @@
             <div class="edit-detector"></div>
             {% for lang in langs %}
             <div class="form-check">
-              <input class="form-check-input" type="checkbox" value="on" name="lang_check_{{ lang }}"
-                     id="lang_check_{{ lang }}" data-checked="{{ dat['languages'].get(lang,True) }}">
-              <label class="form-check-label" for="lang_check_{{ lang }}">
-                {{ lang }}
-              </label>
+                <input class="form-check-input" type="checkbox" value="on" name="lang_check_{{ lang }}"
+                       id="lang_check_{{ lang }}" data-checked="{{ dat['languages'].get(lang,True) }}">
+                <label class="form-check-label" for="lang_check_{{ lang }}">
+                    {{ lang }}
+                </label>
             </div>
             {% endfor %}
             <button class="btn btn-primary data-saver submitter">儲存</button>
@@ -373,11 +388,11 @@
                             {% endif %}
                         </td>
                         <td>
-                        <select class="form-select form-control" name="rule_{{ k }}"
-                                data-value="{{ group.get('rule', 'min') }}">
-                            <option value="min">最小值</option>
-                            <option value="avg">平均值</option>
-                        </select>
+                            <select class="form-select form-control" name="rule_{{ k }}"
+                                    data-value="{{ group.get('rule', 'min') }}">
+                                <option value="min">最小值</option>
+                                <option value="avg">平均值</option>
+                            </select>
                         </td>
                         <td>
                             <input type="number" min="1" max="100" value="{{ group['score'] }}" name="score_{{ k }}"

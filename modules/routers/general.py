@@ -127,6 +127,7 @@ def submission(idx):
                               ce_msg=ce_msg, je=dat.data.get("JE", False), logid=dat.data.get("log_uuid", ""), err=err)
     else:
         group_results = {}
+        protected = True
         problem_info = pdat.data
         if not current_user.has("admin") and dat.user_id != current_user.data.id and current_user.id not in \
                 problem_info[
@@ -138,7 +139,9 @@ def submission(idx):
             result_data = dat.result
             result["CE"] = result_data["CE"]
             results = result_data["results"]
-            result["protected"] = protected = result_data.get("protected", False)
+            # result["protected"] = protected = result_data.get("protected", False)
+            result["protected"] = protected = ((not dat.get('public_testcase', False) or bool(dat.period_id))
+                                               and dat.user.username not in problem_info["users"])
             if not protected:
                 for i in range(len(results)):
                     tcl = len(problem_info["testcases"])
@@ -176,7 +179,7 @@ def submission(idx):
                               pname=problem_info["name"], result=result, enumerate=enumerate,
                               group_results=group_results, link=link, pos=tasks.get_queue_position(idx),
                               ce_msg=ce_msg, je=dat.data.get("JE", False), logid=dat.data.get("log_uuid", ""),
-                              super_access=super_access, contest=contest, cid=cid)
+                              super_access=super_access, contest=contest, cid=cid, protected=protected)
     return ret
 
 

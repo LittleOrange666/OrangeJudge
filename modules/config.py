@@ -7,6 +7,8 @@ class ConfigError(Exception):
 
 with open("config.yaml", "r") as f:
     config = yaml.load(f, yaml.loader.SafeLoader)
+
+
 # print("config=", config)
 
 
