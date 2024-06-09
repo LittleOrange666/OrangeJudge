@@ -66,7 +66,7 @@ latex_begin = """\\documentclass[]{article}
 """
 latex_end = "\n\\end{document}"
 
-permissions: dict[str, str] = {"admin": "管理者", "make_problems": "出題者"}
+permissions: dict[str, str] = {"admin": "管理者", "make_problems": "出題者", "root": "最高管理者"}
 
 default_contest_info: dict = {"name": "unknown", "users": [], "problems": {}, "start": 0, "elapsed": 0, "type": "icpc",
                               "can_register": False, "standing": {"public": True, "start_freeze": 0, "end_freeze": 0},

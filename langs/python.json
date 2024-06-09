@@ -15,5 +15,6 @@
       "ext": "pypy38"
     }
   },
-  "default_branch": "PyPy3"
+  "default_branch": "PyPy3",
+  "executables": ["/usr/bin/python3", "/usr/bin/pypy3"]
 }

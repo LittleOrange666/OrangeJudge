@@ -158,10 +158,10 @@ class Language:
         self.kwargs = self.data["branches"][self.branch]
         base_name = "base_" + self.name
         if "base_name" in self.data:
-            base_name = self.data["base_name"]
-        self.base_exec_cmd = self.get_execmd(
-            "/judge/" + self.data["exec_name"].format(base_name, **self.kwargs))
-        call(["sudo", "lxc-attach", "-n", constants.lxc_name, "--"] + ["chmod", "755", self.base_exec_cmd[-1]])
+            base_name = self.data["base_name"].format(**self.kwargs)
+        exec_name = "/judge/" + self.data["exec_name"].format(base_name, **self.kwargs)
+        self.base_exec_cmd = self.get_execmd(exec_name)
+        call(["sudo", "lxc-attach", "-n", constants.lxc_name, "--"] + ["chmod", "755", exec_name])
 
     def compile(self, filename: str, env: Environment) -> tuple[str, str]:
         if self.data["require_compile"]:
@@ -233,9 +233,12 @@ langs: dict[str, Language] = {}
 def init():
     for name in os.listdir("judge"):
         call(["sudo", "lxc-attach", "-n", constants.lxc_name, "--"] + ["chmod", "700", f"/judge/{name}"])
+    call(["sudo", "lxc-attach", "-n", constants.lxc_name, "--"] + ["chmod", "755", f"/judge/__pycache__"])
     for lang in os.listdir("langs"):
         lang_name = os.path.splitext(lang)[0]
-        keys = tools.read_json(f"langs/{lang_name}.json")["branches"].keys()
+        dat = tools.read_json(f"langs/{lang_name}.json")
+        keys = dat["branches"].keys()
         for key in keys:
             langs[key] = Language(lang_name, key)
-        call(["sudo", "lxc-attach", "-n", constants.lxc_name, "--"] + ["chmod", "755", f"/judge/__pycache__"])
+        for s in dat.get("executables", []):
+            call(["sudo", "lxc-attach", "-n", constants.lxc_name, "--"] + ["chmod", "755", s])

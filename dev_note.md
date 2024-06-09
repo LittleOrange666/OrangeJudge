@@ -39,7 +39,6 @@
 + Two-steps
 + Output-Only
 + 驗題者(readonly)
-+ 出題者可看submissions
 
 ## contests 特性
 + ioi/icpc/ioic/custom ranking strategic

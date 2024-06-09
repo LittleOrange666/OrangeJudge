@@ -5,14 +5,17 @@
   "exec_name": "{0}.class",
   "compile_cmd": ["/usr/lib/jvm/{arg}/bin/javac", "{0}"],
   "exec_cmd": ["/usr/lib/jvm/{arg}/bin/java","-classpath","{folder}","{1}"],
-  "base_name": "BaseJava",
+  "base_name": "BaseJava{idx}",
   "branches": {
     "Java8": {
-      "arg": "java-8-openjdk-amd64"
+      "arg": "java-8-openjdk-amd64",
+      "idx": "8"
     },
     "Java17": {
-      "arg": "java-17-openjdk-amd64"
+      "arg": "java-17-openjdk-amd64",
+      "idx": "17"
     }
   },
-  "default_branch": "Java8"
+  "default_branch": "Java8",
+  "executables": ["/usr/lib/jvm/java-8-openjdk-amd64/bin/java", "/usr/lib/jvm/java-17-openjdk-amd64/bin/java"]
 }

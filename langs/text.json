@@ -7,5 +7,6 @@
   "branches": {
     "PlainText": {}
   },
-  "default_branch": "PlainText"
+  "default_branch": "PlainText",
+  "executables": ["/usr/bin/cat"]
 }

@@ -130,6 +130,7 @@ def submission(idx):
                 problem_info[
                     "users"]:
             abort(403)
+        super_access = current_user.has("admin") or current_user.id in problem_info["users"]
         result = {}
         if completed and not dat.data.get("JE", False):
             result_data = dat.result
@@ -168,7 +169,8 @@ def submission(idx):
         ret = render_template("submission/problem.html", lang=lang, source=source, completed=completed,
                               pname=problem_info["name"], result=result, enumerate=enumerate,
                               group_results=group_results, link=link, pos=tasks.get_queue_position(idx),
-                              ce_msg=ce_msg, je=dat.data.get("JE", False), logid=dat.data.get("log_uuid", ""))
+                              ce_msg=ce_msg, je=dat.data.get("JE", False), logid=dat.data.get("log_uuid", ""),
+                              super_access=super_access)
     return ret
 
 

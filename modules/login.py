@@ -24,7 +24,9 @@ class User(UserMixin):
 
     def has(self, key: str) -> bool:
         prems = self.data.permission_list()
-        return key in prems or "admin" in prems
+        if key == "root":
+            return "root" in prems
+        return key in prems or "admin" in prems or "root" in prems
 
     def may_has(self, key: str) -> bool:
         if self.has(key):
