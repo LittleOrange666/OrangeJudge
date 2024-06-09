@@ -2,6 +2,14 @@
 
 {% block title %}{% if is_contest %}競賽 - {{ cname }} - {{ pidx }}{% else %}問題{% if preview %}(預覽){% endif %}{% endif %} - {{ dat["name"] }}{% endblock %}
 
+{% block navbar %}
+{% if is_contest %}
+<li class="nav-item">
+    <a class="nav-link active" aria-current="page" href="/contest/{{ cid }}">競賽頁面({{ cname }})</a>
+</li>
+{% endif%}
+{% endblock %}
+
 {% block main %}
 <h1 class="text-center">{% if is_contest %}{{ pidx }}. {% endif %}{{ dat["name"] }}</h1>
 <p class="text-center">Time Limit:{{ dat["timelimit"] }}ms</p>

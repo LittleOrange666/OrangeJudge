@@ -160,8 +160,12 @@ def submission(idx):
             if "total_score" in result_data:
                 result["total_score"] = result_data["total_score"]
         link = f"/problem/{pdat.pid}"
+        contest = None
+        cid = None
         if dat.contest_id:
             cdat: datas.Contest = dat.contest
+            contest = cdat.name
+            cid = cdat.cid
             for k, v in cdat.data["problems"].items():
                 if v["pid"] == pdat.pid:
                     link = f"/contest/{cdat.cid}/problem/{k}"
@@ -170,7 +174,7 @@ def submission(idx):
                               pname=problem_info["name"], result=result, enumerate=enumerate,
                               group_results=group_results, link=link, pos=tasks.get_queue_position(idx),
                               ce_msg=ce_msg, je=dat.data.get("JE", False), logid=dat.data.get("log_uuid", ""),
-                              super_access=super_access)
+                              super_access=super_access, contest=contest, cid=cid)
     return ret
 
 

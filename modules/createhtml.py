@@ -42,17 +42,26 @@ class Codehightlighter(HTMLParser):
             for k, v in attrs.items():
                 if k == "class" and v in prepares:
                     self.prepare = v
+        if tag in constants.danger_html_tags:
+            tag = "div"
         if self.prepare == "":
             if tag == "img" and "/" not in attrs["src"]:
                 attrs["src"] = "/problem_file/" + self.dirname + "/" + attrs["src"]
                 attrs["inner_embed"] = "true"
+            if tag == "a" and "/" not in attrs["href"]:
+                attrs["href"] = "/problem_file/" + self.dirname + "/" + attrs["href"]
+            if tag == "a":
+                attrs["target"] = "_blank"
             if tag == "img" and attrs["src"].endswith(".pdf"):
                 tag = "pdf-file"
-            atl = ''.join(' ' + (k if v is None else k + '="' + v + '"') for k, v in attrs.items() if k is not None)
+            atl = ''.join(' ' + (k if v is None else k + '="' + v + '"') for k, v in attrs.items() if
+                          k is not None and not k.strip().startswith("on") and not v.strip().startswith("javascript:"))
             if tag != "br" or len(self.text) == 0 or self.text[-1] != "<br>":
                 self.text.append(f"<{tag}{atl}>")
 
     def handle_endtag(self, tag):
+        if tag in constants.danger_html_tags:
+            tag = "div"
         if self.prepare != "":
             self.prepare = ""
         else:

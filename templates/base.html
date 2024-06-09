@@ -45,6 +45,7 @@
                     <li class="nav-item">
                         <a class="nav-link active" aria-current="page" href="/test">測試</a>
                     </li>
+                    {% block navbar %}{% endblock %}
                 </ul>
                 <ul class="navbar-nav navbar-text">
                     {% if current_user.is_authenticated %}

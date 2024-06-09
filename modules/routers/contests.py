@@ -173,7 +173,7 @@ def virtual_register(cid):
                 idx = per.first().id
             else:
                 nw_per = datas.Period(start_time=start_time,
-                                      end_time=start_time+timedelta(minutes=dat.data["elapsed"]),
+                                      end_time=start_time + timedelta(minutes=dat.data["elapsed"]),
                                       contest=dat)
                 datas.add(nw_per)
                 idx = nw_per.id

@@ -2,7 +2,18 @@
 
 {% block title %}結果{% endblock %}
 
+{% block navbar %}
+{% if contest %}
+<li class="nav-item">
+    <a class="nav-link active" aria-current="page" href="/contest/{{ cid }}">競賽頁面({{ contest }})</a>
+</li>
+{% endif%}
+{% endblock %}
+
 {% block main %}
+{% if contest %}
+<div class="test-case">Contest: <a href="/contest/{{ cid }}">{{ contest }}</a></div>
+{% endif%}
 <div class="test-case">Problem: <a href="{{ link }}">{{ pname }}</a></div>
 
 <div class="test-case">Lang: {{ lang }}</div>

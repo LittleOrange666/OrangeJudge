@@ -74,3 +74,5 @@ default_contest_info: dict = {"name": "unknown", "users": [], "problems": {}, "s
 # pretest: no all last
 # practice: no private public
 # type icpc ioi ioic cf
+
+danger_html_tags = ("script", "style")
