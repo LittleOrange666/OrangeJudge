@@ -1,4 +1,5 @@
 import json
+import time
 from datetime import datetime, timedelta
 
 from flask import abort, render_template, request, jsonify
@@ -120,7 +121,7 @@ def contest_status(cid, page_str):
 def contest_action():
     idx = request.form["cid"]
     cdat = datas.Contest.query.filter_by(cid=idx).first_or_404()
-    if not current_user.id in cdat.data["users"]:
+    if not current_user.has("admin") and not current_user.id in cdat.data["users"]:
         abort(403)
     return contests.action(request.form, cdat)
 
@@ -185,9 +186,15 @@ def virtual_register(cid):
         return "OK", 200
 
 
-@app.route("/contest/<cid>/standing", methods=['GET', 'POST'])
+@app.route("/contest/<cid>/standing", methods=['POST'])
 def contest_standing(cid):
     cdat: datas.Contest = datas.Contest.query.filter_by(cid=cid).first_or_404()
+    dt = time.time()-cdat.data["start"]
+    dt = dt/60 - cdat.data["elapsed"]
+    can_see = (cdat.data["standing"]["public"] and
+               (dt <= -cdat.data["standing"]["start_freeze"] or dt >= cdat.data["standing"]["end_freeze"]))
+    if not can_see and not (current_user.is_authenticated and (current_user.has("admin") or current_user.id in cdat.data["users"])):
+        abort(403)
     per: datas.Period = datas.Period.query.get_or_404(cdat.main_period_id)
     ret = []
     mp = {}
@@ -208,4 +215,5 @@ def contest_standing(cid):
     return jsonify({"submissions": ret,
                     "start_time": per.start_time.timestamp(),
                     "rule": cdat.data["type"],
-                    "pids": list(cdat.data["problems"].keys())})
+                    "pids": list(cdat.data["problems"].keys()),
+                    "penalty": cdat.data["penalty"]})
