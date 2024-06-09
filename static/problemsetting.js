@@ -302,7 +302,8 @@ $(function() {
         $("#save_testcase").prop("disabled", true);
         let dat = $("tr.testcase-normal").toArray().map(function(o){
             return [+$(o).find("th").text(),$(o).find("input[type='checkbox'].is_sample").prop("checked"),
-                    $(o).find("input[type='checkbox'].is_pretest").prop("checked")];
+                    $(o).find("input[type='checkbox'].is_pretest").prop("checked"),
+                    $(o).find("select.form-select").val()];
         });
         post("/problemsetting_action", {
             "action": "save_testcase",

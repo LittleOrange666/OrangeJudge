@@ -52,6 +52,10 @@ $("input[type='datetime-local'][data-value]").each(function(){
     let s = new Date(+$(this).data("value")*1000 - (new Date()).getTimezoneOffset() * 60000).toISOString();
     $(this).val(s.substr(0,s.length-1));
 });
+$("select[data-value]").each(function(){
+    let val = $(this).data("value");
+    $(this).val(val).change();
+});
 $(".time-string").each(function(){
     let t = Math.floor(+$(this).text());
     let d = Math.floor(t/1440);

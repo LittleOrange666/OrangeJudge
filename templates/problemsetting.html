@@ -336,6 +336,7 @@
                     <tr>
                         <th scope="col">名稱</th>
                         <th scope="col">相依性</th>
+                        <th scope="col">給分規則</th>
                         <th scope="col">配分</th>
                         <th scope="col">刪除</th>
                     </tr>
@@ -350,6 +351,13 @@
                             {{ parent }}
                             {% endfor %}
                             {% endif %}
+                        </td>
+                        <td>
+                        <select class="form-select form-control" name="rule_{{ k }}"
+                                data-value="{{ group.get('rule', 'min') }}">
+                            <option value="min">最小值</option>
+                            <option value="avg">平均值</option>
+                        </select>
                         </td>
                         <td>
                             <input type="number" min="1" max="100" value="{{ group['score'] }}" name="score_{{ k }}"
@@ -418,7 +426,14 @@
                            target="_blank">{{ testcase['in'] }}</a></td>
                     <td><a href="/problemsetting_preview?pid={{ pid }}&type=testcases&name={{ testcase['out'] }}"
                            target="_blank">{{ testcase['out'] }}</a></td>
-                    <td>{{ testcase['group'] if "group" in testcase else "default" }}</td>
+                    <td>
+                        <select class="form-select form-control" name="group_{{ i }}"
+                                data-value="{{ testcase['group'] if 'group' in testcase else 'default' }}">
+                            {% for group in dat['groups']%}
+                            <option value="{{ group }}">{{ group }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
                     <td>
                         <input class="form-check-input is_sample" type="checkbox" name="sample_{{ i }}" value="yes"
                                data-checked="{{testcase['sample']}}">

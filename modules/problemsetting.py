@@ -647,7 +647,11 @@ def save_testcase(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: 
     s = set()
     new_testcases = []
     for o in modify:
-        if type(o[1]) is not bool or type(o[0]) is not int or not (len(testcases) > o[0] >= 0):
+        if (len(o) < 4 or
+                type(o[1]) is not bool or
+                type(o[0]) is not int or
+                not (len(testcases) > o[0] >= 0) or
+                o[3] not in dat["groups"]):
             abort(400)
         if o[0] in s:
             abort(400)
@@ -655,6 +659,7 @@ def save_testcase(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: 
         obj = testcases[o[0]]
         obj["sample"] = o[1]
         obj["pretest"] = o[2]
+        obj["group"] = o[3]
         new_testcases.append(obj)
     dat["testcases"] = new_testcases
     return "tests"
@@ -713,7 +718,7 @@ def create_group(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: P
     name = secure_filename(form["name"])
     if name in dat["groups"]:
         abort(409)
-    dat["groups"][name] = {"score": 100}
+    dat["groups"][name] = {"score": 100, "rule": "min"}
     return "tests"
 
 
@@ -731,12 +736,17 @@ def remove_group(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: P
 @actions.bind
 def save_groups(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
     d = {}
+    dr = {}
     for k in dat["groups"]:
-        d[k] = form["score_" + k]
-        if not d[k].isdigit():
+        if not form["score_" + k].isdigit():
             abort(400)
+        if form["rule_" + k] not in ("min", "avg"):
+            abort(400)
+        d[k] = int(form["score_" + k])
+        dr[k] = form["rule_" + k]
     for k in dat["groups"]:
-        dat["groups"][k]["score"] = int(d[k])
+        dat["groups"][k]["score"] = d[k]
+        dat["groups"][k]["rule"] = dr[k]
     return "tests"
 
 
@@ -821,7 +831,7 @@ def query_versions(pdat: datas.Problem):
     info = pdat.data
     for o in info.get("versions", []):
         out.append({
-            "date": str(int(float(o["time"]) * 1000)),
+            "date": str(int(float(o["time"]))),
             "message": o["description"]
         })
     out.reverse()

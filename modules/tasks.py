@@ -156,10 +156,13 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
                 timeusage = tl * 1000
             results.append({"time": timeusage, "mem": memusage, "result": ret[0], "info": ret[1],
                             "has_output": has_output, "score": score})
-            if groups[gp]["result"] != ret[0] and ret[0] != "OK":
-                groups[gp]["result"] = ret[0]
             if ret[0] != "OK":
                 simple_result = "NA"
+            if groups[gp]["result"] != ret[0] and ret[0] != "OK":
+                if groups[gp].get("rule", "min") == "min":
+                    groups[gp]["result"] = ret[0]
+                else:
+                    groups[gp]["result"] = "PARTIAL"
             if groups[gp].get("rule", "min") == "min":
                 groups[gp]["gainscore"] = min(groups[gp]["gainscore"], score)
             else:
@@ -173,6 +176,8 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
     out_info["results"] = results
     keys = ("result", "time", "mem", "gainscore")
     out_info["group_results"] = {k: {key: v[key] for key in keys} for k, v in groups.items() if k in exist_gp}
+    if simple_result == "NA":
+        simple_result += f" {total_score}%"
     out_info["simple_result"] = simple_result
     out_info["total_score"] = total_score
     out_info["protected"] = bool(dat.period_id) and dat.user.username not in problem_info["users"]
