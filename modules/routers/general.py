@@ -75,9 +75,11 @@ def submit():
     lang = request.form["lang"]
     code = request.form["code"].replace("\n\n", "\n")
     pid = request.form["pid"]
-    pdat = datas.Problem.query.filter_by(pid=pid).first_or_404()
+    pdat: datas.Problem = datas.Problem.query.filter_by(pid=pid).first_or_404()
     if lang not in executing.langs:
         abort(404)
+    if not pdat.data["languages"].get(lang, True):
+        abort(400)
     ext = executing.langs[lang].data["source_ext"]
     """
     if tools.elapsed(current_user.folder, "submissions") < 5:

@@ -9,6 +9,10 @@
            type="button" role="tab" aria-controls="general_info" aria-selected="true">基本訊息</a>
     </li>
     <li class="nav-item" role="presentation">
+        <a class="nav-link" id="languages_tab" data-bs-toggle="tab" data-bs-target="#languages" type="button" role="tab"
+           aria-controls="languages" aria-selected="false">語言</a>
+    </li>
+    <li class="nav-item" role="presentation">
         <a class="nav-link" id="statement_tab" data-bs-toggle="tab" data-bs-target="#statement" type="button" role="tab"
            aria-controls="statement" aria-selected="false">題敘</a>
     </li>
@@ -90,6 +94,22 @@
                     上傳zip檔
                 </button>
             </div>
+        </form>
+    </div>
+    <div id="languages" class="tab-pane fade">
+        <h3>語言</h3>
+        <form the_action="save_languages">
+            <div class="edit-detector"></div>
+            {% for lang in langs %}
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" value="on" name="lang_check_{{ lang }}"
+                     id="lang_check_{{ lang }}" data-checked="{{ dat['languages'].get(lang,True) }}">
+              <label class="form-check-label" for="lang_check_{{ lang }}">
+                {{ lang }}
+              </label>
+            </div>
+            {% endfor %}
+            <button class="btn btn-primary data-saver submitter">儲存</button>
         </form>
     </div>
     <div id="statement" class="tab-pane fade">

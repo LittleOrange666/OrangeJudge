@@ -38,7 +38,8 @@ default_problem_info: dict = {"name": "unknown", "timelimit": "1000", "memorylim
                               "statement": {"main": "", "input": "", "output": "", "scoring": "", "interaction": ""},
                               "files": [], "checker_source": ["default", "unknown"], "is_interact": False,
                               "public": False, "groups": {"default": {"score": 100, "rule": "min"}},
-                              "interactor_source": "unknown", "manual_samples": []}
+                              "interactor_source": "unknown", "manual_samples": [],
+                              "languages": {}}
 
 email_reg: Pattern = re.compile("^[\\w\\-.]+@([\\w\\-]+\\.)+[\\w-]{2,4}$")
 

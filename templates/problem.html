@@ -41,7 +41,9 @@
     {% endif %}
     <select class="form-select" aria-label="Default select example" name="lang" id="langoption">
         {% for lang in langs %}
-        <option value="{{ lang }}">{{ lang }}</option>
+        {% if dat["languages"].get(lang,True) %}
+        <option value="{{ lang }}">{{ lang }}
+        {% endif %}
         {% endfor %}
     </select>
     <div class="mb-3">

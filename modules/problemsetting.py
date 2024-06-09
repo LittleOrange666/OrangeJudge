@@ -785,6 +785,13 @@ def import_polygon(form: ImmutableMultiDict[str, str], pid: str, path: str, dat:
     return "general_info"
 
 
+@actions.bind
+def save_languages(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
+    for k in executing.langs.keys():
+        dat["languages"][k] = (form.get("lang_check_" + k, "off") == "on")
+    return "languages"
+
+
 def action(form: ImmutableMultiDict[str, str]) -> Response:
     pid = secure_filename(form["pid"])
     path = f"preparing_problems/{pid}"
