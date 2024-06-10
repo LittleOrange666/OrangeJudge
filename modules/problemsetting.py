@@ -130,12 +130,20 @@ def init() -> None:
     Process(target=runner).start()
 
 
-def create_problem(name: str, user: datas.User) -> str:
+def create_problem(name: str, pid: str, user: datas.User) -> str:
     pcnt = datas.Problem.query.count()
-    pidx = pcnt + 1000
-    while datas.Problem.query.filter_by(pid=str(pidx)).count():
-        pidx += 1
-    pid = str(pidx)
+    if len(name) == 0 or len(name) > 120:
+        abort(400)
+    if pid:
+        if constants.problem_id_reg.match(pid) is None:
+            abort(400)
+        if datas.Problem.query.filter_by(pid=pid).count():
+            abort(409)
+    else:
+        pidx = pcnt + 1000
+        while datas.Problem.query.filter_by(pid=str(pidx)).count():
+            pidx += 1
+        pid = str(pidx)
     dat = datas.Problem(id=pcnt + 1, pid=pid, name=name, data={}, user=user)
     path = "preparing_problems/" + pid
     os.mkdir(path)

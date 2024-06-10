@@ -42,9 +42,9 @@
 
 ## contests 特性
 + ioi/icpc/ioic/custom ranking strategic
-+ 封版
-+ 後測
++ 封版√
++ 後測√
 + heuristic rejudge
-+ 隱藏詳細結果
-+ 賽後看題&練習&看舊code
++ 隱藏詳細結果√
++ 賽後看題&練習&看舊code√
 + 賽中提問

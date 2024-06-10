@@ -165,7 +165,7 @@ $(".submitter").click(function(e){
         return;
     }
     $this.parents("form").find("input,select,textarea").each(function(){
-        if($(this).prop("pattern")&&!$(this).val().match(RegExp($(this).prop("pattern")))) ok = false;
+        if($(this).prop("required")&&$(this).prop("pattern")&&!$(this).val().match(RegExp($(this).prop("pattern")))) ok = false;
     });
     if(!ok||$this.parents("form")[0].onsubmit&&!$this.parents("form")[0].onsubmit()){
         show_modal("錯誤","輸入格式不正確");

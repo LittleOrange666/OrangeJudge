@@ -28,9 +28,10 @@ def create_problem():
     if request.method == "GET":
         return render_template("create_problem.html")
     else:
-        idx = problemsetting.create_problem(request.form["name"], user.data)
+        pid = request.form["pid"]
+        idx = problemsetting.create_problem(request.form["name"], pid, user.data)
         # tools.append(idx + "\n", user.folder, "problems")
-        return redirect(f"/problemsetting/{idx}?user={user.id}")
+        return f"/problemsetting/{idx}?user={user.id}", 200
 
 
 @app.route("/problemsetting/<idx>", methods=['GET'])

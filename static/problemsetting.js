@@ -87,7 +87,7 @@ $(function() {
         $("#create_version").prop("disabled", true);
         let title = $("#title_input").val();
         let time = $("#time_input").val();
-        let memory = $("#memory_input").val();
+        let memory = $("#memory_input").val();;
         let show_testcase = $("input[type='radio'][name='show_testcase']:checked").val();
         if (!number_reg.test(time)){
             show_modal("時間限制格式錯誤","\""+time+"\"不是一個合法的數字");
