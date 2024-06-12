@@ -70,6 +70,7 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
             gp = "default"
             if "group" in testcase and testcase["group"] in groups:
                 gp = testcase["group"]
+            is_sample = testcase.get("sample", False)
             exist_gp.add(gp)
             if "dependency" in groups[gp]:
                 for k in groups[gp]["dependency"]:
@@ -155,7 +156,7 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
             if ret[0] == "TLE":
                 timeusage = tl * 1000
             results.append({"time": timeusage, "mem": memusage, "result": ret[0], "info": ret[1],
-                            "has_output": has_output, "score": score})
+                            "has_output": has_output, "score": score, "sample": is_sample})
             if ret[0] != "OK":
                 simple_result = "NA"
             if groups[gp]["result"] != ret[0] and ret[0] != "OK":

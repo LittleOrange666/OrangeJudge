@@ -1,6 +1,6 @@
 import os
 
-from flask import abort, render_template, redirect, request
+from flask import abort, render_template, request
 from flask_login import login_required
 from werkzeug.utils import secure_filename
 

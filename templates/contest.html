@@ -75,6 +75,19 @@
         {% endif %}
     </div>
     <div id="status" class="tab-pane fade">
+        <div class="row">
+            <div class="col-auto">
+                <select class="form-select" aria-label="題目編號" id="status_filter_pid">
+                    <option value="" selected>所有</option>
+                    {% for k in data["problems"] %}
+                    <option value="{{ k }}">{{ k }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-auto">
+                <button class="btn btn-primary" id="status_filter">篩選</button>
+            </div>
+        </div>
         <table class="table table-hover table-striped">
             <thead>
             <tr>
@@ -95,6 +108,19 @@
         </nav>
     </div>
     <div id="my_status" class="tab-pane fade">
+        <div class="row">
+            <div class="col-auto">
+                <select class="form-select" aria-label="題目編號" id="my_status_filter_pid">
+                    <option value="" selected>所有</option>
+                    {% for k in data["problems"] %}
+                    <option value="{{ k }}">{{ k }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-auto">
+                <button class="btn btn-primary" id="my_status_filter">篩選</button>
+            </div>
+        </div>
         <table class="table table-hover table-striped">
             <thead>
             <tr>

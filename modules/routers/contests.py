@@ -79,6 +79,10 @@ def contest_status(cid, page_str):
     if "user" in request.form:
         user: datas.User = datas.User.query.filter_by(username=request.form["user"]).first_or_404()
         status = status.filter_by(user=user)
+    if "pid" in request.form and len(request.form["pid"]):
+        if request.form["pid"] not in dat.data["problems"]:
+            abort(404)
+        status = status.filter_by(pid=dat.data["problems"][request.form["pid"]])
     status_count = status.count()
     page_cnt = max(1, (status_count - 1) // page_size + 1)
     if page <= 0 or page > page_cnt:

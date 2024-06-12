@@ -12,14 +12,19 @@ $(function() {
     });
     {
         let current_page = 1;
+        let pid = "";
         function change_page(page){
             current_page = page;
+            let fd = new FormData();
+            fd.append("pid", pid);
             fetch("/contest/"+cid+"/status/"+page,{
                 method: "POST",
-                headers: {"x-csrf-token": $("#csrf_token").val()}
+                headers: {"x-csrf-token": $("#csrf_token").val()},
+                body: fd
             }).then(function(response){
                 return response.json();
             }).then(function(data){
+                current_page = data["page"];
                 let table = $("#status_table");
                 table.empty();
                 for(let obj of data["data"]){
@@ -44,7 +49,7 @@ $(function() {
                 pagination.append(first);
                 for(let i of data["show_pages"]){
                     let li = $('<li class="page-item">');
-                    if (i==page)
+                    if (i==current_page)
                         li.addClass("active");
                     let a = $('<a class="page-link">').text(i);
                     a.click(function(){change_page(i)});
@@ -69,13 +74,19 @@ $(function() {
             }
         });
         if (location.hash=="#status") $("#status_tab").click();
-    };
+        $("#status_filter").click(function(){
+            pid = $("#status_filter_pid").val();
+            change_page(current_page);
+        });
+    }
     {
         let current_page = 1;
+        let pid = "";
         function change_page(page){
             current_page = page;
             let fd = new FormData();
             fd.append("user", $("#username").val());
+            fd.append("pid", pid);
             fetch("/contest/"+cid+"/status/"+page,{
                 method: "POST",
                 headers: {"x-csrf-token": $("#csrf_token").val()},
@@ -83,6 +94,7 @@ $(function() {
             }).then(function(response){
                 return response.json();
             }).then(function(data){
+                page = data["page"];
                 let table = $("#my_status_table");
                 table.empty();
                 for(let obj of data["data"]){
@@ -132,6 +144,10 @@ $(function() {
             }
         });
         if (location.hash=="#my_status") $("#my_status_tab").click();
+        $("#my_status_filter").click(function(){
+            pid = $("#my_status_filter_pid").val();
+            change_page(current_page);
+        });
     }
     {
         function load_standing(){
