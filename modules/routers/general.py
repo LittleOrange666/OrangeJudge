@@ -242,7 +242,7 @@ def my_submissions():
     for dat in reversed(got_data):
         dat: datas.Submission
         idx = str(dat.id)
-        o = {"name": str(dat.id), "time": dat.time, "result": "blank"}
+        o = {"name": str(dat.id), "time": dat.time.timestamp(), "result": "blank"}
         if not dat.completed:
             o["result"] = "waiting"
         else:
@@ -275,3 +275,8 @@ def admin():
         return render_template("admin.html")
     else:
         abort(404)
+
+
+@app.route('/preferences', methods=['GET'])
+def preferences():
+    return render_template("preferences.html")

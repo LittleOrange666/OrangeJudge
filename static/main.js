@@ -45,8 +45,11 @@ $("textarea").on('keydown', function(e) {
       this.selectionEnd = start + 1;
   }
 });
+function timestamp_to_str(i){
+    return new Date(+i*1000).toLocaleString()
+}
 $(".date-string").each(function(){
-    $(this).text(new Date(+$(this).text()*1000).toLocaleString());
+    $(this).text(timestamp_to_str($(this).text()));
 });
 $("input[type='datetime-local'][data-value]").each(function(){
     let s = new Date(+$(this).data("value")*1000 - (new Date()).getTimezoneOffset() * 60000).toISOString();

@@ -76,7 +76,7 @@ def contest_status(cid, page_str):
     page = tools.to_int(page_str)
     page_size = constants.page_size
     status = dat.submissions
-    if "user" in request.form:
+    if "user" in request.form and len(request.form["user"]):
         user: datas.User = datas.User.query.filter_by(username=request.form["user"]).first_or_404()
         status = status.filter_by(user=user)
     if "pid" in request.form and len(request.form["pid"]):
@@ -108,14 +108,16 @@ def contest_status(cid, page_str):
             res = obj.result
             if res and "simple_result" in res:
                 result = res["simple_result"]
+        can_see = current_user.has("admin") or current_user.id == obj.user.username
         out.append({"idx": str(obj.id),
-                    "time": obj.time,
+                    "time": obj.time.timestamp(),
                     "user_id": obj.user.username,
                     "user_name": obj.user.display_name,
                     "problem": problem,
                     "problem_name": problem_name,
                     "lang": obj.language,
-                    "result": result})
+                    "result": result,
+                    "can_see": can_see})
     ret = {"show_pages": displays, "page_cnt": page_cnt, "page": page, "data": out}
     return jsonify(ret)
 

@@ -11,17 +11,13 @@
             crossorigin="anonymous"></script>
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"
             integrity="sha256-2Pmvv0kuTBOenSvLm6bvfBSSHrUJ+3A7x6P5Ebd07/g=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/js-cookie@2/src/js.cookie.min.js"></script>
     <link href="/static/main.css" rel="stylesheet" crossorigin="anonymous">
     <link href="/static/codehilite.css" rel="stylesheet" crossorigin="anonymous">
     <style>
         {% block style %}{% endblock %}
-
-
-
     </style>
 </head>
-
-
 <body>
 <div id="top_area" class="toc">
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
@@ -56,7 +52,8 @@
                         <ul class="dropdown-menu">
                             <li><a class="dropdown-item" href="/user/{{current_user.id}}">個人頁面</a></li>
                             <li><a class="dropdown-item" href="/my_submissions">解題列表</a></li>
-                            <li><a class="dropdown-item" href="/settings">設定</a></li>
+                            <li><a class="dropdown-item" href="/settings">帳號設定</a></li>
+                            <li><a class="dropdown-item" href="/preferences">偏好設定</a></li>
                             {% if current_user.may_has("make_problems") %}
                             <li>
                                 <hr class="dropdown-divider">
@@ -103,13 +100,11 @@
     </div>
 </div>
 <script type="text/x-mathjax-config">
-    MathJax.Hub.Config({
-        config: ["MMLorHTML.js"],
-        jax: ["input/TeX", "output/HTML-CSS", "output/NativeMML"],
-        extensions: ["MathMenu.js", "MathZoom.js"]
-    });
-
-
+MathJax.Hub.Config({
+    config: ["MMLorHTML.js"],
+    jax: ["input/TeX", "output/HTML-CSS", "output/NativeMML"],
+    extensions: ["MathMenu.js", "MathZoom.js"]
+});
 
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js"></script>
@@ -117,9 +112,7 @@
 <script src="/static/main.js"></script>
 </body>
 <script>
-    {% block script %}{% endblock %}
-
-
+{% block script %}{% endblock %}
 
 </script>
 </html>

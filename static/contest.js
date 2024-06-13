@@ -16,6 +16,7 @@ $(function() {
         function change_page(page){
             current_page = page;
             let fd = new FormData();
+            fd.append("user", $("#status_filter_username").val());
             fd.append("pid", pid);
             fetch("/contest/"+cid+"/status/"+page,{
                 method: "POST",
@@ -30,7 +31,7 @@ $(function() {
                 for(let obj of data["data"]){
                     let line = $("<tr>");
                     line.append($('<th scope="row">').append($("<a>").text(obj["idx"]).attr("href","/submission/"+obj["idx"])));
-                    line.append($('<td>').text(obj["time"]));
+                    line.append($('<td>').text(timestamp_to_str(obj["time"])));
                     line.append($('<td>').append($("<a>").text(obj["user_name"]).attr("href","/user/"+obj["user_id"])));
                     line.append($('<td>').append($("<a>").text(obj["problem"]+". "+obj["problem_name"]).attr("href","/contest/"+cid+"/problem/"+obj["problem"])));
                     line.append($('<td>').text(obj["lang"]));
@@ -99,8 +100,12 @@ $(function() {
                 table.empty();
                 for(let obj of data["data"]){
                     let line = $("<tr>");
-                    line.append($('<th scope="row">').append($("<a>").text(obj["idx"]).attr("href","/submission/"+obj["idx"])));
-                    line.append($('<td>').text(obj["time"]));
+                    if (obj["can_see"]){
+                        line.append($('<th scope="row">').append($("<a>").text(obj["idx"]).attr("href","/submission/"+obj["idx"])));
+                    }else{
+                        line.append($('<th scope="row">').text(obj["idx"]));
+                    }
+                    line.append($('<td>').text(timestamp_to_str(obj["time"])));
                     // line.append($('<td>').append($("<a>").text(obj["user_name"]).attr("href","/user/"+obj["user_id"])));
                     line.append($('<td>').append($("<a>").text(obj["problem"]+". "+obj["problem_name"]).attr("href","/contest/"+cid+"/problem/"+obj["problem"])));
                     line.append($('<td>').text(obj["lang"]));
