@@ -3,10 +3,21 @@
 {% block title %}競賽 - {{data['name']}}{% endblock %}
 
 {% block main %}
+<div class="row">
+    <div class="col-auto">
+        <p class="h2" id="contest_status" data-status="{{ status }}"></p>
+    </div>
+    <div class="col-auto">
+        {% if status != "practice" %}
+        <p class="h2 text-secondary countdown-timer" data-target="{{ target }}"></p>
+        {% endif %}
+    </div>
+</div>
+{% if can_see %}
 <ul class="nav nav-tabs">
     <li class="nav-item" role="presentation">
         <a class="nav-link active" id="index_page_tab" data-bs-toggle="tab" data-bs-target="#index_page"
-           type="button" role="tab" aria-controls="index_page" aria-selected="true">首頁</a>
+           type="button" role="tab" aria-controls="index_page" aria-selected="true">題目</a>
     </li>
     <li class="nav-item" role="presentation">
         <a class="nav-link" id="status_tab" data-bs-toggle="tab" data-bs-target="#status" type="button" role="tab"
@@ -164,7 +175,7 @@
             <div class="mb-3">
                 <label for="start_time" class="form-label">開始時間</label>
                 <input type="datetime-local" class="form-control" id="start_time" name="start_time"
-                       data-value="{{ data['start'] }}" required>
+                       data-value="{{ data['start'] }}" step="60" required>
             </div>
             <div class="mb-3">
                 <label for="elapsed_time" class="form-label">持續時間(分鐘)</label>
@@ -328,6 +339,7 @@
 </div>
 <script src="/static/tab_memory.js"></script>
 <script src="/static/contest.js"></script>
+{% endif %}
 <input id="cid" value="{{ cid }}" hidden>
 <input id="username" value="{{ current_user.id if current_user.is_authenticated else 'unknow' }}" hidden>
 {% endblock %}

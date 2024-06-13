@@ -55,6 +55,16 @@ $("input[type='datetime-local'][data-value]").each(function(){
     let s = new Date(+$(this).data("value")*1000 - (new Date()).getTimezoneOffset() * 60000).toISOString();
     $(this).val(s.substr(0,s.length-1));
 });
+$(".countdown-timer").each(function(){
+    let $this = $(this);
+    let target = +$this.data("target")*1000;
+    let is_zero = target - (new Date()).getTime()<=0;
+    window.setInterval(function(){
+        let delta = Math.max(0,target - (new Date()).getTime());
+        $this.text(new Date(delta).toISOString().substr(11,8)); // AI 生出的酷東東
+        if (!is_zero && (delta<=0)) location.reload();
+    },100);
+});
 $("select[data-value]").each(function(){
     let val = $(this).data("value");
     $(this).val(val).change();

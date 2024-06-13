@@ -229,11 +229,6 @@ def to_int(text: str) -> int:
     return int(text)
 
 
-def show_time(time: datetime) -> str:
-    time = time.replace(microsecond=0)
-    return time.strftime("%Y-%m-%d %H:%M:%S")
-
-
 has_log: bool = config.get("debug.log")
 
 

@@ -90,7 +90,9 @@ def submit():
                            problem=pdat, language=lang, data={}, pid=pid)
     if "cid" in request.form:
         cdat: datas.Contest = datas.Contest.query.filter_by(cid=request.form["cid"]).first_or_404()
-        contests.check_access(cdat)
+        wait_per = contests.check_waiting(cdat)
+        if wait_per:
+            abort(403)
         per_id = contests.check_period(cdat)
         dat.contest = cdat
         if per_id:

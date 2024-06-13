@@ -19,15 +19,17 @@ def create_contest(name: str, user: datas.User) -> str:
     while datas.Contest.query.filter_by(cid=str(cidx)).count():
         cidx += 1
     cid = str(cidx)
-    start_timestamp = (datetime.now() + timedelta(days=1)).timestamp()
+    start_time = datetime.now().replace(second=0, microsecond=0) + timedelta(days=1)
+    start_timestamp = start_time.timestamp()
     info = constants.default_contest_info | {"name": name, "users": [user.username], "start": start_timestamp,
                                              "elapsed": 60}
     dat = datas.Contest(id=cidx, cid=cid, name=name, data=info, user=user)
-    per = datas.Period(start_time=datetime.now() + timedelta(days=1),
-                       end_time=datetime.now() + timedelta(days=1, hours=1),
+    per = datas.Period(start_time=start_time,
+                       end_time=start_time + timedelta(hours=1),
                        ended=False,
                        running=False,
-                       contest_id=dat.id)
+                       contest_id=dat.id,
+                       is_virtual=False)
     datas.add(dat, per)
     dat.main_period_id = per.id
     datas.add(dat)
@@ -94,7 +96,7 @@ def change_settings(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Co
         abort(400)
     start_time = 0
     try:
-        start_time = datetime.fromisoformat(form["start_time"]).timestamp()
+        start_time = datetime.fromisoformat(form["start_time"]).replace(second=0, microsecond=0).timestamp()
     except ValueError:
         abort(400)
     if not form["elapsed_time"].isdigit():
@@ -160,16 +162,28 @@ def action(form: ImmutableMultiDict[str, str], cdat: datas.Contest):
     return f"/contest/{cid}#{tp}"
 
 
-def check_access(dat: datas.Contest):
-    per: datas.Period = datas.Period.query.get_or_404(dat.main_period_id)
+def check_waiting(dat: datas.Contest) -> int:
+    per: datas.Period = datas.Period.query.get(dat.main_period_id)
+    if per is None:
+        abort(409)
     if current_user.is_authenticated:
-        if current_user.has("admin") or current_user.id in dat.data["users"]:
-            return
+        if current_user.id in dat.data["virtual_participants"]:
+            vir_per: datas.Period = datas.Period.query.get(dat.data["virtual_participants"][current_user.id])
+            if vir_per is None:
+                abort(409)
+            if not vir_per.is_started():
+                return vir_per.id
         if current_user.id in dat.data["participants"]:
-            if per.is_running() or per.is_over() and dat.data["practice"] != "no":
-                return
+            if not per.is_started():
+                return per.id
+            if per.is_running():
+                return 0
+            if per.is_over() and dat.data["practice"] != "no":
+                return 0
+        if current_user.has("admin") or current_user.id in dat.data["users"]:
+            return 0
     if dat.data["practice"] == "public" and per.is_over():
-        return
+        return 0
     abort(403)
 
 

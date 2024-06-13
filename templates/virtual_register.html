@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}模擬報名競賽 - {{ name }}{% endblock %}
+{% block title %}報名模擬競賽 - {{ name }}{% endblock %}
 
 {% block main %}
 <form method="post" action="/contest/{{ cid }}/virtual">
     <div class="mb-3">
         <label for="start_time" class="form-label">開始時間</label>
-        <input type="datetime-local" class="form-control" id="start_time" name="start_time" required>
+        <input type="datetime-local" class="form-control" id="start_time" name="start_time" step="60" required>
     </div>
     <button class="btn btn-primary submitter">確定</button>
 </form>

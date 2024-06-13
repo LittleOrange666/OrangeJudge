@@ -16,7 +16,7 @@ $(function() {
         function change_page(page){
             current_page = page;
             let fd = new FormData();
-            fd.append("user", $("#status_filter_username").val());
+            fd.append("user", $("#status_filter_username").val().toLowerCase());
             fd.append("pid", pid);
             fetch("/contest/"+cid+"/status/"+page,{
                 method: "POST",
@@ -313,4 +313,7 @@ $(function() {
         });
         if (location.hash=="#standing") $("#standing_tab").click();
     }
+    let contest_status = $("#contest_status").data("status");
+    let status_mp = {"practice": "練習模式", "waiting_virtual": "等待模擬競賽開始", "waiting": "等待競賽開始", "running": "競賽進行中", "running_virtual": "模擬競賽進行中"};
+    $("#contest_status").text(status_mp[contest_status]);
 });

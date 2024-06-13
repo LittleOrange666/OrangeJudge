@@ -41,18 +41,39 @@ def create_contest():
 @app.route("/contest/<idx>", methods=["GET"])
 def contest_page(idx):
     dat: datas.Contest = datas.Contest.query.filter_by(cid=idx).first_or_404()
-    contests.check_access(dat)
+    wait_per = contests.check_waiting(dat)
     info = dat.data
     can_edit = current_user.is_authenticated and (current_user.has("admin") or current_user.id in info["users"])
-    return render_template("contest.html", cid=idx, data=info, can_edit=can_edit)
+    can_see = not wait_per or can_edit
+    target = 0
+    status = "practice"
+    if wait_per:
+        per: datas.Period = datas.Period.query.get(wait_per)
+        target = per.start_time.timestamp()
+        if per.is_virtual:
+            status = "waiting_virtual"
+        else:
+            status = "waiting"
+    else:
+        per_id = contests.check_period(dat)
+        if per_id:
+            per: datas.Period = datas.Period.query.get(per_id)
+            target = per.end_time.timestamp()
+            if per.is_virtual:
+                status = "running_virtual"
+            else:
+                status = "running"
+    return render_template("contest.html", cid=idx, data=info, can_edit=can_edit, can_see=can_see, target=target,
+                           status=status)
 
 
 @app.route("/contest/<cid>/problem/<pid>", methods=["GET"])
 def contest_problem(cid, pid):
     cdat: datas.Contest = datas.Contest.query.filter_by(cid=cid).first_or_404()
-    contests.check_access(cdat)
+    wait_per = contests.check_waiting(cdat)
+    if wait_per:
+        abort(403)
     info = cdat.data
-    idx = ""
     if pid not in info["problems"]:
         abort(404)
     idx = info["problems"][pid]["pid"]
@@ -173,15 +194,15 @@ def virtual_register(cid):
     else:
         start_time: datetime
         try:
-            start_time = datetime.fromisoformat(request.form["start_time"])
-            per = datas.Period.query.filter_by(start_time=start_time, contest=dat)
-            idx = 0
+            start_time = datetime.fromisoformat(request.form["start_time"]).replace(second=0, microsecond=0)
+            per = datas.Period.query.filter_by(start_time=start_time, contest=dat, is_virtual=True)
             if per.count():
                 idx = per.first().id
             else:
                 nw_per = datas.Period(start_time=start_time,
                                       end_time=start_time + timedelta(minutes=dat.data["elapsed"]),
-                                      contest=dat)
+                                      contest=dat,
+                                      is_virtual=True)
                 datas.add(nw_per)
                 idx = nw_per.id
             dat.data["virtual_participants"][current_user.id] = idx

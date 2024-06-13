@@ -111,6 +111,7 @@ class Period(db.Model):
     end_time = db.Column(db.DateTime)
     running = db.Column(db.Boolean, default=False)
     ended = db.Column(db.Boolean, default=False)
+    is_virtual = db.Column(db.Boolean, default=False)
     contest_id = db.Column(db.Integer, db.ForeignKey('contests.id'))
     submissions = db.relationship('Submission', backref='period', lazy='dynamic')
 
