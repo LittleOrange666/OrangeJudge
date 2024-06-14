@@ -162,7 +162,28 @@ def action(form: ImmutableMultiDict[str, str], cdat: datas.Contest):
     return f"/contest/{cid}#{tp}"
 
 
-def check_waiting(dat: datas.Contest) -> int:
+def check_super_access(dat: datas.Contest) -> bool:
+    return current_user.is_authenticated and (current_user.has("admin") or current_user.id in dat.data["users"])
+
+
+def check_access(dat: datas.Contest):
+    per: datas.Period = datas.Period.query.get(dat.main_period_id)
+    if per is None:
+        abort(409)
+    if check_super_access(dat):
+        return
+    if current_user.is_authenticated:
+        if current_user.id in dat.data["participants"]:
+            if per.is_running():
+                return
+            if per.is_over() and dat.data["practice"] != "no":
+                return
+    if dat.data["practice"] == "public" and per.is_over():
+        return
+    abort(403)
+
+
+def check_status(dat: datas.Contest) -> tuple[str, int, bool]:
     per: datas.Period = datas.Period.query.get(dat.main_period_id)
     if per is None:
         abort(409)
@@ -172,19 +193,23 @@ def check_waiting(dat: datas.Contest) -> int:
             if vir_per is None:
                 abort(409)
             if not vir_per.is_started():
-                return vir_per.id
+                return "waiting_virtual", vir_per.start_time.timestamp(), False
+            if not vir_per.is_started():
+                return "running_virtual", vir_per.end_time.timestamp(), True
         if current_user.id in dat.data["participants"]:
             if not per.is_started():
-                return per.id
+                return "waiting", per.start_time.timestamp(), False
             if per.is_running():
-                return 0
+                return "running", per.end_time.timestamp(), True
             if per.is_over() and dat.data["practice"] != "no":
-                return 0
-        if current_user.has("admin") or current_user.id in dat.data["users"]:
-            return 0
+                return "practice", 0, True
+        if check_super_access(dat):
+            return "testing", 0, True
+        if per.is_over() and dat.data["practice"] == "public":
+            return "practice", 0, True
     if dat.data["practice"] == "public" and per.is_over():
-        return 0
-    abort(403)
+        return "guest", 0, True
+    return "guest", 0, False
 
 
 def check_period(dat: datas.Contest) -> int:
@@ -248,8 +273,15 @@ def contest_worker():
             dat: datas.Period
             if dat.is_running():
                 dat.running = True
+                dat.judging = True
                 mod.append(dat)
         datas.add(*mod)
+        sleep(10)
+        for dat in datas.Period.query.filter_by(running=False, ended=True, judging=True):
+            dat: datas.Period
+            if dat.submissions.filter_by(completed=False).count() == 0:
+                dat.judging = False
+                datas.add(dat)
         sleep(10)
 
 

@@ -41,28 +41,10 @@ def create_contest():
 @app.route("/contest/<idx>", methods=["GET"])
 def contest_page(idx):
     dat: datas.Contest = datas.Contest.query.filter_by(cid=idx).first_or_404()
-    wait_per = contests.check_waiting(dat)
+    status, target, can_see = contests.check_status(dat)
     info = dat.data
-    can_edit = current_user.is_authenticated and (current_user.has("admin") or current_user.id in info["users"])
-    can_see = not wait_per or can_edit
-    target = 0
-    status = "practice"
-    if wait_per:
-        per: datas.Period = datas.Period.query.get(wait_per)
-        target = per.start_time.timestamp()
-        if per.is_virtual:
-            status = "waiting_virtual"
-        else:
-            status = "waiting"
-    else:
-        per_id = contests.check_period(dat)
-        if per_id:
-            per: datas.Period = datas.Period.query.get(per_id)
-            target = per.end_time.timestamp()
-            if per.is_virtual:
-                status = "running_virtual"
-            else:
-                status = "running"
+    can_edit = contests.check_super_access(dat)
+    can_see = can_see or can_edit
     return render_template("contest.html", cid=idx, data=info, can_edit=can_edit, can_see=can_see, target=target,
                            status=status)
 
@@ -70,9 +52,7 @@ def contest_page(idx):
 @app.route("/contest/<cid>/problem/<pid>", methods=["GET"])
 def contest_problem(cid, pid):
     cdat: datas.Contest = datas.Contest.query.filter_by(cid=cid).first_or_404()
-    wait_per = contests.check_waiting(cdat)
-    if wait_per:
-        abort(403)
+    contests.check_access(cdat)
     info = cdat.data
     if pid not in info["problems"]:
         abort(404)
@@ -148,7 +128,7 @@ def contest_status(cid, page_str):
 def contest_action():
     idx = request.form["cid"]
     cdat = datas.Contest.query.filter_by(cid=idx).first_or_404()
-    if not current_user.has("admin") and not current_user.id in cdat.data["users"]:
+    if contests.check_super_access(cdat):
         abort(403)
     return contests.action(request.form, cdat)
 
@@ -220,8 +200,7 @@ def contest_standing(cid):
     dt = dt / 60 - cdat.data["elapsed"]
     can_see = (cdat.data["standing"]["public"] and
                (dt <= -cdat.data["standing"]["start_freeze"] or dt >= cdat.data["standing"]["end_freeze"]))
-    if not can_see and not (
-            current_user.is_authenticated and (current_user.has("admin") or current_user.id in cdat.data["users"])):
+    if not can_see and not contests.check_super_access(cdat):
         abort(403)
     per: datas.Period = datas.Period.query.get_or_404(cdat.main_period_id)
     ret = []
@@ -244,4 +223,5 @@ def contest_standing(cid):
                     "start_time": per.start_time.timestamp(),
                     "rule": cdat.data["type"],
                     "pids": list(cdat.data["problems"].keys()),
-                    "penalty": cdat.data["penalty"]})
+                    "penalty": cdat.data["penalty"],
+                    "judging": per.judging})

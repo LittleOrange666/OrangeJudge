@@ -22,7 +22,7 @@ CSRFProtect(app)
 limiter = Limiter(
     get_remote_address,
     app=app,
-    default_limits=["20/minute"],
+    default_limits=["10 per 30 second", "1 per 1 second"],
     storage_uri="redis://localhost:6379",
     storage_options={"socket_connect_timeout": 30},
     strategy="fixed-window"

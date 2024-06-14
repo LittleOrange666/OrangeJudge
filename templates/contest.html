@@ -13,7 +13,6 @@
         {% endif %}
     </div>
 </div>
-{% if can_see %}
 <ul class="nav nav-tabs">
     <li class="nav-item" role="presentation">
         <a class="nav-link active" id="index_page_tab" data-bs-toggle="tab" data-bs-target="#index_page"
@@ -45,6 +44,7 @@
 </ul>
 <div class="tab-content">
     <div id="index_page" class="tab-pane fade show active">
+        {% if can_see %}
         <table class="table table-hover table-striped">
             <thead>
             <tr>
@@ -72,6 +72,7 @@
             {% endfor %}
             </tbody>
         </table>
+        {% endif %}
         {% if can_edit %}
         <form the_action="add_problem">
             <div class="row">
@@ -154,6 +155,17 @@
         </nav>
     </div>
     <div id="standing" class="tab-pane fade">
+        <p class="text-center h2 d-none text-danger" id="standing_error"></p>
+        <p class="text-center h4 d-none text-info" id="standing_judging">目前並非最終結果</p>
+        <div class="row">
+            <div class="col-auto">
+                <button class="btn btn-primary" id="standing_refresh">刷新</button>
+            </div>
+        </div>
+        <div class="d-flex align-items-center" id="standing_loading">
+          <strong>Loading...</strong>
+          <div class="spinner-border ms-auto" role="status" aria-hidden="true"></div>
+        </div>
         <table class="table table-hover table-striped" id="standing_table">
             <thead>
             <tr>
@@ -339,7 +351,6 @@
 </div>
 <script src="/static/tab_memory.js"></script>
 <script src="/static/contest.js"></script>
-{% endif %}
 <input id="cid" value="{{ cid }}" hidden>
 <input id="username" value="{{ current_user.id if current_user.is_authenticated else 'unknow' }}" hidden>
 {% endblock %}

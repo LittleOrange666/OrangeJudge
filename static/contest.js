@@ -156,12 +156,29 @@ $(function() {
     }
     {
         function load_standing(){
+            $("#standing_loading").removeClass("d-none",true);
+            $("#standing_error").addClass("d-none",true);
+            $("#standing_table thead tr").empty();
+            $("#standing_table tbody").empty();
             fetch("/contest/"+cid+"/standing",{
                 method: "POST",
                 headers: {"x-csrf-token": $("#csrf_token").val()}
             }).then(function(response){
-                return response.json();
+                if (response.ok) {
+                    return response.json();
+                }else if (response.status==403){
+                    $("#standing_error").text("目前無法觀看記分板").removeClass("d-none");
+                }else{
+                    $("#standing_error").text("Error "+response.status+" "+response.statusText).removeClass("d-none");
+                }
+                $("#standing_loading").addClass("d-none",true);
+                throw new Error("Network response was not ok.");
             }).then(function(data){
+                if(data["judging"]){
+                    $("#standing_judging").removeClass("d-none");
+                }else{
+                    $("#standing_judging").addClass("d-none");
+                }
                 console.log(data['submissions']);
                 if (data['rule']=="ioi"){
                     let out = {};
@@ -302,6 +319,7 @@ $(function() {
                         tb.find("tbody").append(tr);
                     }
                 }
+                $("#standing_loading").addClass("d-none",true);
             });
         }
         let inited = false;
@@ -312,8 +330,10 @@ $(function() {
             }
         });
         if (location.hash=="#standing") $("#standing_tab").click();
+        $("#standing_refresh").click(load_standing);
     }
     let contest_status = $("#contest_status").data("status");
-    let status_mp = {"practice": "練習模式", "waiting_virtual": "等待模擬競賽開始", "waiting": "等待競賽開始", "running": "競賽進行中", "running_virtual": "模擬競賽進行中"};
+    let status_mp = {"practice": "練習模式", "waiting_virtual": "等待模擬競賽開始", "waiting": "等待競賽開始", "running": "競賽進行中", "running_virtual": "模擬競賽進行中",
+                    "guest": "僅觀看", "testing": "測試模式"};
     $("#contest_status").text(status_mp[contest_status]);
 });
