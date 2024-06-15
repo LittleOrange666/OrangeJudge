@@ -6,7 +6,7 @@ from flask_limiter.util import get_remote_address
 from flask_session import Session
 from flask_wtf import CSRFProtect
 
-from modules import tools
+from modules import tools, config
 
 app = Flask(__name__, static_url_path='/static', static_folder="../static/", template_folder="../templates/")
 app.config['SECRET_KEY'] = 'HP4xkCix2nf5qCmxSXV0sBwocE2CjECC5z2T9TKQmv8'
@@ -22,7 +22,7 @@ CSRFProtect(app)
 limiter = Limiter(
     get_remote_address,
     app=app,
-    default_limits=["10 per 30 second", "1 per 1 second"],
+    default_limits=config.get("server.limits"),
     storage_uri="redis://localhost:6379",
     storage_options={"socket_connect_timeout": 30},
     strategy="fixed-window"

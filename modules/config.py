@@ -58,6 +58,7 @@ verify_int("server.workers")
 verify_int("server.timeout")
 verify_int("judge.workers")
 verify_bool("debug.log")
+verify_list("server.limits")
 
 
 def init():

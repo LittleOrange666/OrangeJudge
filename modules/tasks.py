@@ -63,13 +63,17 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
             groups["default"] = {}
         for o in groups.values():
             o |= {"result": "OK", "time": 0, "mem": 0, "gainscore": top_score if o.get("rule", "min") == "min" else 0}
-        testcases = problem_info["testcases"]
+        testcases: list = problem_info["testcases"]
         if "testcases_gen" in problem_info:
             testcases.extend([o | {"gen": True} for o in problem_info["testcases_gen"]])
+        group_testcases = {k: [] for k in groups}
+        for obj in testcases:
+            group_testcases[obj.get("group", "default")].append(obj)
+        testcases.clear()
+        for k, v in group_testcases.items():
+            testcases.extend(v)
         for i, testcase in enumerate(testcases):
-            gp = "default"
-            if "group" in testcase and testcase["group"] in groups:
-                gp = testcase["group"]
+            gp = testcase.get("group", "default")
             is_sample = testcase.get("sample", False)
             exist_gp.add(gp)
             if "dependency" in groups[gp]:

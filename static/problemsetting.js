@@ -390,6 +390,60 @@ $(function() {
             }
         });
     });
+    {
+        let groups = [];
+        let dependency = {};
+        $("#group_list tr").each(function(){
+            let name = $(this).find("th").text().trim();
+            groups.push(name);
+            dependency[name] = [];
+            $(this).find(".dependency span.parents").each(function(){
+                dependency[name].push($(this).text().trim());
+            });
+        });
+        function add_dependency(name, parent){
+            dependency[name].push(parent);
+            update_dependency();
+        }
+        function remove_dependency(name, parent){
+            dependency[name].pop(parent);
+            update_dependency();
+        }
+        function update_dependency(){
+            $("#group_list tr").each(function(){
+                let name = $(this).find("th").text().trim();
+                $(this).find(".dependency").empty();
+                for(let parent of dependency[name]){
+                    let rmbtn = $('<button type="button" class="btn-close close-sm" aria-label="Close"></button>');
+                    rmbtn.click(function(){remove_dependency(name, parent);});
+                    $(this).find(".dependency").append(
+                        $('<div class="col-auto">').append(
+                            $('<div class="alert alert-primary alert-sm-border btn-group" role="alert">')
+                            .append($("<span>").text(parent)).append(rmbtn)
+                        ).append($('<input type="hidden" name="dependency_'+groups.indexOf(name)+'_'+groups.indexOf(parent)+'" value="yes">'))
+                    );
+                }
+                let remain = [];
+                for(let parent of groups) if (parent!=name && !dependency[name].includes(parent)){
+                    remain.push(parent);
+                }
+                if (remain.length>0){
+                    let select = $('<select class="form-select" aria-label="select dependency">');
+                    let btn = $('<button type="button" class="btn btn-primary btn-sm">+</button>');
+                    for(let parent of remain){
+                        select.append($('<option>').val(parent).text(parent));
+                    }
+                    btn.click(function(){
+                        add_dependency(name, select.val());
+                    });
+                    $(this).find(".dependency").append(
+                        $('<div class="col-auto btn-group">').append(select).append(btn)
+                    );
+                }
+            });
+        }
+        update_dependency();
+    }
     // versions
     $("#create_version").click(function(){
         let content = $("#version_name_input").val();

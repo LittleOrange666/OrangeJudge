@@ -140,7 +140,7 @@ def submission(idx):
             result["CE"] = result_data["CE"]
             results = result_data["results"]
             # result["protected"] = protected = result_data.get("protected", False)
-            result["protected"] = protected = ((not dat.get('public_testcase', False) or bool(dat.period_id))
+            result["protected"] = protected = ((not problem_info.get('public_testcase', False) or bool(dat.period_id))
                                                and dat.user.username not in problem_info["users"])
             if not protected:
                 for i in range(len(results)):

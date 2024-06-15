@@ -4,6 +4,7 @@ import os
 import shutil
 import time
 import traceback
+from graphlib import TopologicalSorter, CycleError
 from multiprocessing import Queue, Process
 from typing import Callable
 from xml.etree import ElementTree
@@ -727,10 +728,10 @@ def do_generate(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Pr
 
 @actions.bind
 def create_group(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
-    name = secure_filename(form["name"])
+    name = secure_filename(form["name"].strip())
     if name in dat["groups"]:
         abort(409)
-    dat["groups"][name] = {"score": 100, "rule": "min"}
+    dat["groups"][name] = {"score": 100, "rule": "min", "dependency": []}
     return "tests"
 
 
@@ -759,9 +760,30 @@ def save_groups(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Pr
             abort(400)
         d[k] = int(form["score_" + k])
         dr[k] = form["rule_" + k]
-    for k in dat["groups"]:
+    cnt = len(dat["groups"])
+    names = list(dat["groups"].keys())
+    dep = {i: [] for i in range(cnt)}
+    for i in range(cnt):
+        for j in range(cnt):
+            if f"dependency_{i}_{j}" in form:
+                if i == j:
+                    abort(400)
+                dep[i].append(j)
+    order = list(range(cnt))
+    try:
+        order = list(TopologicalSorter(dep).static_order())
+    except CycleError:
+        abort(400)
+    for i, k in enumerate(dat["groups"]):
         dat["groups"][k]["score"] = d[k]
         dat["groups"][k]["rule"] = dr[k]
+        dat["groups"][k]["dependency"] = [names[j] for j in dep[i]]
+    tmp = []
+    for k, v in dat["groups"].items():
+        tmp.append((k, v))
+    dat["groups"].clear()
+    for i in order:
+        dat["groups"][tmp[i][0]] = tmp[i][1]
     return "tests"
 
 

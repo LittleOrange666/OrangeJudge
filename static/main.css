@@ -69,3 +69,13 @@ textarea{
     height: auto !important; /* 强制将高度设置为自适应 */
     max-height: none !important; /* 禁用最大高度限制 */
 }
+
+.close-sm {
+    opacity: 1;
+    background-size: 10px;
+}
+
+.alert-sm-border {
+    padding: 5px;
+    margin: 0px;
+}

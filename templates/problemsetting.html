@@ -376,16 +376,16 @@
                         <th scope="col">刪除</th>
                     </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="group_list">
                     {% for k, group in dat['groups'].items()%}
                     <tr>
                         <th scope="row">{{ k }}</th>
                         <td>
-                            {% if "dependency" in group%}
-                            {% for parent in group["dependency"] %}
-                            {{ parent }}
-                            {% endfor %}
-                            {% endif %}
+                            <div class="row dependency">
+                                {% for parent in group.get("dependency",[]) %}
+                                <span class="d-none parents">{{ parent }}</span>
+                                {% endfor %}
+                            </div>
                         </td>
                         <td>
                             <select class="form-select form-control" name="rule_{{ k }}"
@@ -407,7 +407,7 @@
                     {% endfor %}
                     </tbody>
                 </table>
-                <button type="button" class="btn btn-primary submitter" data-gp="{{ k }}">儲存</button>
+                <button type="button" class="btn btn-primary submitter" data-msg-400="輸入格式不正確，可能是出現了循環相依">儲存</button>
             </form>
         </div>
         <br>
