@@ -64,6 +64,8 @@ class Submission(db.Model):
     data = db.Column(db.JSON)
     pid = db.Column(db.String(20))
     just_pretest = db.Column(db.Boolean, default=False)
+    simple_result = db.Column(db.String(40))
+    queue_position = db.Column(db.Integer)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

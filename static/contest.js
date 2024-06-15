@@ -331,6 +331,13 @@ $(function() {
         });
         if (location.hash=="#standing") $("#standing_tab").click();
         $("#standing_refresh").click(load_standing);
+        let auto_refresh = false;
+        $("#standing_auto_refresh").change(function(){
+            auto_refresh = $(this).prop("checked");
+        });
+        window.setInterval(function(){
+            if(auto_refresh) load_standing();
+        },20000);
     }
     let contest_status = $("#contest_status").data("status");
     let status_mp = {"practice": "練習模式", "waiting_virtual": "等待模擬競賽開始", "waiting": "等待競賽開始", "running": "競賽進行中", "running_virtual": "模擬競賽進行中",

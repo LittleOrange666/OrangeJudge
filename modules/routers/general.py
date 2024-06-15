@@ -65,7 +65,8 @@ def test():
         idx = str(dat.id)
         tools.write(code, f"submissions/{idx}/Main{ext}")
         tools.write(inp, f"submissions/{idx}/in.txt")
-        tasks.submissions_queue.put(idx)
+        dat.queue_position = tasks.enqueue(dat.id)
+        datas.add(dat)
         return redirect("/submission/" + idx)
 
 
@@ -87,7 +88,7 @@ def submit():
     tools.append(idx + "\n", current_user.folder, "submissions")
     """
     dat = datas.Submission(source="Main" + ext, time=datetime.datetime.now(), user=current_user.data,
-                           problem=pdat, language=lang, data={}, pid=pid)
+                           problem=pdat, language=lang, data={}, pid=pid, simple_result="waiting")
     if "cid" in request.form:
         cdat: datas.Contest = datas.Contest.query.filter_by(cid=request.form["cid"]).first_or_404()
         contests.check_access(cdat)
@@ -100,7 +101,8 @@ def submit():
     datas.add(dat)
     idx = str(dat.id)
     tools.write(code, f"submissions/{idx}/Main{ext}")
-    tasks.submissions_queue.put(idx)
+    dat.queue_position = tasks.enqueue(dat.id)
+    datas.add(dat)
     return redirect("/submission/" + idx)
 
 
@@ -120,10 +122,10 @@ def submission(idx):
             abort(403)
         inp = tools.read_default(path, dat.data["infile"])
         out = tools.read_default(path, dat.data["outfile"])
-        result = dat.result.get("simple_result", "") if dat.result else ""
+        result = dat.simple_result or "blank"
         err = tools.read_default(path, "stderr.txt")
         ret = render_template("submission/test.html", lang=lang, source=source, inp=inp,
-                              out=out, completed=completed, result=result, pos=tasks.get_queue_position(idx),
+                              out=out, completed=completed, result=result, pos=tasks.get_queue_position(dat),
                               ce_msg=ce_msg, je=dat.data.get("JE", False), logid=dat.data.get("log_uuid", ""), err=err)
     else:
         group_results = {}
@@ -177,7 +179,7 @@ def submission(idx):
                     break
         ret = render_template("submission/problem.html", lang=lang, source=source, completed=completed,
                               pname=problem_info["name"], result=result, enumerate=enumerate,
-                              group_results=group_results, link=link, pos=tasks.get_queue_position(idx),
+                              group_results=group_results, link=link, pos=tasks.get_queue_position(dat),
                               ce_msg=ce_msg, je=dat.data.get("JE", False), logid=dat.data.get("log_uuid", ""),
                               super_access=super_access, contest=contest, cid=cid, protected=protected)
     return ret
@@ -242,13 +244,7 @@ def my_submissions():
     for dat in reversed(got_data):
         dat: datas.Submission
         idx = str(dat.id)
-        o = {"name": str(dat.id), "time": dat.time.timestamp(), "result": "blank"}
-        if not dat.completed:
-            o["result"] = "waiting"
-        else:
-            result = dat.result
-            if result and "simple_result" in result:
-                o["result"] = result["simple_result"]
+        o = {"name": str(dat.id), "time": dat.time.timestamp(), "result": dat.simple_result or "blank"}
         if dat.problem is None:
             continue
         if dat.problem.pid == "test":

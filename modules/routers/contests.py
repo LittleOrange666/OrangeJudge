@@ -102,13 +102,7 @@ def contest_status(cid, page_str):
             if v["pid"] == pid:
                 problem = k
                 problem_name = v["name"]
-        result = "blank"
-        if not obj.completed:
-            result = "waiting"
-        else:
-            res = obj.result
-            if res and "simple_result" in res:
-                result = res["simple_result"]
+        result = obj.simple_result or "blank"
         can_see = current_user.has("admin") or current_user.id == obj.user.username
         out.append({"idx": str(obj.id),
                     "time": obj.time.timestamp(),

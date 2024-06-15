@@ -8,7 +8,9 @@ from modules import executing, constants, tools, locks, datas, config
 
 submissions_queue = Queue()
 
-last_judged = locks.AtomicValue(0)
+last_judged = locks.Counter()
+
+queue_position = locks.Counter()
 
 
 def run_test(dat: datas.Submission) -> None:
@@ -19,7 +21,8 @@ def run_test(dat: datas.Submission) -> None:
     in_file = os.path.abspath(f"submissions/{idx}/" + dat.data["infile"])
     out_file = os.path.abspath(f"submissions/{idx}/" + dat.data["outfile"])
     result = lang.run(source, env, [(in_file, out_file)])
-    dat.result = {"simple_result": result}
+    dat.result = {}
+    dat.simple_result = result
     dat.completed = True
     datas.add(dat)
 
@@ -184,19 +187,22 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
     out_info["group_results"] = {k: {key: v[key] for key in keys} for k, v in groups.items() if k in exist_gp}
     if simple_result == "NA":
         simple_result += f" {total_score}%"
-    out_info["simple_result"] = simple_result
     out_info["total_score"] = total_score
-    out_info["protected"] = ((not dat.get('public_testcase', False) or bool(dat.period_id))
+    out_info["protected"] = ((not problem_info.get('public_testcase', False) or bool(dat.period_id))
                              and dat.user.username not in problem_info["users"])
     dat.result = out_info
+    dat.simple_result = simple_result
     dat.completed = True
     datas.add(dat)
 
 
-def get_queue_position(idx: str) -> int:
-    if not idx.isdigit():
-        abort(400)
-    return max(int(idx) - last_judged.value, 0)
+def get_queue_position(dat: datas.Submission) -> int:
+    return max(dat.queue_position - last_judged.value, 0)
+
+
+def enqueue(idx: int) -> int:
+    submissions_queue.put(str(idx))
+    return queue_position.inc()
 
 
 def runner():
@@ -206,7 +212,7 @@ def runner():
         if dat is None:
             continue
         try:
-            last_judged.value = idx
+            last_judged.inc()
             pdat: datas.Problem = dat.problem
             if pdat.pid == "test":
                 run_test(dat)
@@ -225,4 +231,3 @@ def runner():
 def init():
     for _ in range(config.get("judge.workers")):
         Process(target=runner).start()
-    last_judged.value = datas.Submission.query.count()

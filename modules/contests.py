@@ -225,7 +225,7 @@ def check_period(dat: datas.Contest) -> int:
 
 
 def break_result(dat: datas.Submission):
-    dat.result["simple_result"] = "ignored"
+    dat.simple_result = "ignored"
     dat.result["total_score"] = 0
     if "group_results" in dat.result:
         for k in dat.result["group_results"]:
@@ -234,10 +234,9 @@ def break_result(dat: datas.Submission):
 
 
 def resubmit(dat: datas.Submission):
-    dat.result["simple_result"] = "wait system test"
+    dat.simple_result = "wait system test"
     dat.completed = False
-    tasks.submissions_queue.put(str(dat.id))
-    flag_modified(dat, "result")
+    dat.queue_position = tasks.enqueue(dat.id)
 
 
 def contest_worker():
@@ -255,7 +254,7 @@ def contest_worker():
                     dic: dict[int, datas.Submission] = {}
                     for submission in submissions:
                         submission.just_pretest = False
-                        if submission.result["simple_result"].lower() not in ("jc", "ce"):
+                        if submission.simple_result.lower() not in ("jc", "ce"):
                             break_result(submission)
                             if pretest == "all":
                                 resubmit(submission)

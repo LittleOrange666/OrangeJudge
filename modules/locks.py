@@ -1,5 +1,5 @@
 import os
-from multiprocessing import Lock, Manager
+from multiprocessing import Lock, Manager, Value
 from multiprocessing.managers import SyncManager
 from time import sleep
 from typing import Generic, TypeVar
@@ -46,6 +46,24 @@ class AtomicValue(Generic[T]):
     def value(self, value: T):
         with self.lock:
             self._value.value = value
+
+
+class Counter:
+    __slots__ = ("_value", "lock")
+
+    def __init__(self):
+        self._value = Value("i", 0)
+        self.lock = Lock()
+
+    @property
+    def value(self) -> int:
+        with self.lock:
+            return self._value.value
+
+    def inc(self) -> int:
+        with self.lock:
+            self._value.value = self._value.value + 1
+            return self._value.value
 
 
 def init():
