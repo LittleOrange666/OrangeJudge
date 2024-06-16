@@ -826,6 +826,55 @@ def save_languages(form: ImmutableMultiDict[str, str], pid: str, path: str, dat:
     return "languages"
 
 
+@actions.bind
+def create_gen_group(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
+    file1 = form["file1"]
+    if not any(o["name"] == file1 for o in dat["files"]):
+        abort(404)
+    file2 = form["file2"]
+    if not any(o["name"] == file2 for o in dat["files"]):
+        abort(404)
+    group = form["group"]
+    if group not in dat["groups"]:
+        abort(404)
+    tp = form["type"]
+    if tp not in ("sol", "gen"):
+        abort(400)
+    cnt = tools.to_int(form["mul"])
+    cmds = form["cmds"].split("\n")
+    out_cmds = []
+    for i in range(1, cnt+1):
+        for s in cmds:
+            out_cmds.append(s.replace("{index}", str(i)))
+    if "gen_groups" not in dat:
+        dat["gen_groups"] = []
+    dat["gen_groups"].append({"file1": file1, "file2": file2, "group": group, "type": tp, "cmds": out_cmds,
+                              "status": "未更新"})
+
+
+@actions.bind
+def update_gen_group(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
+    file1 = form["file1"]
+    if not any(o["name"] == file1 for o in dat["files"]):
+        abort(404)
+    file2 = form["file2"]
+    if not any(o["name"] == file2 for o in dat["files"]):
+        abort(404)
+    group = form["group"]
+    if group not in dat["groups"]:
+        abort(404)
+    tp = form["type"]
+    if tp not in ("sol", "gen"):
+        abort(400)
+    idx = tools.to_int(form["idx"])
+    cmds = form["cmds"].split("\n")
+    if "gen_groups" not in dat or idx < 0 or idx >= len(dat["gen_groups"]):
+        abort(400)
+    dat["gen_groups"][idx] = {"file1": file1, "file2": file2, "group": group, "type": tp, "cmds": cmds,
+                              "status": "未更新"}
+    return "tests"
+
+
 def action(form: ImmutableMultiDict[str, str]) -> Response:
     pid = secure_filename(form["pid"])
     path = f"preparing_problems/{pid}"

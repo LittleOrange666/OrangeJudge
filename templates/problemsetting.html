@@ -486,6 +486,133 @@
             </div>
         </div>
         <div class="container-fluid">
+            <h4>建立生成測資組</h4>
+            <div class="card card-body">
+                <form the_action="create_gen_group">
+                    <div class="row">
+                        <div class="col">
+                            <label class="form-label" for="gen_group_group">分組</label>
+                            <select class="form-select form-control" name="group"
+                                    data-value="default" id="gen_group_group">
+                                {% for group in dat['groups']%}
+                                <option value="{{ group }}">{{ group }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col">
+                            <label class="form-label" for="gen_group_file1">生成器</label>
+                            <select class="form-select" name="file1" id="gen_group_file1" required>
+                                <option value="" selected>選擇檔案</option>
+                                {% for file in dat["files"] %}
+                                <option value="{{ file['name'] }}">{{ file['name'] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col">
+                            <div class="form-check">
+                              <input class="form-check-input" type="radio" name="type" id="gen_group_check1" value="sol" checked>
+                              <label class="form-check-label" for="gen_group_check1">
+                                解題程式
+                              </label>
+                            </div>
+                            <div class="form-check">
+                              <input class="form-check-input" type="radio" name="type" id="gen_group_check2" value="gen">
+                              <label class="form-check-label" for="gen_group_check2">
+                                答案生成器
+                              </label>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <label class="form-label" for="gen_group_file2">解題程式/答案生成器</label>
+                            <select class="form-select" name="file2" id="gen_group_file2" required>
+                                <option value="" selected>選擇檔案</option>
+                                {% for file in dat["files"] %}
+                                <option value="{{ file['name'] }}">{{ file['name'] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col">
+                            <label class="form-label" for="gen_group_mul">重複次數</label>
+                            <input class="form-control" name="mul" value="1" id="gen_group_mul" type="number" min="1" max="100" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <label class="form-label" for="gen_group_cmd">生成參數</label>
+                        <textarea class="form-control" name="cmds" rows="3" id="gen_group_cmd" placeholder="使用{index}來代入編號" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <button class="btn btn-primary submitter">建立</button>
+                    </div>
+                </form>
+            </div>
+            {% for i,gen_group in enumerate(dat.get("gen_groups",[])) %}
+            <br>
+            <h4>生成測資組{{ i+1 }}</h4>
+            <div class="card card-body">
+                <form the_action="update_gen_group">
+                    <input type="hidden" name="idx" value="{{ i }}">
+                    <div class="row">
+                        <div class="col">
+                            <label class="form-label" for="gen_group_{{ i }}_group">分組</label>
+                            <select class="form-select form-control" name="group"
+                                    data-value="{{ gen_group['group'] }}" id="gen_group_{{ i }}_group">
+                                {% for group in dat['groups']%}
+                                <option value="{{ group }}">{{ group }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col">
+                            <label class="form-label" for="gen_group_{{ i }}_file1">生成器</label>
+                            <select class="form-select" name="file1" id="gen_group_{{ i }}_file1"
+                                    data-value="{{ gen_group['file1'] }}" required>
+                                {% for file in dat["files"] %}
+                                <option value="{{ file['name'] }}">{{ file['name'] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col radio-selector" data-value="{{ gen_group['type'] }}">
+                            <div class="form-check">
+                              <input class="form-check-input" type="radio" name="type" id="gen_group_{{ i }}_check1" value="sol" checked>
+                              <label class="form-check-label" for="gen_group_{{ i }}_check1">
+                                解題程式
+                              </label>
+                            </div>
+                            <div class="form-check">
+                              <input class="form-check-input" type="radio" name="type" id="gen_group_{{ i }}_check2" value="gen">
+                              <label class="form-check-label" for="gen_group_{{ i }}_check2">
+                                答案生成器
+                              </label>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <label class="form-label" for="gen_group_{{ i }}_file2">解題程式/答案生成器</label>
+                            <select class="form-select" name="file2" id="gen_group_{{ i }}_file2"
+                                    data-value="{{ gen_group['file2'] }}" required>
+                                {% for file in dat["files"] %}
+                                <option value="{{ file['name'] }}">{{ file['name'] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col">
+                            狀態：{{ gen_group['status'] }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <label class="form-label" for="gen_group_{{ i }}_cmd">生成參數</label>
+                        <textarea class="form-control" name="cmds" rows="3" id="gen_group_{{ i }}_cmd" required>{{ "\n".join(gen_group['cmds']) }}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <button class="btn btn-primary submitter">儲存</button>
+                    </div>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+        <form the_action="do_generate">
+            <button class="btn btn-primary submitter">嘗試生成測資</button>
+        </form>
+        <!--
+        <div class="container-fluid">
             <h4>生成測資</h4>
             <div class="edit-detector"></div>
             <div class="card card-body">
@@ -573,6 +700,7 @@
                 <button class="btn btn-primary data-saver" id="save_testcase_gen">儲存</button>
             </div>
         </div>
+        -->
     </div>
     <div id="versions" class="tab-pane fade">
         <h3>版本控制</h3>
