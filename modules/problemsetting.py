@@ -191,15 +191,19 @@ def generate_testcase(pid: str):
     int_cmd = []
     run_cmds = {}
 
-    def get_cmd(s: str, name: str):
+    def get_cmd(s: str, title: str):
         if s not in run_cmds:
-            run_cmds[s] = problem.compile_inner(s, name, env)
+            run_cmds[s] = problem.compile_inner(s, title, env)
         return run_cmds[s]
 
     if problem["is_interact"]:
         int_cmd = get_cmd(problem["interactor_source"], "interactor")
     tl = float(problem["timelimit"]) / 1000
     ml = int(problem["memorylimit"])
+    log("clear folder")
+    shutil.rmtree(f"{path}/testcases_gen")
+    os.makedirs(f"{path}/testcases_gen")
+    log("complete clear folder")
     if "gen_groups" in problem:
         for gpidx, gen_group in enumerate(problem["gen_groups"]):
             file1_cmd = get_cmd(gen_group["file1"], "generator")
@@ -223,7 +227,8 @@ def generate_testcase(pid: str):
                     if problem["is_interact"]:
                         env.judge_readable(in_file)
                         env.judge_writeable(out_file)
-                        out = env.runwithinteractshell(file2_cmd, int_cmd, env.filepath(in_file), env.filepath(out_file),
+                        out = env.runwithinteractshell(file2_cmd, int_cmd, env.filepath(in_file),
+                                                       env.filepath(out_file),
                                                        tl, ml,
                                                        sol_lang.base_exec_cmd)
                     else:
@@ -262,93 +267,6 @@ def generate_testcase(pid: str):
             else:
                 gen_group['status'] = "生成成功"
                 gen_list.extend(cur)
-    """
-    if "gen_msg" in problem:
-        i = 1
-        tests = []
-        seed = problem["gen_msg"]["seed"]
-        for k, v in problem["gen_msg"]["counts"].items():
-            for j in range(int(v)):
-                tests.append((f"{k}_{j + 1}", [str(i), k, seed]))
-                i += 1
-        exec_cmd = problem.compile_inner(problem["gen_msg"]["generator"], "generator", env)
-        sol_cmd = problem.compile_inner(problem["gen_msg"]["solution"], "solution", env)
-        sol_lang = problem.lang(problem["gen_msg"]["solution"])
-        if os.path.isdir(path + "/testcases_gen/"):
-            shutil.rmtree(path + "/testcases_gen/")
-        os.makedirs(path + "/testcases_gen/", exist_ok=True)
-        for test in tests:
-            in_file = os.path.abspath(path + "/testcases_gen/" + test[0] + ".in")
-            out_file = os.path.abspath(path + "/testcases_gen/" + test[0] + ".out")
-            log(f"generating testcase {test[0]!r}")
-            gen_out = env.safe_run(exec_cmd + test[1])
-            if gen_out[2]:
-                log("generator RE")
-                log(gen_out[1])
-                end(False)
-            tools.write(gen_out[0], in_file)
-            env.send_file(in_file)
-            if problem["is_interact"]:
-                env.judge_readable(in_file)
-                env.judge_writeable(out_file)
-                out = env.runwithinteractshell(sol_cmd, int_cmd, env.filepath(in_file), env.filepath(out_file), tl, ml,
-                                               sol_lang.base_exec_cmd)
-            else:
-                out = env.runwithshell(sol_cmd, env.filepath(in_file), env.filepath(out_file), tl, ml,
-                                       sol_lang.base_exec_cmd)
-            result = {o[0]: o[1] for o in (s.split("=") for s in out[0].split("\n")) if len(o) == 2}
-            if "1" == result.get("WIFSIGNALED", None) or "0" != result.get("WEXITSTATUS", "0"):
-                log("solution RE")
-                log(out[1])
-                end(False)
-            env.get_file(out_file)
-        gen_list += [{"in": test[0] + ".in", "out": test[0] + ".out", "sample": False, "pretest": False,
-                      "group": test[1][1]} for test in tests]
-    if "ex_gen_msg" in problem:
-        sol = problem["ex_gen_msg"]["solution"]
-        cmds = problem["ex_gen_msg"]["cmds"]
-        sol_cmd = problem.compile_inner(sol, "solution", env)
-        sol_lang = problem.lang(sol)
-        gens = list({cmd[0].split()[0] for cmd in cmds})
-        gen_exec = {}
-        tools.log(problem["files"])
-        tools.log(gens)
-        for k in gens:
-            if not any(file["name"].startswith(k + ".") for file in problem["files"]):
-                log(f"unknown generator {k!r}")
-        for k in gens:
-            gen = next(file["name"] for file in problem["files"] if file["name"].startswith(k + "."))
-            gen_exec[k] = problem.compile_inner(gen, f"generator({k})", env)
-        for i, test in enumerate(cmds):
-            test = test[0].split()
-            in_file = os.path.abspath(path + f"/testcases_gen/{i}_exgen.in")
-            out_file = os.path.abspath(path + f"/testcases_gen/{i}_exgen.out")
-            log(f"generating ex testcase {i}")
-            gen_out = env.safe_run(gen_exec[test[0]] + test[1:])
-            if gen_out[2]:
-                log("generator RE")
-                log(gen_out[1])
-                end(False)
-            tools.write(gen_out[0], in_file)
-            env.send_file(in_file)
-            if problem["is_interact"]:
-                env.judge_readable(in_file)
-                env.judge_writeable(out_file)
-                out = env.runwithinteractshell(sol_cmd, int_cmd, env.filepath(in_file), env.filepath(out_file), tl, ml,
-                                               sol_lang.base_exec_cmd)
-            else:
-                out = env.runwithshell(sol_cmd, env.filepath(in_file), env.filepath(out_file), tl, ml,
-                                       sol_lang.base_exec_cmd)
-            result = {o[0]: o[1] for o in (s.split("=") for s in out[0].split("\n")) if len(o) == 2}
-            if "1" == result.get("WIFSIGNALED", None) or "0" != result.get("WEXITSTATUS", "0"):
-                log("solution RE")
-                log(out[1])
-                end(False)
-            env.get_file(out_file)
-        gen_list += [
-            {"in": f"{i}_exgen.in", "out": f"{i}_exgen.out", "sample": False, "pretest": False, "group": test[1]}
-            for i, test in enumerate(cmds)]
-    """
     log(f"generate complete")
     problem["testcases_gen"] = gen_list
 
@@ -966,6 +884,15 @@ def update_gen_group(form: ImmutableMultiDict[str, str], pid: str, path: str, da
         abort(400)
     dat["gen_groups"][idx] = {"file1": file1, "file2": file2, "group": group, "type": tp, "cmds": cmds,
                               "status": "未更新"}
+    return "tests"
+
+
+@actions.bind
+def remove_gen_group(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
+    idx = tools.to_int(form["idx"])
+    if "gen_groups" not in dat or idx < 0 or idx >= len(dat["gen_groups"]):
+        abort(400)
+    dat["gen_groups"].pop(idx)
     return "tests"
 
 

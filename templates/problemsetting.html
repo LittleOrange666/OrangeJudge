@@ -407,7 +407,9 @@
                     {% endfor %}
                     </tbody>
                 </table>
-                <button type="button" class="btn btn-primary submitter" data-msg-400="輸入格式不正確，可能是出現了循環相依">儲存</button>
+                <button type="button" class="btn btn-primary submitter"
+                        data-msg-400="輸入格式不正確，可能是出現了循環相依">儲存
+                </button>
             </form>
         </div>
         <br>
@@ -510,16 +512,18 @@
                         </div>
                         <div class="col">
                             <div class="form-check">
-                              <input class="form-check-input" type="radio" name="type" id="gen_group_check1" value="sol" checked>
-                              <label class="form-check-label" for="gen_group_check1">
-                                解題程式
-                              </label>
+                                <input class="form-check-input" type="radio" name="type" id="gen_group_check1"
+                                       value="sol" checked>
+                                <label class="form-check-label" for="gen_group_check1">
+                                    解題程式
+                                </label>
                             </div>
                             <div class="form-check">
-                              <input class="form-check-input" type="radio" name="type" id="gen_group_check2" value="gen">
-                              <label class="form-check-label" for="gen_group_check2">
-                                答案生成器
-                              </label>
+                                <input class="form-check-input" type="radio" name="type" id="gen_group_check2"
+                                       value="gen">
+                                <label class="form-check-label" for="gen_group_check2">
+                                    答案生成器
+                                </label>
                             </div>
                         </div>
                         <div class="col">
@@ -533,12 +537,14 @@
                         </div>
                         <div class="col">
                             <label class="form-label" for="gen_group_mul">重複次數</label>
-                            <input class="form-control" name="mul" value="1" id="gen_group_mul" type="number" min="1" max="100" required>
+                            <input class="form-control" name="mul" value="1" id="gen_group_mul" type="number" min="1"
+                                   max="100" required>
                         </div>
                     </div>
                     <div class="row">
                         <label class="form-label" for="gen_group_cmd">生成參數</label>
-                        <textarea class="form-control" name="cmds" rows="3" id="gen_group_cmd" placeholder="使用{index}來代入編號" required></textarea>
+                        <textarea class="form-control" name="cmds" rows="3" id="gen_group_cmd"
+                                  placeholder="使用{index}來代入編號" required></textarea>
                     </div>
                     <div class="mb-3">
                         <button class="btn btn-primary submitter">建立</button>
@@ -572,16 +578,18 @@
                         </div>
                         <div class="col radio-selector" data-value="{{ gen_group['type'] }}">
                             <div class="form-check">
-                              <input class="form-check-input" type="radio" name="type" id="gen_group_{{ i }}_check1" value="sol" checked>
-                              <label class="form-check-label" for="gen_group_{{ i }}_check1">
-                                解題程式
-                              </label>
+                                <input class="form-check-input" type="radio" name="type" id="gen_group_{{ i }}_check1"
+                                       value="sol" checked>
+                                <label class="form-check-label" for="gen_group_{{ i }}_check1">
+                                    解題程式
+                                </label>
                             </div>
                             <div class="form-check">
-                              <input class="form-check-input" type="radio" name="type" id="gen_group_{{ i }}_check2" value="gen">
-                              <label class="form-check-label" for="gen_group_{{ i }}_check2">
-                                答案生成器
-                              </label>
+                                <input class="form-check-input" type="radio" name="type" id="gen_group_{{ i }}_check2"
+                                       value="gen">
+                                <label class="form-check-label" for="gen_group_{{ i }}_check2">
+                                    答案生成器
+                                </label>
                             </div>
                         </div>
                         <div class="col">
@@ -605,102 +613,18 @@
                         <button class="btn btn-primary submitter">儲存</button>
                     </div>
                 </form>
+                <div class="mb-3">
+                    <form the_action="remove_gen_group">
+                        <input type="hidden" name="idx" value="{{ i }}">
+                        <button class="btn btn-danger submitter">刪除</button>
+                    </form>
+                </div>
             </div>
             {% endfor %}
         </div>
         <form the_action="do_generate">
             <button class="btn btn-primary submitter">嘗試生成測資</button>
         </form>
-        <!--
-        <div class="container-fluid">
-            <h4>生成測資</h4>
-            <div class="edit-detector"></div>
-            <div class="card card-body">
-                {% if "gen_msg" in dat %}
-                <div>目前生成器：{{ dat["gen_msg"]["generator"] }}</div>
-                <div>目前官解：{{ dat["gen_msg"]["solution"] }}</div>
-                <div>目前隨機種子：{{ dat["gen_msg"]["seed"] }}</div>
-                {% for k,v in dat["gen_msg"]["counts"].items() %}
-                <div>Group "{{ k }}": {{ v }}個測資</div>
-                {% endfor %}
-                {% else %}
-                <div>目前生成器：無</div>
-                {% endif %}
-            </div>
-            <div class="card card-body">
-                <form the_action="set_generator">
-                    <div class="col">
-                        <label class="form-label" for="generator_select">生成器</label>
-                        <select class="form-select" name="generator"
-                                id="generator_select" required>
-                            <option value="" selected>選擇檔案</option>
-                            {% for file in dat["files"] %}
-                            <option value="{{ file['name'] }}">{{ file['name'] }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col">
-                        <label class="form-label" for="solution_select">官解</label>
-                        <select class="form-select" aria-label="Default select example" name="solution"
-                                id="solution_select" required>
-                            <option value="" selected>選擇檔案</option>
-                            {% for file in dat["files"] %}
-                            <option value="{{ file['name'] }}">{{ file['name'] }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col">
-                        <label class="form-label" for="generator_seed">隨機種子</label>
-                        <input class="form-control" name="seed" id="generator_seed" value="0" required>
-                    </div>
-                    {% for k in dat["groups"].keys() %}
-                    <br>
-                    <div class="input-group mb-3">
-                        <span class="input-group-text">Group "{{ k }}"</span>
-                        <input type="number" class="form-control" placeholder="數目" aria-label="數目"
-                               name="count_{{ k }}" min="0" value="0" required>
-                    </div>
-                    {% endfor %}
-                    <button class="btn btn-primary submitter">變更生成指示</button>
-                </form>
-            </div>
-            <form the_action="do_generate">
-                <button class="btn btn-primary submitter">嘗試生成測資</button>
-            </form>
-            {% if 'testcases_gen' in dat %}
-            <table class="table table-hover">
-                <thead>
-                <tr>
-                    <th scope="col">#</th>
-                    <th scope="col">輸入檔</th>
-                    <th scope="col">輸出檔</th>
-                    <th scope="col">Group</th>
-                    <th scope="col">範測</th>
-                </tr>
-                </thead>
-                <tbody>
-                {% for i, testcase in enumerate(dat['testcases_gen'])%}
-                <tr class="testcase testcase-gen">
-                    <th scope="row">{{ i }}</th>
-                    <td><a href="/problemsetting_preview?pid={{ pid }}&type=testcases_gen&name={{ testcase['in'] }}"
-                           target="_blank">{{ testcase['in'] }}</a></td>
-                    <td><a href="/problemsetting_preview?pid={{ pid }}&type=testcases_gen&name={{ testcase['out'] }}"
-                           target="_blank">{{ testcase['out'] }}</a></td>
-                    <td>{{ testcase['group'] if "group" in testcase else "default" }}</td>
-                    <td>
-                        <input class="form-check-input" type="checkbox" name="sample_{{ i }}" value="yes"
-                               data-checked="{{testcase['sample']}}">
-                    </td>
-                </tr>
-                {% endfor %}
-                </tbody>
-            </table>
-            {% endif %}
-            <div class="mb-3">
-                <button class="btn btn-primary data-saver" id="save_testcase_gen">儲存</button>
-            </div>
-        </div>
-        -->
     </div>
     <div id="versions" class="tab-pane fade">
         <h3>版本控制</h3>

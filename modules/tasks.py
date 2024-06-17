@@ -2,8 +2,6 @@ import os
 import traceback
 from multiprocessing import Queue, Process
 
-from flask import abort
-
 from modules import executing, constants, tools, locks, datas, config
 
 submissions_queue = Queue()

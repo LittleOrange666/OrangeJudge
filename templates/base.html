@@ -16,6 +16,8 @@
     <link href="/static/codehilite.css" rel="stylesheet" crossorigin="anonymous">
     <style>
         {% block style %}{% endblock %}
+
+
     </style>
 </head>
 <body>
@@ -110,6 +112,8 @@ MathJax.Hub.Config({
     extensions: ["MathMenu.js", "MathZoom.js"]
 });
 
+
+
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js"></script>
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" id="csrf_token">
@@ -117,6 +121,8 @@ MathJax.Hub.Config({
 </body>
 <script>
 {% block script %}{% endblock %}
+
+
 
 </script>
 </html>
