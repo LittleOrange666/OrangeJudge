@@ -41,12 +41,13 @@ def do_login():
 def signup():
     if not config.get('account.signup'):
         abort(503)
+    need_verify = config.get("smtp.enabled")
     if request.method == 'GET':
         if current_user.is_authenticated:
             return redirect('/')
-        return render_template("signup.html")
+        return render_template("signup.html", need_verify=need_verify)
     email = request.form["email"]
-    verify = request.form["verify"]
+    verify = request.form["verify"] if need_verify else ""
     user_id = request.form["user_id"]
     password = request.form["password"]
     nxt = request.form.get('next')
@@ -60,7 +61,7 @@ def signup():
         err = "email已被使用"
     elif len(password) < 6:
         err = "密碼應至少6個字元"
-    elif not use_code(email, verify):
+    elif need_verify and not use_code(email, verify):
         err = "驗證碼錯誤"
     if err:
         q = {"msg": err}
@@ -90,12 +91,11 @@ def get_code():
         abort(409)
     idx = "".join(str(random.randint(0, 9)) for _ in range(6))
     verify_codes[email] = (idx, time.time())
-    if config.get("smtp.enabled"):
-        if not login.send_email(email, constants.email_content.format(idx)):
-            return Response(status=503)
-        return Response(status=200)
-    else:
-        return idx, 200
+    if not config.get("smtp.enabled"):
+        abort(503)
+    if not login.send_email(email, constants.email_content.format(idx)):
+        abort(503)
+    return Response(status=200)
 
 
 def use_code(email: str, verify: str) -> bool:
