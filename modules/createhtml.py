@@ -55,7 +55,10 @@ class Codehightlighter(HTMLParser):
             if tag == "img" and attrs["src"].endswith(".pdf"):
                 tag = "pdf-file"
             atl = ''.join(' ' + (k if v is None else k + '="' + v + '"') for k, v in attrs.items() if
-                          k is not None and not k.strip().startswith("on") and not v.strip().startswith("javascript:"))
+                          k is not None and
+                          not k.strip().startswith("on") and
+                          not k.strip() == "style" and
+                          not v.strip().startswith("javascript:"))
             if tag != "br" or len(self.text) == 0 or self.text[-1] != "<br>":
                 self.text.append(f"<{tag}{atl}>")
 

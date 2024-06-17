@@ -189,10 +189,80 @@ def generate_testcase(pid: str):
     env.send_file("testlib/testlib.h")
     gen_list = []
     int_cmd = []
+    run_cmds = {}
+
+    def get_cmd(s: str, name: str):
+        if s not in run_cmds:
+            run_cmds[s] = problem.compile_inner(s, name, env)
+        return run_cmds[s]
+
     if problem["is_interact"]:
-        int_cmd = problem.compile_inner(problem["interactor_source"], "interactor", env)
+        int_cmd = get_cmd(problem["interactor_source"], "interactor")
     tl = float(problem["timelimit"]) / 1000
     ml = int(problem["memorylimit"])
+    if "gen_groups" in problem:
+        for gpidx, gen_group in enumerate(problem["gen_groups"]):
+            file1_cmd = get_cmd(gen_group["file1"], "generator")
+            file2_cmd = get_cmd(gen_group["file2"], "solution" if gen_group['type'] == "sol" else "ans_generator")
+            sol_lang = problem.lang(gen_group["file2"])
+            cur = []
+            for tcidx, cmd in enumerate(gen_group['cmds']):
+                name = f"{gpidx}_{tcidx}"
+                in_file = os.path.abspath(f"{path}/testcases_gen/{name}.in")
+                out_file = os.path.abspath(f"{path}/testcases_gen/{name}.out")
+                log(f"generating testcase {name!r}")
+                gen_out = env.safe_run(file1_cmd + cmd.split())
+                if gen_out[2]:
+                    log("generator RE")
+                    gen_group['status'] = "生成失敗：生成器RE"
+                    log(gen_out[1])
+                    break
+                tools.write(gen_out[0], in_file)
+                if gen_group['type'] == "sol":
+                    env.send_file(in_file)
+                    if problem["is_interact"]:
+                        env.judge_readable(in_file)
+                        env.judge_writeable(out_file)
+                        out = env.runwithinteractshell(file2_cmd, int_cmd, env.filepath(in_file), env.filepath(out_file),
+                                                       tl, ml,
+                                                       sol_lang.base_exec_cmd)
+                    else:
+                        out = env.runwithshell(file2_cmd, env.filepath(in_file), env.filepath(out_file), tl, ml,
+                                               sol_lang.base_exec_cmd)
+                    if executing.is_tle(out):
+                        log("solution TLE")
+                        gen_group['status'] = "生成失敗：官解TLE"
+                        log(out[1])
+                        break
+                    result = {o[0]: o[1] for o in (s.split("=") for s in out[0].split("\n")) if len(o) == 2}
+                    if "1" == result.get("WIFSIGNALED", None) or "0" != result.get("WEXITSTATUS", "0"):
+                        log("solution RE")
+                        gen_group['status'] = "生成失敗：官解RE"
+                        log(out[1])
+                        break
+                    if "time" in result and float(result["time"]) >= 0:
+                        timeusage = int((float(result["time"]) + float(result["basetime"])) * 1000)
+                        if timeusage > tl * 950:
+                            gen_group['status'] = "生成失敗：官解TLE"
+                    if "mem" in result and float(result["mem"]) >= 0:
+                        memusage = (int(result["mem"]) - int(result["basemem"])) * int(result["pagesize"]) // 1000
+                        if memusage > ml * 1024:
+                            gen_group['status'] = "生成失敗：官解MLE"
+                    env.get_file(out_file)
+                else:
+                    gen_out = env.safe_run(file2_cmd + cmd.split())
+                    if gen_out[2]:
+                        log("generator RE")
+                        gen_group['status'] = "生成失敗：答案生成器RE"
+                        log(gen_out[1])
+                        break
+                    tools.write(gen_out[0], in_file)
+                cur.append({"in": name + ".in", "out": name + ".out", "sample": False, "pretest": False,
+                            "group": gen_group['group']})
+            else:
+                gen_group['status'] = "生成成功"
+                gen_list.extend(cur)
+    """
     if "gen_msg" in problem:
         i = 1
         tests = []
@@ -232,7 +302,6 @@ def generate_testcase(pid: str):
                 log(out[1])
                 end(False)
             env.get_file(out_file)
-        log(f"generate complete")
         gen_list += [{"in": test[0] + ".in", "out": test[0] + ".out", "sample": False, "pretest": False,
                       "group": test[1][1]} for test in tests]
     if "ex_gen_msg" in problem:
@@ -279,6 +348,8 @@ def generate_testcase(pid: str):
         gen_list += [
             {"in": f"{i}_exgen.in", "out": f"{i}_exgen.out", "sample": False, "pretest": False, "group": test[1]}
             for i, test in enumerate(cmds)]
+    """
+    log(f"generate complete")
     problem["testcases_gen"] = gen_list
 
 
@@ -375,13 +446,36 @@ def do_import_polygon(pid: str, filename: str):
         if solution.get("tag") == "main":
             main_sol = fn
         tools.log(source.get("path"), solution.get("tag"))
-    if main_sol:
-        dat["ex_gen_msg"] = {"solution": main_sol, "cmds": gen_cmds}
     for executable in root.iter("executable"):
         source = executable.find("source")
         fn = os.path.basename(source.get("path"))
         tools.write_binary(zip_file.read(files[source.get("path")]), path, "file", fn)
         dat["files"].append({"name": fn, "type": constants.polygon_type.get(source.get("type"), "C++17")})
+    if main_sol:
+        mp = {}
+        for cmd, group in gen_cmds:
+            if cmd is None:
+                continue
+            cmdl = cmd.split()
+            gen = cmdl[0]
+            cmd = " ".join(cmdl[1:])
+            for file in dat["files"]:
+                if os.path.splitext(file["name"])[0] == gen:
+                    gen = file["name"]
+                    break
+            else:
+                continue
+            key = (gen, group)
+            if key not in mp:
+                mp[key] = []
+            mp[key].append(cmd)
+        if "gen_groups" not in dat:
+            dat["gen_groups"] = []
+        for k, v in mp.items():
+            gen, group = k
+            dat["gen_groups"].append({"file1": gen, "file2": main_sol, "group": group, "type": "sol", "cmds": v,
+                                      "status": "未更新"})
+        dat["ex_gen_msg"] = {"solution": main_sol, "cmds": gen_cmds}
     fake_form = {k: "" for k in constants.polygon_statment}
     fake_form["samples"] = "[]"
     for k, v in constants.polygon_statment.items():
@@ -843,7 +937,7 @@ def create_gen_group(form: ImmutableMultiDict[str, str], pid: str, path: str, da
     cnt = tools.to_int(form["mul"])
     cmds = form["cmds"].split("\n")
     out_cmds = []
-    for i in range(1, cnt+1):
+    for i in range(1, cnt + 1):
         for s in cmds:
             out_cmds.append(s.replace("{index}", str(i)))
     if "gen_groups" not in dat:
