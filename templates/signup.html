@@ -57,7 +57,11 @@ error: function(xhr, status, content){
 show_modal("錯誤","獲取失敗");
 },
 success: function(content, status, xhr){
+if (content){
+show_modal("成功","驗證碼為'"+content+"'，十分鐘內有效");
+}else{
 show_modal("成功","驗證碼已發送至'"+email+"'，十分鐘內有效");
+}
 }
 });
 }

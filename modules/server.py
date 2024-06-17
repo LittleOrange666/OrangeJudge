@@ -74,6 +74,14 @@ def error_429(error):
         return "429 Too Many Request", 429
 
 
+@app.errorhandler(503)
+def error_503(error):
+    if request.method == "GET":
+        return render_template("503.html"), 503
+    else:
+        return "503 Service Unavailable", 503
+
+
 @app.errorhandler(Exception)
 def error_500(error: Exception):
     target = tools.random_string()

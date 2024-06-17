@@ -5,7 +5,7 @@ from flask import abort, render_template, redirect, request, Response
 from flask_login import login_required, current_user, login_user, logout_user
 from yarl import URL
 
-from modules import tools, server, login, constants, datas, locks
+from modules import tools, server, login, constants, datas, locks, config
 
 app = server.app
 
@@ -39,6 +39,8 @@ def do_login():
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
+    if not config.get('account.signup'):
+        abort(503)
     if request.method == 'GET':
         if current_user.is_authenticated:
             return redirect('/')
@@ -88,9 +90,12 @@ def get_code():
         abort(409)
     idx = "".join(str(random.randint(0, 9)) for _ in range(6))
     verify_codes[email] = (idx, time.time())
-    if not login.send_email(email, constants.email_content.format(idx)):
-        return Response(status=503)
-    return Response(status=200)
+    if config.get("smtp.enabled"):
+        if not login.send_email(email, constants.email_content.format(idx)):
+            return Response(status=503)
+        return Response(status=200)
+    else:
+        return idx, 200
 
 
 def use_code(email: str, verify: str) -> bool:
@@ -181,6 +186,8 @@ def settings():
 
 @app.route("/forget_password", methods=["GET", "POST"])
 def forget_password():
+    if not config.get("smtp.enabled"):
+        abort(503)
     if current_user.is_authenticated:
         abort(409)
     if request.method == "GET":

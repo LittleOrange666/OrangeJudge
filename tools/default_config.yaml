@@ -1,4 +1,5 @@
 smtp:
+  enabled: false
   host: smtp.gmail.com
   port: 587
   user: user@gmail.com
@@ -17,3 +18,6 @@ judge:
 
 debug:
   log: false
+
+account:
+  signup: true

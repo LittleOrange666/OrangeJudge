@@ -56,10 +56,7 @@ app = server.app
 login_manager = LoginManager(app)
 login_manager.session_protection = None
 login_manager.login_view = 'do_login'
-smtp.ehlo()
-smtp.starttls()
 email_sender = config.get("smtp.user")
-smtp.login(config.get("smtp.user"), config.get("smtp.password"))
 
 
 @login_manager.user_loader
@@ -160,6 +157,10 @@ def check_user(require: str | None = None, users: list[str] | None = None) -> Us
 
 
 def init():
+    if config.get("smtp.enabled"):
+        smtp.ehlo()
+        smtp.starttls()
+        smtp.login(config.get("smtp.user"), config.get("smtp.password"))
     if not exist("root"):
         create_account(tools.random_string(), "root", "root")
         root: datas.User = datas.User.query.filter_by(username="root").first()
