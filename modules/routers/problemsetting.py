@@ -18,7 +18,19 @@ def my_problems():
     for obj in reversed(problem_list):
         idx = obj.pid
         problems_dat.append({"pid": idx, "name": obj.name})
-    return render_template("my_problems.html", problems=problems_dat, username=user.id)
+    return render_template("my_problems.html", problems=problems_dat, title="我的題目")
+
+
+@app.route("/problemsetting_all", methods=['GET'])
+@login_required
+def all_problems():
+    user = login.check_user("admin")
+    problem_list = datas.Problem.query.all()
+    problems_dat = []
+    for obj in reversed(problem_list):
+        idx = obj.pid
+        problems_dat.append({"pid": idx, "name": obj.name})
+    return render_template("my_problems.html", problems=problems_dat, title="所有題目")
 
 
 @app.route("/problemsetting_new", methods=['GET', 'POST'])

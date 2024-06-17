@@ -2,7 +2,7 @@ import datetime
 import json
 import os
 
-from flask import abort, render_template, redirect, request, send_file
+from flask import abort, render_template, redirect, request, send_file, jsonify
 from flask_login import login_required, current_user
 from pygments import highlight, lexers
 from pygments.formatters import HtmlFormatter
@@ -186,7 +186,9 @@ def submission(idx):
 
 
 @app.route("/problem/<idx>", methods=['GET'])
-def problem(idx):
+def problem_page(idx):
+    if idx == "test":
+        return redirect("/test")
     pdat: datas.Problem = datas.Problem.query.filter_by(pid=idx).first_or_404()
     idx = secure_filename(idx)
     path = "problems/" + idx
@@ -260,6 +262,47 @@ def my_submissions():
     displays.extend(range(max(2, page_idx - 2), min(page_cnt, page_idx + 2) + 1))
     return render_template("my_submissions.html", submissions=out, page_cnt=page_cnt, page_idx=page_idx,
                            show_pages=sorted(set(displays)))
+
+
+@app.route("/status", methods=["GET", "POST"])
+def all_status():
+    if request.method == "GET":
+        return render_template("status.html")
+    page = tools.to_int(request.form["page"])
+    page_size = constants.page_size
+    status = datas.Submission.query.filter_by(contest_id=None)
+    if "user" in request.form and len(request.form["user"]):
+        user: datas.User = datas.User.query.filter_by(username=request.form["user"]).first_or_404()
+        status = status.filter_by(user=user)
+    if "pid" in request.form and len(request.form["pid"]):
+        status = status.filter_by(pid=request.form["pid"])
+    status_count = status.count()
+    page_cnt = max(1, (status_count - 1) // page_size + 1)
+    if page <= 0 or page > page_cnt:
+        abort(404)
+    got_data: list[datas.Submission] = status.slice(max(0, status_count - page_size * page),
+                                                    status_count - page_size * (page - 1)).all()
+    displays = [1, page_cnt]
+    displays.extend(range(max(2, page - 2), min(page_cnt, page + 2) + 1))
+    displays = sorted(set(displays))
+    out = []
+    for obj in reversed(got_data):
+        pid = obj.pid
+        problem = datas.Problem.query.filter_by(pid=pid)
+        problem_name = problem.first().name if problem.count() else "unknown"
+        result = obj.simple_result or "blank"
+        can_see = current_user.has("admin") or current_user.id == obj.user.username
+        out.append({"idx": str(obj.id),
+                    "time": obj.time.timestamp(),
+                    "user_id": obj.user.username,
+                    "user_name": obj.user.display_name,
+                    "problem": pid,
+                    "problem_name": problem_name,
+                    "lang": obj.language,
+                    "result": result,
+                    "can_see": can_see})
+    ret = {"show_pages": displays, "page_cnt": page_cnt, "page": page, "data": out}
+    return jsonify(ret)
 
 
 @app.route('/admin', methods=['GET', 'POST'])

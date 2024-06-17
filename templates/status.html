@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}解題動態{% endblock %}
+
+{% block main %}
+<div class="row">
+    <div class="col-auto">
+        <input type="text" class="form-control" placeholder="題目編號" id="status_filter_pid">
+    </div>
+    <div class="col-auto">
+        <input type="text" class="form-control" placeholder="使用者id" id="status_filter_username">
+    </div>
+    <div class="col-auto">
+        <button class="btn btn-primary" id="status_filter">篩選</button>
+    </div>
+</div>
+<table class="table table-hover table-striped">
+    <thead>
+    <tr>
+        <th scope="col">解題編號</th>
+        <th scope="col">時間</th>
+        <th scope="col">提交者</th>
+        <th scope="col">題目</th>
+        <th scope="col">語言</th>
+        <th scope="col">結果</th>
+    </tr>
+    </thead>
+    <tbody id="status_table">
+    </tbody>
+</table>
+<nav aria-label="Page navigation example">
+    <ul class="pagination" id="status_page">
+    </ul>
+</nav>
+<script src="/static/status.js"></script>
+{% endblock %}

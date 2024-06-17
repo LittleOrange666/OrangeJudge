@@ -9,8 +9,8 @@ server:
   workers: 4
   timeout: 120
   limits:
-    - 20 per 40 second
-    - 1 per 1 second
+    - 20 per 30 second
+    - 2 per 1 second
 
 judge:
   workers: 1

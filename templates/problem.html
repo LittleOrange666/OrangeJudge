@@ -74,7 +74,12 @@
         $("#uploadfile").prop("accept",lang_exts[$("#langoption").val()]);
         $("#langoption").on("change",function(){
             $("#uploadfile").prop("accept",lang_exts[$("#langoption").val()]);
+            localStorage.lang = $("#langoption").val();
         });
+        if(localStorage.lang){
+            $("#langoption").val(localStorage.lang);
+            $("#langoption").trigger("change");
+        }
     </script>
 </form>
 {% endif %}

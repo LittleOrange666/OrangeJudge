@@ -42,6 +42,9 @@
                     <li class="nav-item">
                         <a class="nav-link active" aria-current="page" href="/test">測試</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="/status">解題動態</a>
+                    </li>
                     {% block navbar %}{% endblock %}
                 </ul>
                 <ul class="navbar-nav navbar-text">
@@ -54,13 +57,14 @@
                             <li><a class="dropdown-item" href="/my_submissions">解題列表</a></li>
                             <li><a class="dropdown-item" href="/settings">帳號設定</a></li>
                             <li><a class="dropdown-item" href="/preferences">偏好設定</a></li>
-                            {% if current_user.may_has("make_problems") %}
+                            {% if current_user.has("make_problems") %}
                             <li>
                                 <hr class="dropdown-divider">
                             </li>
-                            <li><a class="dropdown-item" href="/problemsetting">題目管理</a></li>
+                            <li><a class="dropdown-item" href="/problemsetting">我的題目</a></li>
                             {% endif %}
                             {% if current_user.has("admin") %}
+                            <li><a class="dropdown-item" href="/problemsetting_all">所有題目</a></li>
                             <li>
                                 <hr class="dropdown-divider">
                             </li>
