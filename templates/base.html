@@ -67,6 +67,8 @@
                             {% endif %}
                             {% if current_user.has("admin") %}
                             <li><a class="dropdown-item" href="/problemsetting_all">所有題目</a></li>
+                            {% endif %}
+                            {% if current_user.has("root") %}
                             <li>
                                 <hr class="dropdown-divider">
                             </li>

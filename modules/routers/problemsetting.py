@@ -13,24 +13,52 @@ app = server.app
 @login_required
 def my_problems():
     user = login.check_user("make_problems")
-    problem_list = user.data.problems.all()
+    problem_obj = user.data.problems
+    page_size = constants.page_size
+    problem_cnt = problem_obj.count()
+    page_cnt = max(1, (problem_cnt - 1) // page_size + 1)
+    page = request.args.get("page", "1")
+    if not page.isdigit():
+        abort(404)
+    page_idx = int(page)
+    if page_idx <= 0 or page_idx > page_cnt:
+        abort(404)
+    got_data = problem_obj.slice(max(0, problem_cnt - page_size * page_idx),
+                                 problem_cnt - page_size * (page_idx - 1)).all()
     problems_dat = []
-    for obj in reversed(problem_list):
+    for obj in reversed(got_data):
         idx = obj.pid
         problems_dat.append({"pid": idx, "name": obj.name})
-    return render_template("my_problems.html", problems=problems_dat, title="我的題目")
+    displays = [1, page_cnt]
+    displays.extend(range(max(2, page_idx - 2), min(page_cnt, page_idx + 2) + 1))
+    return render_template("my_problems.html", problems=problems_dat, title="我的題目", page_cnt=page_cnt,
+                           page_idx=page_idx, show_pages=sorted(set(displays)))
 
 
 @app.route("/problemsetting_all", methods=['GET'])
 @login_required
 def all_problems():
     user = login.check_user("admin")
-    problem_list = datas.Problem.query.all()
+    problem_obj = datas.Problem.query
+    page_size = constants.page_size
+    problem_cnt = problem_obj.count()
+    page_cnt = max(1, (problem_cnt - 1) // page_size + 1)
+    page = request.args.get("page", "1")
+    if not page.isdigit():
+        abort(404)
+    page_idx = int(page)
+    if page_idx <= 0 or page_idx > page_cnt:
+        abort(404)
+    got_data = problem_obj.slice(max(0, problem_cnt - page_size * page_idx),
+                                 problem_cnt - page_size * (page_idx - 1)).all()
     problems_dat = []
-    for obj in reversed(problem_list):
+    for obj in reversed(got_data):
         idx = obj.pid
         problems_dat.append({"pid": idx, "name": obj.name})
-    return render_template("my_problems.html", problems=problems_dat, title="所有題目")
+    displays = [1, page_cnt]
+    displays.extend(range(max(2, page_idx - 2), min(page_cnt, page_idx + 2) + 1))
+    return render_template("my_problems.html", problems=problems_dat, title="所有題目", page_cnt=page_cnt,
+                           page_idx=page_idx, show_pages=sorted(set(displays)))
 
 
 @app.route("/problemsetting_new", methods=['GET', 'POST'])

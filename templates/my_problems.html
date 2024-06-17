@@ -24,6 +24,24 @@
     {% endfor %}
     </tbody>
 </table>
+<nav aria-label="Page navigation example">
+    <ul class="pagination">
+        <li class="page-item" data-disabled="{{ page_idx == 1 }}">
+            <a class="page-link" data-args="page={{ page_idx-1 }}" aria-label="Previous">
+                <span aria-hidden="true">&laquo;</span>
+            </a>
+        </li>
+        {% for page in show_pages %}
+        <li class="page-item" data-active="{{ page==page_idx }}"><a class="page-link" data-args="page={{ page }}">{{
+            page }}</a></li>
+        {% endfor %}
+        <li class="page-item" data-disabled="{{ page_idx == page_cnt }}">
+            <a class="page-link" data-args="page={{ page_idx+1 }}" aria-label="Next">
+                <span aria-hidden="true">&raquo;</span>
+            </a>
+        </li>
+    </ul>
+</nav>
 <div class="mb-3">
     <a class="btn btn-primary" href="/problemsetting_new" role="button">新建題目</a>
 </div>
