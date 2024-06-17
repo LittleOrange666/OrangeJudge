@@ -1,3 +1,4 @@
+import socket
 import traceback
 
 from flask import Flask, render_template, request
@@ -90,3 +91,19 @@ def error_500(error: Exception):
     if request.method == "POST":
         return target, 500
     return render_template("500.html", log_uid=target), 500
+
+
+def check_port(ip, port):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(5)
+
+    try:
+        result = sock.connect_ex((ip, port))
+        if result == 0:
+            return True
+        else:
+            return False
+    except Exception as e:
+        print(f"Error: {str(e)}")
+    finally:
+        sock.close()

@@ -1,3 +1,4 @@
+import subprocess
 import sys
 from gunicorn.app.base import BaseApplication
 
@@ -29,6 +30,8 @@ def main():
         raise RuntimeError("The judge server must be run as root")
     tools.system(f"sudo lxc-start {constants.lxc_name}")
     tools.system(f"sudo cp -r -f judge /var/lib/lxc/{constants.lxc_name}/rootfs/")
+    if not server.check_port("localhost", 6379):
+        subprocess.Popen("redis-server")
     with server.app.app_context():
         config.init()
         locks.init()
