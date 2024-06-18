@@ -28,6 +28,12 @@ class User(UserMixin):
             return "root" in prems
         return key in prems or "admin" in prems or "root" in prems
 
+    def may_has(self, key: str) -> bool:
+        prems = self.data.permission_list()
+        if key == "root":
+            return "root" in prems
+        return key in prems or "admin" in prems or "root" in prems
+
     """
     def who_has(self, key: str) -> list[str]:
         ret = []
@@ -143,7 +149,7 @@ def init():
         smtp.starttls()
         smtp.login(config.get("smtp.user"), config.get("smtp.password"))
     if not exist("root"):
-        create_account(tools.random_string(), "root", "root")
+        create_account("", "root", "root")
         root: datas.User = datas.User.query.filter_by(username="root").first()
         root.permissions = "root"
         datas.add(root)
