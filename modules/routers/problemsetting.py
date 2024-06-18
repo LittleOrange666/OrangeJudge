@@ -69,7 +69,6 @@ def my_problem_page(idx):
             dat["groups"] = {}
         if "default" not in dat["groups"]:
             dat["groups"]["default"] = {}
-        tools.write_json(dat, "preparing_problems", idx, "info.json")
     return render_template("problemsetting.html", dat=constants.default_problem_info | dat, pid=idx,
                            versions=problemsetting.query_versions(pdat), enumerate=enumerate,
                            public_files=public_files, default_checkers=default_checkers,

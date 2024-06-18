@@ -200,7 +200,8 @@ def problem_page(idx):
 def problem_file(idx, filename):
     idx = secure_filename(idx)
     filename = secure_filename(filename)
-    dat = tools.read_json("problems", idx, "info.json")
+    pdat: datas.Problem = datas.Problem.query.filter_by(pid=idx).first_or_404()
+    dat = pdat.data
     if not dat.get("public", False):
         if not current_user.is_authenticated:
             abort(403)
