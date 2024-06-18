@@ -37,7 +37,7 @@ default_problem_info: dict = {"name": "unknown", "timelimit": "1000", "memorylim
                               "users": [],
                               "statement": {"main": "", "input": "", "output": "", "scoring": "", "interaction": ""},
                               "files": [], "checker_source": ["default", "unknown"], "is_interact": False,
-                              "public": False, "groups": {"default": {"score": 100, "rule": "min", "dependency": []}},
+                              "groups": {"default": {"score": 100, "rule": "min", "dependency": []}},
                               "interactor_source": "unknown", "manual_samples": [],
                               "languages": {}, "public_testcase": False, "gen_groups": []}
 

@@ -202,7 +202,7 @@ def problem_file(idx, filename):
     filename = secure_filename(filename)
     pdat: datas.Problem = datas.Problem.query.filter_by(pid=idx).first_or_404()
     dat = pdat.data
-    if not dat.get("public", False):
+    if not pdat.is_public:
         if not current_user.is_authenticated:
             abort(403)
         if not current_user.has("admin") and current_user.id not in dat["users"]:

@@ -759,24 +759,17 @@ def save_groups(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Pr
 
 @actions.bind
 def protect_problem(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
-    if not dat.get("public", False):
+    if not dat.sql_data.is_public:
         abort(409)
-    dat["public"] = False
     dat.sql_data.is_public = False
-    # with tools.Json("data/public_problems.json") as pubs:
-    #    if pid in pubs:
-    #        del pubs[pid]
     return "general_info"
 
 
 @actions.bind
 def public_problem(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
-    if dat.get("public", False):
+    if dat.sql_data.is_public:
         abort(409)
-    dat["public"] = True
     dat.sql_data.is_public = True
-    # with tools.Json("data/public_problems.json") as pubs:
-    #    pubs[pid] = dat["name"]
     return "general_info"
 
 
