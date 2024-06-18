@@ -7,9 +7,9 @@ from datetime import datetime
 from functools import partial
 from typing import Callable, Any
 
-from flask import abort
+from flask import abort, request
 
-from modules import locks, config
+from modules import locks, config, constants
 
 
 def system(s: str, cwd: str = "") -> None:
@@ -235,3 +235,26 @@ has_log: bool = config.get("debug.log")
 def log(*args):
     if has_log:
         print(*args)
+
+
+def pagination(sql_obj, rev: bool = True, page: int | str | None = None, page_size: int = constants.page_size):
+    cnt = sql_obj.count()
+    page_cnt = max(1, (cnt - 1) // page_size + 1)
+    if page is None:
+        if request.method == "GET":
+            page = request.args.get("page", "1")
+        else:
+            page = request.form.get("page", "1")
+    if type(page) == str:
+        page = to_int(page)
+    if page <= 0 or page > page_cnt:
+        abort(404)
+    if rev:
+        got_data = list(reversed(sql_obj.slice(max(0, cnt - page_size * page),
+                                               cnt - page_size * (page - 1)).all()))
+    else:
+        got_data = sql_obj.slice(constants.page_size * (page - 1),
+                                 min(cnt, constants.page_size * page)).all()
+    displays = [1, page_cnt]
+    displays.extend(range(max(2, page - 2), min(page_cnt, page + 2) + 1))
+    return got_data, page_cnt, page, sorted(set(displays))

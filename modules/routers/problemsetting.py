@@ -14,51 +14,25 @@ app = server.app
 def my_problems():
     user = login.check_user("make_problems")
     problem_obj = user.data.problems
-    page_size = constants.page_size
-    problem_cnt = problem_obj.count()
-    page_cnt = max(1, (problem_cnt - 1) // page_size + 1)
-    page = request.args.get("page", "1")
-    if not page.isdigit():
-        abort(404)
-    page_idx = int(page)
-    if page_idx <= 0 or page_idx > page_cnt:
-        abort(404)
-    got_data = problem_obj.slice(max(0, problem_cnt - page_size * page_idx),
-                                 problem_cnt - page_size * (page_idx - 1)).all()
+    got_data, page_cnt, page_idx, show_pages = tools.pagination(problem_obj)
     problems_dat = []
-    for obj in reversed(got_data):
-        idx = obj.pid
-        problems_dat.append({"pid": idx, "name": obj.name})
-    displays = [1, page_cnt]
-    displays.extend(range(max(2, page_idx - 2), min(page_cnt, page_idx + 2) + 1))
+    for obj in got_data:
+        problems_dat.append({"pid": obj.pid, "name": obj.name})
     return render_template("my_problems.html", problems=problems_dat, title="我的題目", page_cnt=page_cnt,
-                           page_idx=page_idx, show_pages=sorted(set(displays)))
+                           page_idx=page_idx, show_pages=show_pages)
 
 
 @app.route("/problemsetting_all", methods=['GET'])
 @login_required
 def all_problems():
-    user = login.check_user("admin")
+    login.check_user("admin")
     problem_obj = datas.Problem.query
-    page_size = constants.page_size
-    problem_cnt = problem_obj.count()
-    page_cnt = max(1, (problem_cnt - 1) // page_size + 1)
-    page = request.args.get("page", "1")
-    if not page.isdigit():
-        abort(404)
-    page_idx = int(page)
-    if page_idx <= 0 or page_idx > page_cnt:
-        abort(404)
-    got_data = problem_obj.slice(max(0, problem_cnt - page_size * page_idx),
-                                 problem_cnt - page_size * (page_idx - 1)).all()
+    got_data, page_cnt, page_idx, show_pages = tools.pagination(problem_obj)
     problems_dat = []
     for obj in reversed(got_data):
-        idx = obj.pid
-        problems_dat.append({"pid": idx, "name": obj.name})
-    displays = [1, page_cnt]
-    displays.extend(range(max(2, page_idx - 2), min(page_cnt, page_idx + 2) + 1))
+        problems_dat.append({"pid": obj.pid, "name": obj.name})
     return render_template("my_problems.html", problems=problems_dat, title="所有題目", page_cnt=page_cnt,
-                           page_idx=page_idx, show_pages=sorted(set(displays)))
+                           page_idx=page_idx, show_pages=show_pages)
 
 
 @app.route("/problemsetting_new", methods=['GET', 'POST'])
@@ -70,7 +44,6 @@ def create_problem():
     else:
         pid = request.form["pid"]
         idx = problemsetting.create_problem(request.form["name"], pid, user.data)
-        # tools.append(idx + "\n", user.folder, "problems")
         return f"/problemsetting/{idx}?user={user.id}", 200
 
 
@@ -79,9 +52,6 @@ def create_problem():
 def my_problem_page(idx):
     idx = secure_filename(idx)
     pdat: datas.Problem = datas.Problem.query.filter_by(pid=idx).first_or_404()
-    # if not os.path.isdir("preparing_problems/" + idx) or not os.path.isfile("preparing_problems/" + idx +
-    # "/info.json"): abort(404) if len(os.listdir("preparing_problems/" + idx)) == 0: problemsetting.system(f"sudo
-    # mount -o loop {idx}.img ./{idx}", "preparing_problems")
     o = problemsetting.check_background_action(idx)
     if o is not None:
         return render_template("pleasewaitlog.html", action=o[1], log=o[0])
@@ -118,7 +88,7 @@ def problem_action():
     if problemsetting.check_background_action(idx) is not None:
         abort(503)
     dat = pdat.data
-    user = login.check_user("make_problems", dat["users"])
+    login.check_user("make_problems", dat["users"])
     return problemsetting.action(request.form)
 
 
@@ -130,5 +100,5 @@ def problem_preview():
     if os.path.isfile("preparing_problems/" + idx + "/waiting"):
         return render_template("pleasewait.html", action=tools.read("preparing_problems", idx, "waiting"))
     dat = pdat.new_data
-    user = login.check_user("make_problems", dat["users"])
+    login.check_user("make_problems", dat["users"])
     return problemsetting.preview(request.args, pdat)

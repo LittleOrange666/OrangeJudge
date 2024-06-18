@@ -23,20 +23,9 @@ def index():
 @app.route('/problems', methods=['GET'])
 def problems():
     public_problems = datas.Problem.query.filter_by(is_public=True)
-    problem_cnt = public_problems.count()
-    page_cnt = max(1, (problem_cnt - 1) // constants.page_size + 1)
-    page = request.args.get("page", "1")
-    if not page.isdigit():
-        abort(404)
-    page_idx = int(page)
-    if page_idx <= 0 or page_idx > page_cnt:
-        abort(404)
-    got_data = public_problems.slice(constants.page_size * (page_idx - 1),
-                                     min(problem_cnt, constants.page_size * page_idx)).all()
-    displays = [1, page_cnt]
-    displays.extend(range(max(2, page_idx - 2), min(page_cnt, page_idx + 2) + 1))
+    got_data, page_cnt, page_idx, show_pages = tools.pagination(public_problems, False)
     return render_template("problems.html", problems=got_data, page_cnt=page_cnt, page_idx=page_idx,
-                           show_pages=sorted(set(displays)))
+                           show_pages=show_pages)
 
 
 @app.route('/test', methods=['GET', 'POST'])
@@ -141,7 +130,6 @@ def submission(idx):
             result_data = dat.result
             result["CE"] = result_data["CE"]
             results = result_data["results"]
-            # result["protected"] = protected = result_data.get("protected", False)
             result["protected"] = protected = ((not problem_info.get('public_testcase', False) or bool(dat.period_id))
                                                and dat.user.username not in problem_info["users"])
             if not protected:
@@ -229,23 +217,12 @@ def problem_file(idx, filename):
 def my_submissions():
     data: datas.User = current_user.data
     submission_obj = data.submissions
-    page_size = constants.page_size
     if "pid" in request.args:
         submission_obj = submission_obj.filter_by(pid=request.args.get("pid"))
-    submit_cnt = submission_obj.count()
-    page_cnt = max(1, (submit_cnt - 1) // page_size + 1)
+    got_data, page_cnt, page_idx, show_pages = tools.pagination(submission_obj)
     out = []
-    page = request.args.get("page", "1")
-    if not page.isdigit():
-        abort(404)
-    page_idx = int(page)
-    if page_idx <= 0 or page_idx > page_cnt:
-        abort(404)
-    got_data = submission_obj.slice(max(0, submit_cnt - page_size * page_idx),
-                                    submit_cnt - page_size * (page_idx - 1)).all()
-    for dat in reversed(got_data):
+    for dat in got_data:
         dat: datas.Submission
-        idx = str(dat.id)
         o = {"name": str(dat.id), "time": dat.time.timestamp(), "result": dat.simple_result or "blank"}
         if dat.problem is None:
             continue
@@ -258,35 +235,23 @@ def my_submissions():
             o["source_name"] = source_dat.name
         o["lang"] = dat.language
         out.append(o)
-    displays = [1, page_cnt]
-    displays.extend(range(max(2, page_idx - 2), min(page_cnt, page_idx + 2) + 1))
     return render_template("my_submissions.html", submissions=out, page_cnt=page_cnt, page_idx=page_idx,
-                           show_pages=sorted(set(displays)))
+                           show_pages=show_pages)
 
 
 @app.route("/status", methods=["GET", "POST"])
 def all_status():
     if request.method == "GET":
         return render_template("status.html")
-    page = tools.to_int(request.form["page"])
-    page_size = constants.page_size
     status = datas.Submission.query.filter_by(contest_id=None)
     if "user" in request.form and len(request.form["user"]):
         user: datas.User = datas.User.query.filter_by(username=request.form["user"]).first_or_404()
         status = status.filter_by(user=user)
     if "pid" in request.form and len(request.form["pid"]):
         status = status.filter_by(pid=request.form["pid"])
-    status_count = status.count()
-    page_cnt = max(1, (status_count - 1) // page_size + 1)
-    if page <= 0 or page > page_cnt:
-        abort(404)
-    got_data: list[datas.Submission] = status.slice(max(0, status_count - page_size * page),
-                                                    status_count - page_size * (page - 1)).all()
-    displays = [1, page_cnt]
-    displays.extend(range(max(2, page - 2), min(page_cnt, page + 2) + 1))
-    displays = sorted(set(displays))
+    got_data, page_cnt, page_idx, show_pages = tools.pagination(status)
     out = []
-    for obj in reversed(got_data):
+    for obj in got_data:
         pid = obj.pid
         problem = datas.Problem.query.filter_by(pid=pid)
         problem_name = problem.first().name if problem.count() else "unknown"
@@ -301,7 +266,7 @@ def all_status():
                     "lang": obj.language,
                     "result": result,
                     "can_see": can_see})
-    ret = {"show_pages": displays, "page_cnt": page_cnt, "page": page, "data": out}
+    ret = {"show_pages": show_pages, "page_cnt": page_cnt, "page": page_idx, "data": out}
     return jsonify(ret)
 
 

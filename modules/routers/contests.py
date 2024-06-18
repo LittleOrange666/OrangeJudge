@@ -14,17 +14,9 @@ app = server.app
 @app.route("/contests", methods=["GET"])
 def contests_list():
     public_contests = datas.Contest.query
-    contest_cnt = public_contests.count()
-    page_cnt = max(1, (contest_cnt - 1) // constants.page_size + 1)
-    page_idx = tools.to_int(request.args.get("page", "1"))
-    if page_idx <= 0 or page_idx > page_cnt:
-        abort(404)
-    got_data = public_contests.slice(constants.page_size * (page_idx - 1),
-                                     min(contest_cnt, constants.page_size * page_idx)).all()
-    displays = [1, page_cnt]
-    displays.extend(range(max(2, page_idx - 2), min(page_cnt, page_idx + 2) + 1))
+    got_data, page_cnt, page_idx, show_pages = tools.pagination(public_contests)
     return render_template("contests.html", contests=got_data, page_cnt=page_cnt, page_idx=page_idx,
-                           show_pages=sorted(set(displays)))
+                           show_pages=show_pages)
 
 
 @app.route("/create_contest", methods=["POST"])
@@ -74,8 +66,6 @@ def contest_problem(cid, pid):
 @app.route("/contest/<cid>/status/<page_str>", methods=["POST"])
 def contest_status(cid, page_str):
     dat: datas.Contest = datas.Contest.query.filter_by(cid=cid).first_or_404()
-    page = tools.to_int(page_str)
-    page_size = constants.page_size
     status = dat.submissions
     if "user" in request.form and len(request.form["user"]):
         user: datas.User = datas.User.query.filter_by(username=request.form["user"]).first_or_404()
@@ -84,17 +74,9 @@ def contest_status(cid, page_str):
         if request.form["pid"] not in dat.data["problems"]:
             abort(404)
         status = status.filter_by(pid=dat.data["problems"][request.form["pid"]])
-    status_count = status.count()
-    page_cnt = max(1, (status_count - 1) // page_size + 1)
-    if page <= 0 or page > page_cnt:
-        abort(404)
-    got_data: list[datas.Submission] = status.slice(max(0, status_count - page_size * page),
-                                                    status_count - page_size * (page - 1)).all()
-    displays = [1, page_cnt]
-    displays.extend(range(max(2, page - 2), min(page_cnt, page + 2) + 1))
-    displays = sorted(set(displays))
+    got_data, page_cnt, page_idx, show_pages = tools.pagination(status, True, page_str)
     out = []
-    for obj in reversed(got_data):
+    for obj in got_data:
         pid = obj.pid
         problem = "?"
         problem_name = "?"
@@ -113,7 +95,7 @@ def contest_status(cid, page_str):
                     "lang": obj.language,
                     "result": result,
                     "can_see": can_see})
-    ret = {"show_pages": displays, "page_cnt": page_cnt, "page": page, "data": out}
+    ret = {"show_pages": show_pages, "page_cnt": page_cnt, "page": page_idx, "data": out}
     return jsonify(ret)
 
 
