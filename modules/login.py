@@ -34,24 +34,6 @@ class User(UserMixin):
             return "root" in prems
         return key in prems or "admin" in prems or "root" in prems
 
-    """
-    def who_has(self, key: str) -> list[str]:
-        ret = []
-        if self.has(key):
-            ret.append(self.id)
-        if "teams" in self.data:
-            for k in self.data["teams"]:
-                if User(k).has(key):
-                    ret.append(k)
-        return ret
-
-    def in_team(self, key: str) -> bool:
-        return self.id == key or "teams" in self.data and key in self.data["teams"]
-
-    def is_team(self) -> bool:
-        return self.has("team")
-    """
-
 
 app = server.app
 login_manager = LoginManager(app)
@@ -123,9 +105,7 @@ def create_account(email: str, user_id: str, password: str | None) -> None:
                      display_name=user_id,
                      email=email,
                      password_sha256_hex=try_hash(password),
-                     permissions="",
-                     teams="",
-                     is_team=False)
+                     permissions="")
     datas.add(obj)
 
 

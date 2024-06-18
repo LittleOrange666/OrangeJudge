@@ -20,7 +20,6 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True)
     password_sha256_hex = db.Column(db.String(64))
     permissions = db.Column(db.String(100), default="")
-    is_team = db.Column(db.Boolean, default=False)
     owner_id = db.Column(db.Integer, nullable=True)
     submissions = db.relationship('Submission', backref='user', lazy='dynamic')
     problems = db.relationship('Problem', backref='user', lazy='dynamic')
