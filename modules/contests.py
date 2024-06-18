@@ -50,8 +50,6 @@ def calidx(idx: int) -> str:
 def add_problem(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Contest, dat: dict) -> str:
     pid = form["pid"]
     pdat: datas.Problem = datas.Problem.query.filter_by(pid=pid).first_or_404()
-    if not current_user.has("admin") and current_user.id not in pdat.data["users"]:
-        abort(403)
     for idx, obj in dat["problems"].items():
         if obj["pid"] == pid:
             abort(409)

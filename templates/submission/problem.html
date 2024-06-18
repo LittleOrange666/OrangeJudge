@@ -77,7 +77,9 @@
 {% endif %}
 <div class="test-case">
     <div>Result {{ i+1 }}: {{ testcase["result"] }}</div>
+{% if testcase["result"] != "SKIP" and (not protected or super_access or testcase["sample"])  %}
     <pre>{{ testcase["info"] }}</pre>
+{% endif %}
 </div>
 {% endfor %}
 {% endif %}
