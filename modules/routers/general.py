@@ -210,7 +210,7 @@ def problem_file(idx, filename):
     target = f"problems/{idx}/public_file/{filename}"
     if not os.path.isfile(target):
         abort(404)
-    return send_file(target)
+    return send_file(os.path.abspath(target))
 
 
 @app.route("/my_submissions", methods=['GET'])

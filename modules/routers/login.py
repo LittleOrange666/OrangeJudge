@@ -13,6 +13,8 @@ app = server.app
 @app.route("/log/<uid>", methods=["GET"])
 @login_required
 def log(uid):
+    if not current_user.has("admin"):
+        abort(403)
     if not tools.exists("logs", uid + ".log"):
         abort(404)
     return render_template("log.html", content=tools.read("logs", uid + ".log"))
