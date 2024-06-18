@@ -20,7 +20,6 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True)
     password_sha256_hex = db.Column(db.String(64))
     permissions = db.Column(db.String(100), default="")
-    teams = db.Column(db.Text, default="")
     is_team = db.Column(db.Boolean, default=False)
     owner_id = db.Column(db.Integer, nullable=True)
     submissions = db.relationship('Submission', backref='user', lazy='dynamic')
@@ -29,20 +28,6 @@ class User(db.Model):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-
-    def remove_team(self, name: str):
-        tl = self.team_list()
-        tl.remove(name)
-        self.teams = ";".join(tl)
-
-    def add_team(self, name: str):
-        if self.teams == "":
-            self.teams = name
-        else:
-            self.teams = self.teams + ";" + name
-
-    def team_list(self) -> list[str]:
-        return self.teams.split(";") if self.teams else []
 
     def permission_list(self) -> list[str]:
         return self.permissions.split(";")

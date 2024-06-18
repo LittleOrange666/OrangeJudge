@@ -28,11 +28,6 @@ class User(UserMixin):
             return "root" in prems
         return key in prems or "admin" in prems or "root" in prems
 
-    def may_has(self, key: str) -> bool:
-        if self.has(key):
-            return True
-        return any(User(k).has(key) for k in self.data.team_list())
-
     """
     def who_has(self, key: str) -> list[str]:
         ret = []
@@ -128,20 +123,6 @@ def create_account(email: str, user_id: str, password: str | None) -> None:
     datas.add(obj)
 
 
-def create_team(team_id: str, owner_id: str, permissions: list[str]):
-    user: datas.User = datas.User.query.filter_by(username=owner_id).first()
-    obj = datas.User(username=team_id.lower(),
-                     display_name=team_id,
-                     email=tools.random_string(),
-                     password_sha256_hex="",
-                     permissions=";".join(permissions),
-                     teams="",
-                     is_team=True,
-                     owner_id=user.id)
-    user.add_team(team_id.lower())
-    datas.add(obj, user)
-
-
 def check_user(require: str | None = None, users: list[str] | None = None) -> User:
     obj = request.args if request.method == "GET" else request.form
     username = obj.get('user', current_user.id)
@@ -149,9 +130,9 @@ def check_user(require: str | None = None, users: list[str] | None = None) -> Us
     if user is None:
         abort(404)
     if not user.has("admin"):
-        if require is not None and not user.may_has(require):
+        if require is not None and not user.has(require):
             abort(403)
-        if users is not None and not any(user.in_team(name) for name in users):
+        if users is not None and user.id not in users:
             abort(403)
     return user
 

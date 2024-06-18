@@ -13,7 +13,6 @@ app = server.app
 @app.route("/log/<uid>", methods=["GET"])
 @login_required
 def log(uid):
-    # login.check_user("admin")
     if not tools.exists("logs", uid + ".log"):
         abort(404)
     return render_template("log.html", content=tools.read("logs", uid + ".log"))
@@ -131,10 +130,9 @@ def user_page(name):
 def settings():
     data: datas.User = current_user.data
     if request.method == "GET":
-        teams = {k: login.get_user(k).data for k in data.team_list()}
         perms = [(k, v) for k, v in constants.permissions.items() if current_user.has(k) and k != "admin"
                  and k != "root"]
-        return render_template("settings.html", data=data, teams=teams, perms=perms)
+        return render_template("settings.html", data=data, perms=perms)
     if request.form["action"] == "general_info":
         display_name = request.form["DisplayName"]
         if len(display_name) > 120 or len(display_name) < 1:
@@ -149,37 +147,6 @@ def settings():
         if len(new_password) < 6:
             abort(400)
         data.password_sha256_hex = login.try_hash(new_password)
-        current_user.save()
-    elif request.form["action"] == "create_team":
-        name = request.form["name"].lower()
-        if not name:
-            abort(400)
-        if login.exist(name):
-            abort(409)
-        perms = [k for k in constants.permissions if current_user.has(k) and k != "admin" and
-                 request.form.get("perm_" + k, "") == "on"]
-        login.create_team(name, current_user.id, perms)
-        data.add_team(name)
-        current_user.save()
-    elif request.form["action"] == "add_member":
-        target = request.form["target"].lower()
-        name = request.form["team"].lower()
-        if not login.exist(target):
-            abort(404)
-        if not login.exist(name) or not login.get_user(name).data.owner_id == data.id:
-            abort(403)
-        user = login.get_user(target)
-        user_data = user.data
-        if name in user_data.team_list():
-            abort(409)
-        user_data.add_team(name)
-        user.save()
-        current_user.save()
-    elif request.form["action"] == "leave_team":
-        name = request.form["team"].lower()
-        if name not in data.team_list():
-            abort(409)
-        data.remove_team(name)
         current_user.save()
     return "", 200
 

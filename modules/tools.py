@@ -34,13 +34,13 @@ def create_truncated(source: str, target: str) -> str:
 
 
 def get_content(filename: str) -> str:
-    partial = filename + "_partial"
-    if os.path.isfile(partial):
-        return read(partial)
+    target = filename + "_partial"
+    if os.path.isfile(target):
+        return read(target)
     file_stats = os.stat(filename)
     if file_stats.st_size <= 500:
         return read(filename)
-    content = create_truncated(filename, partial)
+    content = create_truncated(filename, target)
     return content
 
 

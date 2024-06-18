@@ -55,46 +55,18 @@
     <div class="mb-3">
         <button type="submit" class="btn btn-primary mb-3">Submit</button>
     </div>
-    <script>
-        $("#uploadfile").on("change",function() {
-            let files = $(this).prop("files");
-            if (!files.length) {
-                return false;
-            }
-            let file = files[0];
-            let reader = new FileReader();
-            let target = $(this);
-            reader.onload = function () {
-                $("#codeTextarea").text(this.result);
-                target.val(null);
-            };
-            reader.readAsText(file);
-        });
-        const lang_exts = {{ lang_exts|safe }};
-        $("#uploadfile").prop("accept",lang_exts[$("#langoption").val()]);
-        $("#langoption").on("change",function(){
-            $("#uploadfile").prop("accept",lang_exts[$("#langoption").val()]);
-            localStorage.lang = $("#langoption").val();
-        });
-        if(localStorage.lang){
-            $("#langoption").val(localStorage.lang);
-            $("#langoption").trigger("change");
-        }
-
-
-    </script>
 </form>
+<script src="/static/problem.js"></script>
 {% endif %}
+{% endblock %}
+
+{% block script %}
 {% if preview %}
-<script>
-    $("*[inner_embed]").each(function(){
-        let s = $(this).attr("src");
-        let l = s.split("/")
-        let link = "/problemsetting_preview?pid="+l[2]+"&type=public_file&name="+l[3];
-        $(this).attr("src",link);
-    });
-
-
-</script>
+$("*[inner_embed]").each(function(){
+    let s = $(this).attr("src");
+    let l = s.split("/")
+    let link = "/problemsetting_preview?pid="+l[2]+"&type=public_file&name="+l[3];
+    $(this).attr("src",link);
+});
 {% endif %}
 {% endblock %}

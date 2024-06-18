@@ -32,22 +32,6 @@ class Locker:
                 del _used_set[self.name]
 
 
-class AtomicValue(Generic[T]):
-    def __init__(self, value: T):
-        self._value: T = manager.Value(type(value).__name__, value)
-        self.lock = Lock()
-
-    @property
-    def value(self) -> T:
-        with self.lock:
-            return self._value.value
-
-    @value.setter
-    def value(self, value: T):
-        with self.lock:
-            self._value.value = value
-
-
 class Counter:
     __slots__ = ("_value", "lock")
 

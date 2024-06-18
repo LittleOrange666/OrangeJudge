@@ -691,48 +691,6 @@ def save_testcase(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: 
 
 
 @actions.bind
-def save_testcase_gen(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
-    try:
-        modify = json.loads(form["modify"])
-    except json.decoder.JSONDecodeError:
-        abort(400)
-    testcases = dat["testcases_gen"]
-    if type(modify) is not list or len(modify) != len(testcases):
-        abort(400)
-    s = set()
-    new_testcases = []
-    for o in modify:
-        if type(o[1]) is not bool or type(o[0]) is not int or not (len(testcases) > o[0] >= 0):
-            abort(400)
-        if o[0] in s:
-            abort(400)
-        s.add(o[0])
-        obj = testcases[o[0]]
-        obj["sample"] = o[1]
-        new_testcases.append(obj)
-    dat["testcases_gen"] = new_testcases
-    return "tests"
-
-
-@actions.bind
-def set_generator(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
-    generator = form["generator"]
-    solution = form["solution"]
-    if not any(o["name"] == generator for o in dat["files"]):
-        abort(404)
-    if not any(o["name"] == solution for o in dat["files"]):
-        abort(404)
-    seed = form["seed"]
-    cnts = {}
-    for k in dat["groups"].keys():
-        cnts[k] = form["count_" + k]
-        if not cnts[k].isdigit():
-            abort(400)
-    dat["gen_msg"] = {"generator": generator, "solution": solution, "seed": seed, "counts": cnts}
-    return "tests"
-
-
-@actions.bind
 def do_generate(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
     add_background_action({"action": "generate_testcase", "pid": pid})
     return "tests"

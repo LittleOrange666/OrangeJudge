@@ -8,7 +8,7 @@ from pygments import highlight, lexers
 from pygments.formatters import HtmlFormatter
 from werkzeug.utils import secure_filename
 
-from modules import tools, server, constants, executing, tasks, datas, contests
+from modules import tools, server, constants, executing, tasks, datas, contests, login
 
 app = server.app
 
@@ -276,8 +276,26 @@ def admin():
     if not current_user.has("admin"):
         abort(403)
     if request.method == 'GET':
-        return render_template("admin.html")
+        users = datas.User.query.all()
+        return render_template("admin.html", users=users)
     else:
+        if request.form["action"] == "update_user":
+            user: datas.User = datas.User.query.filter_by(username=request.form["username"]).first_or_404()
+            user.display_name = request.form["display_name"]
+            if len(request.form["password"]) > 1:
+                user.password_sha256_hex = login.try_hash(request.form["password"])
+            perms = user.permission_list()
+            new_perms = request.form["permissions"].split(";")
+            for perm_name in ("admin", "make_problems"):
+                if perm_name in new_perms:
+                    if perm_name not in perms:
+                        perms.append(perm_name)
+                else:
+                    if perm_name in perms:
+                        perms.remove(perm_name)
+            user.permissions = ";".join(perms)
+            datas.add(user)
+            return "OK", 200
         abort(404)
 
 

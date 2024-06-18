@@ -102,7 +102,7 @@
             <div class="modal-body" id="myModalText">
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
             </div>
         </div>
     </div>
@@ -120,11 +120,6 @@ MathJax.Hub.Config({
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js"></script>
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" id="csrf_token">
 <script src="/static/main.js"></script>
+<script>{% block script %}{% endblock %}</script>
 </body>
-<script>
-{% block script %}{% endblock %}
-
-
-
-</script>
 </html>
