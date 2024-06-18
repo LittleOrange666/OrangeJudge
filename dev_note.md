@@ -20,7 +20,6 @@
 + problem set
 + exam
 + custom languages
-+ ans generator
 + background action log (不完整)
 + better editer(自動縮排&空格縮排)
 + 出題小組 (虛擬使用者?)
@@ -32,7 +31,6 @@
 + seccomp
 + judge error log (不完整)
 + tutorial
-+ all submissions
 + language limit and specify ML, TL
 + 標準化計時
 + latex/md題敘 (只支持Polygon import 且後續修改困難)

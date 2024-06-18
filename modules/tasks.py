@@ -180,6 +180,8 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
                     o["gainscore"] /= o.get("cnt", 0)
                 o["gainscore"] = o["gainscore"] * o.get("score", 100) / top_score
                 total_score += o["gainscore"]
+            elif o.get("rule", "min") == "avg":
+                o["gainscore"] = o.get("score", 100)
     out_info["results"] = results
     keys = ("result", "time", "mem", "gainscore")
     out_info["group_results"] = {k: {key: v[key] for key in keys} for k, v in groups.items() if k in exist_gp}

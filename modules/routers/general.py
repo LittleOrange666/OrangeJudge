@@ -200,13 +200,22 @@ def problem_page(idx):
 def problem_file(idx, filename):
     idx = secure_filename(idx)
     filename = secure_filename(filename)
-    pdat: datas.Problem = datas.Problem.query.filter_by(pid=idx).first_or_404()
-    dat = pdat.data
-    if not pdat.is_public:
-        if not current_user.is_authenticated:
-            abort(403)
-        if not current_user.has("admin") and current_user.id not in dat["users"]:
-            abort(403)
+    if "cid" in request.args:
+        cdat: datas.Contest = datas.Contest.query.filter_by(cid=request.args["cid"]).first_or_404()
+        for obj in cdat.data["problems"].values():
+            if obj["pid"] == idx:
+                break
+        else:
+            abort(404)
+        contests.check_access(cdat)
+    else:
+        pdat: datas.Problem = datas.Problem.query.filter_by(pid=idx).first_or_404()
+        dat = pdat.data
+        if not pdat.is_public:
+            if not current_user.is_authenticated:
+                abort(403)
+            if not current_user.has("admin") and current_user.id not in dat["users"]:
+                abort(403)
     target = f"problems/{idx}/public_file/{filename}"
     if not os.path.isfile(target):
         abort(404)

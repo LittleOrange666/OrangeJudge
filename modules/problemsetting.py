@@ -497,8 +497,11 @@ def save_statement(form: ImmutableMultiDict[str, str], pid: str, path: str, dat:
     if obj["type"] == "latex":
         obj["main"], obj["input"], obj["output"], obj["interaction"], obj["scoring"] = \
             createhtml.run_latex(pid, [obj["main"], obj["input"], obj["output"], obj["interaction"], obj["scoring"]])
-    full = "# 題目敘述\n" + obj["main"] + "\n## 輸入說明\n" + obj["input"] + "\n## 輸出說明\n" \
-           + obj["output"]
+    full = "# 題目敘述\n" + obj["main"]
+    if obj["input"]:
+        full += "\n## 輸入說明\n" + obj["input"]
+    if obj["output"]:
+        full += "\n## 輸出說明\n" + obj["output"]
     if obj["interaction"]:
         full += "\n## 互動說明\n" + form["statement_interaction"]
     if obj["scoring"]:

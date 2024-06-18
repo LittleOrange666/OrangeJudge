@@ -69,4 +69,10 @@ $("*[inner_embed]").each(function(){
     $(this).attr("src",link);
 });
 {% endif %}
+{% if is_contest %}
+$("*[inner_embed]").each(function(){
+    let link = $(this).attr("src") + "?cid={{ cid }}";
+    $(this).attr("src",link);
+});
+{% endif %}
 {% endblock %}

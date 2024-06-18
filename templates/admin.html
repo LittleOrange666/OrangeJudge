@@ -5,12 +5,12 @@
 {% block main %}
 <ul class="nav nav-tabs">
     <li class="nav-item" role="presentation">
-        <a class="nav-link active" id="config_tab" data-bs-toggle="tab" data-bs-target="#config"
-           type="button" role="tab" aria-controls="config" aria-selected="true">設置</a>
+        <a class="nav-link" id="users_tab" data-bs-toggle="tab" data-bs-target="#users" type="button" role="tab"
+           aria-controls="users" aria-selected="true">使用者管理</a>
     </li>
     <li class="nav-item" role="presentation">
-        <a class="nav-link" id="users_tab" data-bs-toggle="tab" data-bs-target="#users" type="button" role="tab"
-           aria-controls="users" aria-selected="false">使用者管理</a>
+        <a class="nav-link active" id="config_tab" data-bs-toggle="tab" data-bs-target="#config"
+           type="button" role="tab" aria-controls="config" aria-selected="false">設置</a>
     </li>
     <li class="nav-item" role="presentation">
         <a class="nav-link" id="make_users_tab" data-bs-toggle="tab" data-bs-target="#make_users" type="button" role="tab"
@@ -18,9 +18,7 @@
     </li>
 </ul>
 <div class="tab-content">
-    <div id="config" class="tab-pane fade show active">
-    </div>
-    <div id="users" class="tab-pane fade">
+    <div id="users" class="tab-pane fade show active">
         <table class="table table-hover table-striped">
             <thead>
             <tr>
@@ -45,7 +43,9 @@
             </tbody>
         </table>
     </div>
-    <div id="make_users" class="tab-pane fade show active">
+    <div id="config" class="tab-pane fade">
+    </div>
+    <div id="make_users" class="tab-pane fade">
     </div>
 </div>
 <div class="modal fade" id="user_manage" tabindex="-1" aria-labelledby="Modal" aria-hidden="true">
