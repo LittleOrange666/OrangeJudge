@@ -104,7 +104,7 @@ def contest_status(cid, page_str):
 def contest_action():
     idx = request.form["cid"]
     cdat = datas.Contest.query.filter_by(cid=idx).first_or_404()
-    if contests.check_super_access(cdat):
+    if not contests.check_super_access(cdat):
         abort(403)
     return contests.action(request.form, cdat)
 
