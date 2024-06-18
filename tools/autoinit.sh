@@ -5,9 +5,7 @@ sudo apt-get -y install python3-pip
 sudo apt-get -y install lxc
 sudo apt-get -y install lxc-templates
 sudo apt-get -y install redis
-# sudo apt-get -y install texlive-binaries
 sudo apt-get -y install texlive-latex-generic
-# sudo apt-get -y install texlive-latex-extra
 sudo apt-get -y install texlive-xetex
 sudo pip3 install -r tools/requirements.txt
 sudo lxc-create lxc-test -t ubuntu
