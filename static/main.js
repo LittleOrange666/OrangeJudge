@@ -61,7 +61,13 @@ $(".countdown-timer").each(function(){
     let is_zero = target - (new Date()).getTime()<=0;
     window.setInterval(function(){
         let delta = Math.max(0,target - (new Date()).getTime());
-        $this.text(new Date(delta).toISOString().substr(11,8)); // AI 生出的酷東東
+        delta = Math.floor(delta/1000);
+        let sec = ""+(delta%60);
+        let min = ""+(Math.floor(delta/60)%60);
+        let hr = ""+Math.floor(delta/3600);
+        if(sec.length<2) sec = "0"+sec;
+        if(min.length<2) min = "0"+min;
+        $this.text(hr+":"+min+":"+sec);
         if (!is_zero && (delta<=0)) location.reload();
     },100);
 });
