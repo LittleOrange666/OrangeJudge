@@ -208,3 +208,19 @@ $(".submitter").click(function(e){
         });
     });
 });
+var copyer = document.createElement("textarea");
+document.body.appendChild(copyer);
+$(copyer).hide();
+$("pre.can-copy").each(function() {
+    let p = $(this);
+    let copy = $('<button class="copy_btn">copy</button>');
+    p.append(copy);
+    p.css("position","relative");
+    let text = $(this).text();
+    copy.click(function() {
+        copyer.value = text;
+        copyer.select();
+        copyer.setSelectionRange(0, 99999);
+        navigator.clipboard.writeText(copyer.value);
+    });
+});

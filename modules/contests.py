@@ -141,6 +141,19 @@ def change_settings(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Co
     return "edit"
 
 
+@actions.bind
+def save_order(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Contest, dat: dict) -> str:
+    order = form["order"].split(",")
+    if set(order) != set(dat["problems"]):
+        abort(400)
+    nw_dict = {}
+    arr = sorted(order)
+    for k1, k2 in zip(arr, order):
+        nw_dict[k1] = dat["problems"][k2]
+    dat["problems"] = nw_dict
+    return "index_page"
+
+
 @actions.default
 def action_not_found(*args):
     abort(404)

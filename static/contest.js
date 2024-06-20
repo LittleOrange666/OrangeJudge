@@ -343,4 +343,42 @@ $(function() {
     let status_mp = {"practice": "練習模式", "waiting_virtual": "等待模擬競賽開始", "waiting": "等待競賽開始", "running": "競賽進行中", "running_virtual": "模擬競賽進行中",
                     "guest": "僅觀看", "testing": "測試模式"};
     $("#contest_status").text(status_mp[contest_status]);
+    if($("#save_order").length){
+        let moveing_problem = null;
+        $("tr.problem").attr("draggable","true");
+        $("tr.problem").on("dragstart",function(e){
+            moveing_problem = $(this);
+        });
+        $("tr.problem").on("dragover",function(e){e.preventDefault();});
+        $("tr.problem").on("dragenter",function(e){e.preventDefault();});
+        $("tr.problem").on("drop",function(e){
+            e.preventDefault();
+            $(this).before(moveing_problem);
+            moveing_problem = null;
+        });
+        $("#save_order").click(function(){
+            let fd = new FormData();;
+            fd.append("cid",cid);
+            fd.append("action","save_order");
+            let arr = [];
+            $("tr.problem").each(function(){
+                arr.push($(this).data("index"));
+            });
+            fd.append("order",arr.join(","));
+            fetch("/contest_action",{
+                method: "POST",
+                headers: {"x-csrf-token": $("#csrf_token").val()},
+                body: fd
+            }).then(function(response){
+                if (response.ok){
+                    show_modal("成功","成功儲存順序", true);
+                }else {
+                    let msg = null;
+                    if(!msg&&response.status==400) msg = "輸入格式不正確"
+                    if(!msg&&response.status==403) msg = "您似乎沒有權限執行此操作"
+                    show_modal("失敗",msg?msg:"Error Code: " + response.status);
+                }
+            });
+        });
+    }
 });

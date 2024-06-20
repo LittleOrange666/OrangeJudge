@@ -57,7 +57,7 @@
             </thead>
             <tbody>
             {% for idx, problem in data["problems"].items() %}
-            <tr>
+            <tr class="problem" data-index="{{ idx }}">
                 <th scope="row"><a href="/contest/{{ cid }}/problem/{{ idx }}" target="_blank">{{ idx }}</a></th>
                 <td><a href="/contest/{{ cid }}/problem/{{ idx }}" target="_blank">{{ problem['name'] }}</a></td>
                 {% if can_edit %}
@@ -76,6 +76,8 @@
         <p class="h3">您目前無法觀看題目</p>
         {% endif %}
         {% if can_edit %}
+        <button class="btn btn-primary" id="save_order">儲存順序</button>
+        <br>
         <form the_action="add_problem">
             <div class="row">
                 <div class="col-auto">

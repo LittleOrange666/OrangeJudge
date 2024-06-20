@@ -50,7 +50,8 @@ class Codehightlighter(HTMLParser):
                 attrs["inner_embed"] = "true"
             if tag == "a" and "/" not in attrs["href"]:
                 attrs["href"] = "/problem_file/" + self.dirname + "/" + attrs["href"]
-            if tag == "a":
+                attrs["download"] = "true"
+            elif tag == "a":
                 attrs["target"] = "_blank"
             if tag == "img" and attrs["src"].endswith(".pdf"):
                 tag = "pdf-file"

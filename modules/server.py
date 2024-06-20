@@ -17,7 +17,7 @@ app.config["SESSION_FILE_DIR"] = "sessions"
 # app.config['SECRET_KEY'] = os.urandom(24)
 app.config["SESSION_COOKIE_NAME"] = "OrangeJudgeSession"
 app.config['SESSION_PERMANENT'] = True
-app.config["PERMANENT_SESSION_LIFETIME"] = 3000000
+app.config["PERMANENT_SESSION_LIFETIME"] = 200000
 Session(app)
 CSRFProtect(app)
 limiter = Limiter(
@@ -35,7 +35,7 @@ def error_400(error):
     if request.method == "GET":
         return render_template("400.html"), 400
     else:
-        return "400 Bad Request", 400
+        return error.description, 400
 
 
 @app.errorhandler(403)

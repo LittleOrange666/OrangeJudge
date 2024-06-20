@@ -10,8 +10,6 @@
 <br>
 <p>Log:</p>
 <div class="alert alert-primary" role="alert">
-    {% for txt in log.split("\n") %}
-    <p>{{ txt }}</p>
-    {% endfor %}
+    <pre>{{ log }}</pre>
 </div>
 {% endblock %}
