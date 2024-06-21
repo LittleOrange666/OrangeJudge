@@ -851,13 +851,14 @@ def remove_gen_group(form: ImmutableMultiDict[str, str], pid: str, path: str, da
 
 
 def action(form: ImmutableMultiDict[str, str]) -> Response:
-    pid = secure_filename(form["pid"])
-    path = f"preparing_problems/{pid}"
-    func = actions.get(form["action"])
-    important = hasattr(func, "important") and getattr(func, "important")
-    with Problem(pid, important) as dat:
-        tp = actions.call(form["action"], form, pid, path, dat)
-        return redirect(f"/problemsetting/{pid}#{tp}")
+    with datas.DelayCommit():
+        pid = secure_filename(form["pid"])
+        path = f"preparing_problems/{pid}"
+        func = actions.get(form["action"])
+        important = hasattr(func, "important") and getattr(func, "important")
+        with Problem(pid, important) as dat:
+            tp = actions.call(form["action"], form, pid, path, dat)
+            return redirect(f"/problemsetting/{pid}#{tp}")
 
 
 def sending_file(file: str) -> Response:

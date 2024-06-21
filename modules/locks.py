@@ -2,7 +2,7 @@ import os
 from multiprocessing import Lock, Manager, Value
 from multiprocessing.managers import SyncManager
 from time import sleep
-from typing import Generic, TypeVar
+from typing import TypeVar
 
 manager: SyncManager = Manager()
 _used_set = manager.dict()
@@ -48,6 +48,14 @@ class Counter:
         with self.lock:
             self._value.value = self._value.value + 1
             return self._value.value
+
+    def dec(self) -> int:
+        with self.lock:
+            self._value.value = self._value.value - 1
+            return self._value.value
+
+    def __bool__(self):
+        return bool(self.value)
 
 
 def init():

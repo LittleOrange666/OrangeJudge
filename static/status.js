@@ -7,7 +7,7 @@ $(function(){
         fd.append("user", $("#status_filter_username").val().toLowerCase());
         fd.append("pid", pid);
         fd.append("page", page);
-        fetch("/status",{
+        fetch("/status_data",{
             method: "POST",
             headers: {"x-csrf-token": $("#csrf_token").val()},
             body: fd

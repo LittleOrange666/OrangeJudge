@@ -249,10 +249,13 @@ def my_submissions():
                            show_pages=show_pages)
 
 
-@app.route("/status", methods=["GET", "POST"])
+@app.route("/status", methods=["GET"])
 def all_status():
-    if request.method == "GET":
-        return render_template("status.html")
+    return render_template("status.html")
+
+
+@app.route("/status_data", methods=["POST"])
+def all_status_data():
     status = datas.Submission.query.filter_by(contest_id=None)
     if "user" in request.form and len(request.form["user"]):
         user: datas.User = datas.User.query.filter_by(username=request.form["user"]).first_or_404()

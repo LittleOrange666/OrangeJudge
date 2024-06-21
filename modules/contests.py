@@ -154,22 +154,45 @@ def save_order(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Contest
     return "index_page"
 
 
+@actions.bind
+def send_announcement(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Contest, dat: dict) -> str:
+    obj = datas.Announcement(time=datetime.now(),
+                             title=form["title"],
+                             content=form["content"],
+                             user=current_user.data,
+                             contest=cdat,
+                             public=True)
+    # datas.add(obj)
+    return "index_page"
+
+
+@actions.bind
+def remove_announcement(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Contest, dat: dict) -> str:
+    idx = tools.to_int(form["id"])
+    obj: datas.Announcement = datas.Announcement.query.get_or_404(idx)
+    if obj.contest != cdat:
+        abort(404)
+    datas.delete(obj)
+    return "index_page"
+
+
 @actions.default
 def action_not_found(*args):
     abort(404)
 
 
 def action(form: ImmutableMultiDict[str, str], cdat: datas.Contest):
-    dat = cdat.data
-    cid = cdat.cid
-    tp = actions.call(form["action"], form, cid, cdat, dat)
-    flag_modified(cdat, "data")
-    datas.add(cdat)
-    if form["action"] == "change_settings":
-        for the_per in cdat.periods:
-            the_per: datas.Period
-            the_per.end_time = the_per.start_time + timedelta(minutes=dat["elapsed"])
-        datas.add(*cdat.periods)
+    with datas.DelayCommit():
+        dat = cdat.data
+        cid = cdat.cid
+        tp = actions.call(form["action"], form, cid, cdat, dat)
+        flag_modified(cdat, "data")
+        datas.add(cdat)
+        if form["action"] == "change_settings":
+            for the_per in cdat.periods:
+                the_per: datas.Period
+                the_per.end_time = the_per.start_time + timedelta(minutes=dat["elapsed"])
+            datas.add(*cdat.periods)
     return f"/contest/{cid}#{tp}"
 
 

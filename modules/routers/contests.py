@@ -6,7 +6,7 @@ from flask import abort, render_template, request, jsonify
 from flask_login import login_required, current_user
 from sqlalchemy.orm.attributes import flag_modified
 
-from modules import server, login, constants, contests, datas, tools, executing
+from modules import server, login, contests, datas, tools, executing
 
 app = server.app
 
@@ -37,8 +37,9 @@ def contest_page(idx):
     info = dat.data
     can_edit = contests.check_super_access(dat)
     can_see = can_see or can_edit
+    announcements = reversed(dat.announcements.filter_by(public=True).all())
     return render_template("contest.html", cid=idx, data=info, can_edit=can_edit, can_see=can_see, target=target,
-                           status=status)
+                           status=status, announcements=announcements)
 
 
 @app.route("/contest/<cid>/problem/<pid>", methods=["GET"])

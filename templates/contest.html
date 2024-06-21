@@ -77,7 +77,6 @@
         {% endif %}
         {% if can_edit %}
         <button class="btn btn-primary" id="save_order">儲存順序</button>
-        <br>
         <form the_action="add_problem">
             <div class="row">
                 <div class="col-auto">
@@ -89,6 +88,74 @@
             </div>
         </form>
         {% endif %}
+        <p class="h3">公告</p>
+        {% if can_edit %}
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#announcement_modal">
+            發布公告
+        </button>
+        <form the_action="send_announcement">
+            <div class="modal fade" id="announcement_modal" tabindex="-1" aria-labelledby="announcement_modal"
+                 aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="exampleModalLabel">發布公告</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label for="announcement_title" class="col-form-label">標題:</label>
+                                <input type="text" class="form-control" id="announcement_title" name="title">
+                            </div>
+                            <div class="mb-3">
+                                <label for="announcement_content" class="col-form-label">內容:</label>
+                                <textarea class="form-control" id="announcement_content" name="content"></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
+                            <button type="button" class="btn btn-primary submitter">發布</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+        {% endif %}
+        <table class="table table-hover table-striped">
+            <thead>
+            <tr>
+                <th scope="col">#</th>
+                <th scope="col">時間</th>
+                <th scope="col">發佈者</th>
+                <th scope="col">內容</th>
+                <th scope="col">回覆者</th>
+                <th scope="col">回覆</th>
+                <th scope="col"></th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for announcement in announcements %}
+            <tr>
+                <th scope="row">{{ loop.index }}</th>
+                <td class="date-string">{{ announcement.time.timestamp() }}</td>
+                <td>{{ announcement.user.username }}</td>
+                <td class="message-area">{{ announcement.content }}</td>
+                <td>{{ announcement.reply_name or "" }}</td>
+                <td class="message-area">{{ announcement.reply or "" }}</td>
+                {% if can_edit %}
+                <td>
+                    <form the_action="remove_announcement">
+                        <input type="hidden" name="id" value="{{ announcement.id }}">
+                        <button class="btn btn-danger submitter">
+                            移除公告
+                        </button>
+                    </form>
+                </td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
     </div>
     <div id="status" class="tab-pane fade">
         <div class="row">

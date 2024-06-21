@@ -63,16 +63,16 @@
 {% block script %}
 {% if preview %}
 $("*[inner_embed]").each(function(){
-    let s = $(this).attr("src");
-    let l = s.split("/")
-    let link = "/problemsetting_preview?pid="+l[2]+"&type=public_file&name="+l[3];
-    $(this).attr("src",link);
+let s = $(this).attr("src");
+let l = s.split("/")
+let link = "/problemsetting_preview?pid="+l[2]+"&type=public_file&name="+l[3];
+$(this).attr("src",link);
 });
 {% endif %}
 {% if is_contest %}
 $("*[inner_embed]").each(function(){
-    let link = $(this).attr("src") + "?cid={{ cid }}";
-    $(this).attr("src",link);
+let link = $(this).attr("src") + "?cid={{ cid }}";
+$(this).attr("src",link);
 });
 {% endif %}
 {% endblock %}

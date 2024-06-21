@@ -79,3 +79,10 @@ textarea{
     padding: 5px;
     margin: 0px;
 }
+
+.message-area {
+    white-space:pre;
+    word-break: break-all;
+    width: 20%;
+    max-width: 20%;
+}

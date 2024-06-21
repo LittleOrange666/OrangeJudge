@@ -5,7 +5,7 @@ from flask import request, abort
 from flask_login import LoginManager, UserMixin, current_user
 from werkzeug.utils import secure_filename
 
-from modules import server, datas, config, tools
+from modules import server, datas, config
 
 smtp = smtplib.SMTP(config.get("smtp.host"), config.get("smtp.port"))
 
