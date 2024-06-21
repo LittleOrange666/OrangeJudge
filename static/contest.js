@@ -381,4 +381,11 @@ $(function() {
             });
         });
     }
+    $("#save_question_modal").on("show.bs.modal", function(event){
+        let id = $(event.relatedTarget).data("id");
+        $("#save_question_id").val(id);
+        let reply = $(".question-tr[data-id='"+id+"'] .message-area.reply").text();
+        $("#save_question_content").val(reply);
+        $("#save_question_check").prop("checked", $(event.relatedTarget).data("public")==="True");
+    });
 });

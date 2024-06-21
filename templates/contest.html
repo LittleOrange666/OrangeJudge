@@ -96,10 +96,10 @@
         <form the_action="send_announcement">
             <div class="modal fade" id="announcement_modal" tabindex="-1" aria-labelledby="announcement_modal"
                  aria-hidden="true">
-                <div class="modal-dialog">
+                <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title" id="exampleModalLabel">發布公告</h5>
+                            <h5 class="modal-title">發布公告</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
@@ -126,7 +126,7 @@
             <tr>
                 <th scope="col">#</th>
                 <th scope="col">時間</th>
-                <th scope="col">發佈者</th>
+                <th scope="col">發佈者/提問者</th>
                 <th scope="col">內容</th>
                 <th scope="col">回覆者</th>
                 <th scope="col">回覆</th>
@@ -139,7 +139,8 @@
                 <th scope="row">{{ loop.index }}</th>
                 <td class="date-string">{{ announcement.time.timestamp() }}</td>
                 <td>{{ announcement.user.username }}</td>
-                <td class="message-area">{{ announcement.content }}</td>
+                <td><p class="fw-bold h4">{{ announcement.title }}</p>
+                    <p class="message-area">{{ announcement.content }}</p></td>
                 <td>{{ announcement.reply_name or "" }}</td>
                 <td class="message-area">{{ announcement.reply or "" }}</td>
                 {% if can_edit %}
@@ -147,7 +148,7 @@
                     <form the_action="remove_announcement">
                         <input type="hidden" name="id" value="{{ announcement.id }}">
                         <button class="btn btn-danger submitter">
-                            移除公告
+                            移除
                         </button>
                     </form>
                 </td>
@@ -156,6 +157,105 @@
             {% endfor %}
             </tbody>
         </table>
+        <p class="h3">詢問</p>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#question_modal">
+            提出問題
+        </button>
+        <form action="/contest/{{ cid }}/question" method="post">
+            <div class="modal fade" id="question_modal" tabindex="-1" aria-labelledby="question_modal"
+                 aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">提出問題</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label for="question_title" class="col-form-label">標題:</label>
+                                <input type="text" class="form-control" id="question_title" name="title">
+                            </div>
+                            <div class="mb-3">
+                                <label for="question_content" class="col-form-label">內容:</label>
+                                <textarea class="form-control" id="question_content" name="content"></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
+                            <button type="button" class="btn btn-primary submitter">提交</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+        <table class="table table-hover table-striped">
+            <thead>
+            <tr>
+                <th scope="col">#</th>
+                <th scope="col">時間</th>
+                <th scope="col">提問者</th>
+                <th scope="col">內容</th>
+                <th scope="col">回覆者</th>
+                <th scope="col">回覆</th>
+                <th scope="col"></th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for question in questions %}
+            <tr class="question-tr" data-id="{{ question.id }}">
+                <th scope="row">{{ loop.index }}</th>
+                <td class="date-string">{{ question.time.timestamp() }}</td>
+                <td>{{ question.user.username }}</td>
+                <td><p class="fw-bold h4">{{ question.title }}</p>
+                    <p class="message-area">{{ question.content }}</p></td>
+                <td>{{ question.reply_name or "" }}</td>
+                <td class="message-area reply">{{ question.reply or "" }}</td>
+                {% if can_edit %}
+                <td>
+                    <form the_action="remove_announcement">
+                        <input type="hidden" name="id" value="{{ question.id }}">
+                        <button class="btn btn-danger submitter">
+                            移除
+                        </button>
+                    </form>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#save_question_modal"
+                            data-id="{{ question.id }}" data-public="{{ question.public }}">回覆</button>
+                </td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        <form the_action="save_question">
+            <input type="hidden" name="id" value="" id="save_question_id">
+            <div class="modal fade" id="save_question_modal" tabindex="-1" aria-labelledby="save_question_modal"
+                 aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">回覆問題</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label for="save_question_content" class="col-form-label">內容:</label>
+                                <textarea class="form-control" id="save_question_content" name="content"></textarea>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="yes" name="public" id="save_question_check">
+                                <label class="form-check-label" for="save_question_check">
+                                    公開回覆
+                                </label>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
+                            <button type="button" class="btn btn-primary submitter">儲存回覆</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
     </div>
     <div id="status" class="tab-pane fade">
         <div class="row">

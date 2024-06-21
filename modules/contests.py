@@ -161,8 +161,9 @@ def send_announcement(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.
                              content=form["content"],
                              user=current_user.data,
                              contest=cdat,
-                             public=True)
-    # datas.add(obj)
+                             public=True,
+                             question=False)
+    datas.add(obj)
     return "index_page"
 
 
@@ -173,6 +174,21 @@ def remove_announcement(form: ImmutableMultiDict[str, str], cid: str, cdat: data
     if obj.contest != cdat:
         abort(404)
     datas.delete(obj)
+    return "index_page"
+
+
+@actions.bind
+def save_question(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Contest, dat: dict) -> str:
+    idx = tools.to_int(form["id"])
+    obj: datas.Announcement = datas.Announcement.query.get_or_404(idx)
+    if obj.contest != cdat:
+        abort(404)
+    reply = form["content"]
+    public = form.get("public", "no") == "yes"
+    obj.reply = reply
+    obj.reply_name = current_user.id
+    obj.public = public
+    datas.add(obj)
     return "index_page"
 
 

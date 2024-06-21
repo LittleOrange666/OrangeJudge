@@ -38,8 +38,12 @@ def contest_page(idx):
     can_edit = contests.check_super_access(dat)
     can_see = can_see or can_edit
     announcements = reversed(dat.announcements.filter_by(public=True).all())
+    if can_edit:
+        questions = reversed(dat.announcements.filter_by(question=True).all())
+    else:
+        questions = reversed(dat.announcements.filter_by(question=True, user=current_user.data).all())
     return render_template("contest.html", cid=idx, data=info, can_edit=can_edit, can_see=can_see, target=target,
-                           status=status, announcements=announcements)
+                           status=status, announcements=announcements, questions=questions)
 
 
 @app.route("/contest/<cid>/problem/<pid>", methods=["GET"])
@@ -202,3 +206,17 @@ def contest_standing(cid):
                     "pids": list(cdat.data["problems"].keys()),
                     "penalty": cdat.data["penalty"],
                     "judging": per.judging})
+
+
+@app.route("/contest/<cid>/question", methods=['POST'])
+def contest_question(cid):
+    cdat: datas.Contest = datas.Contest.query.filter_by(cid=cid).first_or_404()
+    obj = datas.Announcement(time=datetime.now(),
+                             title=request.form["title"],
+                             content=request.form["content"],
+                             user=current_user.data,
+                             contest=cdat,
+                             public=False,
+                             question=True)
+    datas.add(obj)
+    return "", 200

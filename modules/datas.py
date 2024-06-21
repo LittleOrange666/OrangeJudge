@@ -128,6 +128,7 @@ class Announcement(db.Model):
     contest_id = db.Column(db.Integer, db.ForeignKey('contests.id'), nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     public = db.Column(db.Boolean, default=True, nullable=False)
+    question = db.Column(db.Boolean, default=False, nullable=False)
 
 
 def init():
@@ -162,4 +163,6 @@ class DelayCommit:
         lock_counter.inc()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        lock_counter.dec()
+        cnt = lock_counter.dec()
+        if cnt == 0:
+            db.session.commit()
