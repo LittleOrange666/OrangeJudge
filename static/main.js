@@ -82,8 +82,9 @@ $(".time-string").each(function(){
     let m = t%60;
     $(this).text((d>0?d+':':'')+(h<10?"0":"")+h+":"+(m<10?"0":"")+m);
 });
-var myModal = new bootstrap.Modal(document.getElementById('myModal'));
+var myModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('myModal'));
 function show_modal(title, text, refresh, next_page){
+    document.getElementById('myModal').focus();
     $("#myModalTitle").text(title);
     $("#myModalText").text(text);
     if (next_page) {
@@ -171,6 +172,10 @@ function post(url, data, callback){
         }
     });
 }
+$(".submitter").each(function(){
+    let spin = $('<span class="visually-hidden spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+    $(this).prepend(spin);
+});
 $(".submitter").click(function(e){
     e.preventDefault();
     let $this = $(this);
@@ -190,8 +195,15 @@ $(".submitter").click(function(e){
         show_modal("錯誤","輸入格式不正確");
         return;
     }
+    $this.find("span").removeClass("visually-hidden");
+    let modals = $this.parents(".modal");
+    let modal = null;
+    if(modals.length) modal = bootstrap.Modal.getOrCreateInstance(modals[0]);
+    console.log(modal)
     fetching($this.parents("form").first()).then(function (response) {
         console.log(response);
+        if(modal) modal.hide();
+        $this.find("span").addClass("visually-hidden");
         response.text().then(function(text){
             let link = null;
             if(response.ok) {

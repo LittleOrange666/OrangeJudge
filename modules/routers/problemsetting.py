@@ -42,7 +42,7 @@ def create_problem():
     if request.method == "GET":
         return render_template("create_problem.html")
     else:
-        pid = request.form["pid"]
+        pid = request.form["pid"]  # 不用加 secure_filename 因為下面那個函數會檢查
         idx = problemsetting.create_problem(request.form["name"], pid, user.data)
         return f"/problemsetting/{idx}?user={user.id}", 200
 

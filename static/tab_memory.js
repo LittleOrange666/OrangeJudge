@@ -3,7 +3,7 @@ $(function() {
         $(this).attr("href",$(this).data("bs-target"));
     });
     $("a[role='tab']").click(function(){
-        history.pushState({}, '', this.href);
+        history.replaceState({}, '', this.href);
     });
     if(location.hash) {
         $("a[role='tab'][data-bs-target='"+location.hash+"']").each(function(){
