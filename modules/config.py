@@ -9,7 +9,7 @@ with open("config.yaml", "r") as f:
     config = yaml.load(f, yaml.loader.SafeLoader)
 
 
-# print("config=", config)
+print("config=", config)
 
 
 def get(path: str):
@@ -61,6 +61,8 @@ verify_int("server.timeout")
 verify_list("server.limits")
 verify_dict("judge")
 verify_int("judge.workers")
+verify_str("judge.limit")
+verify_int("judge.file_size")
 verify_dict("debug")
 verify_bool("debug.log")
 verify_dict("account")

@@ -10,7 +10,7 @@ def call(cmd: list[str], stdin: str = "", timeout: float | None = None) -> tuple
     tools.log(*cmd)
     if timeout is None:
         timeout = 30
-    process = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
     ret = process.communicate(stdin.encode("utf8"), timeout=timeout)
     return ret[0].decode("utf8"), ret[1].decode("utf8"), process.returncode
 

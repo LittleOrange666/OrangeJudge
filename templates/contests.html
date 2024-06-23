@@ -8,7 +8,7 @@
 <form method="post" action="/create_contest">
     <div class="row">
         <div class="col-auto">
-            <input type="text" class="form-control" name="contest_name" placeholder="競賽名稱" required>
+            <input type="text" class="form-control" name="contest_name" placeholder="競賽名稱" pattern="^.{1,120}$" required>
         </div>
         <div class="col-auto">
             <button class="btn btn-primary submitter" data-redirect="true">建立新的競賽</button>

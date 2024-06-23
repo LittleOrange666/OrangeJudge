@@ -557,6 +557,8 @@ def upload_public_file(form: ImmutableMultiDict[str, str], pid: str, path: str, 
         fn = secure_filename(file.filename)
         if fn == "":
             abort(400)
+        if len(fn) > 100:
+            abort(400)
         if tools.exists(path, "public_file", fn):
             abort(409)
     for file in get_files:
@@ -580,18 +582,23 @@ def remove_public_file(form: ImmutableMultiDict[str, str], pid: str, path: str, 
 def upload_file(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
     get_files = request.files.getlist("files")
     for file in get_files:
-        if secure_filename(file.filename) == "":
+        fn = secure_filename(file.filename)
+        if fn == "":
             abort(400)
-        if tools.exists(path, "file/", secure_filename(file.filename)):
+        if len(fn) > 100:
+            abort(400)
+        if tools.exists(path, "file/", fn):
             abort(409)
-        file.save(path + "/file/" + secure_filename(file.filename))
-        dat["files"].append({"name": secure_filename(file.filename), "type": "C++17"})
+        file.save(path + "/file/" + fn)
+        dat["files"].append({"name": fn, "type": "C++17"})
     return "files"
 
 
 @actions.bind
 def create_file(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
     filename = secure_filename(form["filename"])
+    if len(filename) == 0 or len(filename) > 100:
+        abort(400)
     if tools.exists(path, "file", filename):
         abort(409)
     tools.create(path, "file", filename)

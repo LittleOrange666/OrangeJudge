@@ -211,6 +211,10 @@ def contest_standing(cid):
 @app.route("/contest/<cid>/question", methods=['POST'])
 def contest_question(cid):
     cdat: datas.Contest = datas.Contest.query.filter_by(cid=cid).first_or_404()
+    if len(request.form["title"]) > 80:
+        abort(400)
+    if len(request.form["content"]) > 1000:
+        abort(400)
     obj = datas.Announcement(time=datetime.now(),
                              title=request.form["title"],
                              content=request.form["content"],

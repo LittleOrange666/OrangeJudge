@@ -69,11 +69,16 @@ def my_problem_page(idx):
             dat["groups"] = {}
         if "default" not in dat["groups"]:
             dat["groups"]["default"] = {}
+    action_files = os.listdir(f"preparing_problems/{idx}/actions")
+    actions = []
+    for f in action_files:
+        if os.path.splitext(f)[1] == ".json":
+            actions.append(os.path.splitext(f)[0])
     return render_template("problemsetting.html", dat=constants.default_problem_info | dat, pid=idx,
                            versions=problemsetting.query_versions(pdat), enumerate=enumerate,
                            public_files=public_files, default_checkers=default_checkers,
                            langs=executing.langs.keys(), default_interactors=default_interactors,
-                           username=user.id, pdat=pdat)
+                           username=user.id, pdat=pdat, actions=actions)
 
 
 @app.route("/problemsetting_action", methods=['POST'])

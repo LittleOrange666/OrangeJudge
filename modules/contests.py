@@ -14,6 +14,8 @@ actions = tools.Switcher()
 
 
 def create_contest(name: str, user: datas.User) -> str:
+    if len(name) > 120:
+        abort(400)
     ccnt = datas.Contest.query.count()
     cidx = ccnt + 1
     while datas.Contest.query.filter_by(cid=str(cidx)).count():
@@ -156,6 +158,10 @@ def save_order(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Contest
 
 @actions.bind
 def send_announcement(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Contest, dat: dict) -> str:
+    if len(form["title"]) > 80:
+        abort(400)
+    if len(form["content"]) > 1000:
+        abort(400)
     obj = datas.Announcement(time=datetime.now(),
                              title=form["title"],
                              content=form["content"],
@@ -184,6 +190,8 @@ def save_question(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Cont
     if obj.contest != cdat:
         abort(404)
     reply = form["content"]
+    if len(reply) > 1000:
+        abort(400)
     public = form.get("public", "no") == "yes"
     obj.reply = reply
     obj.reply_name = current_user.id

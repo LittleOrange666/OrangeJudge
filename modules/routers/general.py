@@ -8,7 +8,7 @@ from pygments import highlight, lexers
 from pygments.formatters import HtmlFormatter
 from werkzeug.utils import secure_filename
 
-from modules import tools, server, constants, executing, tasks, datas, contests, login
+from modules import tools, server, constants, executing, tasks, datas, contests, login, config
 
 app = server.app
 
@@ -60,10 +60,13 @@ def test():
 
 
 @app.route("/submit", methods=['POST'])
+@server.limiter.limit(config.get("judge.limit"))
 @login_required
 def submit():
     lang = request.form["lang"]
     code = request.form["code"].replace("\n\n", "\n")
+    if len(code) > config.get("judge.file_size")*1024:
+        abort(400)
     pid = request.form["pid"]
     pdat: datas.Problem = datas.Problem.query.filter_by(pid=pid).first_or_404()
     if lang not in executing.langs:
@@ -71,11 +74,6 @@ def submit():
     if not pdat.data["languages"].get(lang, True):
         abort(400)
     ext = executing.langs[lang].data["source_ext"]
-    """
-    if tools.elapsed(current_user.folder, "submissions") < 5:
-        abort(429)
-    tools.append(idx + "\n", current_user.folder, "submissions")
-    """
     dat = datas.Submission(source="Main" + ext, time=datetime.datetime.now(), user=current_user.data,
                            problem=pdat, language=lang, data={}, pid=pid, simple_result="waiting")
     if "cid" in request.form:

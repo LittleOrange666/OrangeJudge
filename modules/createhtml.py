@@ -177,6 +177,7 @@ def run_latex(pid: str, strings: list[str]):
             out = out.replace("&amp;#", "&#").replace("\n", "")
             out = out[out.find(">", out.find("<body")) + 1:out.find("</body")] + "\n"
         outs.append(out)
+    shutil.rmtree(folder)
     return outs
 
 

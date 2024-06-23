@@ -12,10 +12,10 @@ from flask import abort, request
 from modules import locks, config, constants
 
 
-def system(s: str, cwd: str = "") -> None:
+def system(s: str, cwd: str = "") -> None:  # 此處使用了shell=True，請謹慎使用
     cwd = os.path.abspath(cwd)
     log(f"system command in {cwd!r}:", s)
-    subprocess.call(s.split(), cwd=cwd)
+    subprocess.call(s, cwd=cwd, shell=True)
 
 
 def create_truncated(source: str, target: str) -> str:
