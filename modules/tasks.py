@@ -229,5 +229,5 @@ def runner():
 
 
 def init():
-    for _ in range(config.get("judge.workers")):
+    for _ in range(config.judge.workers.value):
         Process(target=runner).start()

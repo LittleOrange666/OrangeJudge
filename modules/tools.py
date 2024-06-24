@@ -229,7 +229,7 @@ def to_int(text: str) -> int:
     return int(text)
 
 
-has_log: bool = config.get("debug.log")
+has_log: bool = config.debug.log.value
 
 
 def log(*args):

@@ -44,9 +44,9 @@ def main():
         problemsetting.init()
         modules.routers.init()
     options = {
-        'bind': '%s:%s' % ('0.0.0.0', str(config.get("server.port"))),
-        'workers': config.get("server.workers"),
-        'timeout': config.get("server.timeout"),
+        'bind': '%s:%s' % ('0.0.0.0', str(config.server.port.value)),
+        'workers': config.server.workers.value,
+        'timeout': config.server.timeout.value,
     }
     StandaloneApplication(server.app, options).run()
     # server.app.run("0.0.0.0", port=config.get("server.port"))

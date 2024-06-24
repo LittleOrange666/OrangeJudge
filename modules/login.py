@@ -7,7 +7,7 @@ from werkzeug.utils import secure_filename
 
 from modules import server, datas, config
 
-smtp = smtplib.SMTP(config.get("smtp.host"), config.get("smtp.port"))
+smtp = smtplib.SMTP(config.smtp.host.value, config.smtp.port.value)
 
 
 class User(UserMixin):
@@ -39,7 +39,7 @@ app = server.app
 login_manager = LoginManager(app)
 login_manager.session_protection = None
 login_manager.login_view = 'do_login'
-email_sender = config.get("smtp.user")
+email_sender = config.smtp.user.value
 
 
 @login_manager.user_loader
@@ -124,10 +124,10 @@ def check_user(require: str | None = None, users: list[str] | None = None) -> Us
 
 
 def init():
-    if config.get("smtp.enabled"):
+    if config.smtp.enabled.value:
         smtp.ehlo()
         smtp.starttls()
-        smtp.login(config.get("smtp.user"), config.get("smtp.password"))
+        smtp.login(config.smtp.user.value, config.smtp.password.value)
     if not exist("root"):
         create_account("", "root", "root")
         root: datas.User = datas.User.query.filter_by(username="root").first()

@@ -1,4 +1,8 @@
+from typing import Generic, TypeVar, Type
+
 import yaml
+
+T = TypeVar('T')
 
 
 class ConfigError(Exception):
@@ -8,65 +12,92 @@ class ConfigError(Exception):
 with open("config.yaml", "r") as f:
     config = yaml.load(f, yaml.loader.SafeLoader)
 
-
 print("config=", config)
 
 
-def get(path: str):
-    cur = config
-    for key in path.split("."):
-        cur = cur[key]
-    return cur
+class ConfigCategory:
+
+    def __init__(self, data: dict, key: str, name: str):
+        self.key = key
+        self.name = name
+        if key not in data:
+            data[key] = {}
+        if not isinstance(data[key], dict):
+            raise ConfigError(f"'{key}' is not a dict")
+        self.data = data[key]
 
 
-def verify(path: str, _type: type):
-    if not isinstance(get(path), _type):
-        raise ConfigError(f"{path} is not of type {_type.__name__}")
+class ConfigProperty(Generic[T]):
+    __slots__ = ("_value", "name", "_key", "_type")
+
+    def __init__(self, data: ConfigCategory, key: str, name: str, _type: Type[T], _default: T):
+        if key not in data.data:
+            data.data[key] = _default
+        if not isinstance(data.data[key], _type):
+            raise ConfigError(f"'{data.key}.{key}' is not a {_type.__name__}")
+        self._value: T = data.data[key]
+        self.name = name
+        self._key = key
+        self._type = _type
+
+    @property
+    def value(self) -> T:
+        return self._value
 
 
-def verify_int(path: str):
-    verify(path, int)
+class SmtpConfig(ConfigCategory):
+    def __init__(self, data: dict):
+        super().__init__(data, "smtp", "SMTP設定")
+        self.host = ConfigProperty[str](self, "host", "SMTP伺服器", str, "smtp.gmail.com")
+        self.port = ConfigProperty[int](self, "port", "SMTP伺服器連接埠", int, 587)
+        self.user = ConfigProperty[str](self, "user", "SMTP使用者名稱(email)", str, "user@gmail.com")
+        self.password = ConfigProperty[str](self, "password", "SMTP使用者密碼", str, "password")
+        self.enabled = ConfigProperty[bool](self, "enabled", "SMTP是否啟用", bool, False)
 
 
-def verify_str(path: str):
-    verify(path, str)
+smtp = SmtpConfig(config)
 
 
-def verify_bool(path: str):
-    verify(path, bool)
+class ServerConfig(ConfigCategory):
+    def __init__(self, data: dict):
+        super().__init__(data, "server", "伺服器設定")
+        self.port = ConfigProperty[int](self, "port", "此伺服器的連接埠", int, 8080)
+        self.workers = ConfigProperty[int](self, "workers", "WSGI並行數量", int, 4)
+        self.timeout = ConfigProperty[int](self, "timeout", "WSGI超時時間", int, 120)
+        self.limits = ConfigProperty[list[str]](self, "limits", "請求頻率限制列表", list,
+                                                ["20 per 30 second", "1 per 1 second"])
 
 
-def verify_list(path: str):
-    verify(path, list)
+server = ServerConfig(config)
 
 
-def verify_dict(path: str):
-    verify(path, dict)
+class JudgeConfig(ConfigCategory):
+    def __init__(self, data: dict):
+        super().__init__(data, "judge", "評測系統設定")
+        self.workers = ConfigProperty[int](self, "workers", "評測系統並行數量", int, 1)
+        self.limit = ConfigProperty[str](self, "limit", "提交頻率限制", str, "1 per 10 second")
+        self.file_size = ConfigProperty[int](self, "file_size", "檔案大小限制(KB)", int, 100)
 
 
-def verify_float(path: str):
-    verify(path, float)
+judge = JudgeConfig(config)
 
 
-verify_dict("smtp")
-verify_str("smtp.host")
-verify_int("smtp.port")
-verify_str("smtp.user")
-verify_str("smtp.password")
-verify_bool("smtp.enabled")
-verify_dict("server")
-verify_int("server.port")
-verify_int("server.workers")
-verify_int("server.timeout")
-verify_list("server.limits")
-verify_dict("judge")
-verify_int("judge.workers")
-verify_str("judge.limit")
-verify_int("judge.file_size")
-verify_dict("debug")
-verify_bool("debug.log")
-verify_dict("account")
-verify_bool("account.signup")
+class DebugConfig(ConfigCategory):
+    def __init__(self, data: dict):
+        super().__init__(data, "debug", "除錯設定")
+        self.log = ConfigProperty[bool](self, "log", "除錯紀錄是否啟用", bool, False)
+
+
+debug = DebugConfig(config)
+
+
+class AccountConfig(ConfigCategory):
+    def __init__(self, data: dict):
+        super().__init__(data, "account", "帳號系統設定")
+        self.signup = ConfigProperty[bool](self, "signup", "是否開放註冊", bool, True)
+
+
+account = AccountConfig(config)
 
 
 def init():

@@ -40,9 +40,9 @@ def do_login():
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
-    if not config.get('account.signup'):
+    if not config.account.signup.value:
         abort(503)
-    need_verify = config.get("smtp.enabled")
+    need_verify = config.smtp.enabled.value
     if request.method == 'GET':
         if current_user.is_authenticated:
             return redirect('/')
@@ -92,7 +92,7 @@ def get_code():
         abort(409)
     idx = "".join(str(random.randint(0, 9)) for _ in range(6))
     verify_codes[email] = (idx, time.time())
-    if not config.get("smtp.enabled"):
+    if not config.smtp.enabled.value:
         abort(503)
     if not login.send_email(email, constants.email_content.format(idx)):
         abort(503)
@@ -155,7 +155,7 @@ def settings():
 
 @app.route("/forget_password", methods=["GET", "POST"])
 def forget_password():
-    if not config.get("smtp.enabled"):
+    if not config.smtp.enabled.value:
         abort(503)
     if current_user.is_authenticated:
         abort(409)

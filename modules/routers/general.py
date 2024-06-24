@@ -60,12 +60,12 @@ def test():
 
 
 @app.route("/submit", methods=['POST'])
-@server.limiter.limit(config.get("judge.limit"))
+@server.limiter.limit(config.judge.limit.value)
 @login_required
 def submit():
     lang = request.form["lang"]
     code = request.form["code"].replace("\n\n", "\n")
-    if len(code) > config.get("judge.file_size")*1024:
+    if len(code) > config.judge.file_size.value*1024:
         abort(400)
     pid = request.form["pid"]
     pdat: datas.Problem = datas.Problem.query.filter_by(pid=pid).first_or_404()
