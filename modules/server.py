@@ -1,3 +1,4 @@
+import secrets
 import socket
 import traceback
 
@@ -10,7 +11,10 @@ from flask_wtf import CSRFProtect
 from modules import tools, config
 
 app = Flask(__name__, static_url_path='/static', static_folder="../static/", template_folder="../templates/")
-app.config['SECRET_KEY'] = 'HP4xkCix2nf5qCmxSXV0sBwocE2CjECC5z2T9TKQmv8'
+if config.debug.single_secret:
+    app.config['SECRET_KEY'] = '2lGU53x5P7HujHeoqk5X-IDrK1sSj4RQBeGU84CMpkGJ'
+else:
+    app.config['SECRET_KEY'] = secrets.token_urlsafe(33)
 app.config['SESSION_TYPE'] = "filesystem"
 app.config["SESSION_FILE_DIR"] = "sessions"
 # app.config['SESSION_USE_SIGNER'] = True

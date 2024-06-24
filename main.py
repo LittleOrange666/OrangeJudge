@@ -49,7 +49,6 @@ def main():
         'timeout': config.server.timeout.value,
     }
     StandaloneApplication(server.app, options).run()
-    # server.app.run("0.0.0.0", port=config.get("server.port"))
 
 
 if __name__ == '__main__':

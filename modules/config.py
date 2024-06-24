@@ -1,3 +1,4 @@
+import secrets
 from typing import Generic, TypeVar, Type
 
 import yaml
@@ -15,6 +16,11 @@ with open("config.yaml", "r") as f:
 print("config=", config)
 
 
+def save_config():
+    with open("config.yaml", "w") as file:
+        yaml.dump(config, file)
+
+
 class ConfigCategory:
 
     def __init__(self, data: dict, key: str, name: str):
@@ -25,17 +31,20 @@ class ConfigCategory:
         if not isinstance(data[key], dict):
             raise ConfigError(f"'{key}' is not a dict")
         self.data = data[key]
+        self.source = data
 
 
 class ConfigProperty(Generic[T]):
-    __slots__ = ("_value", "name", "_key", "_type")
+    __slots__ = ("_value", "name", "_key", "_type", "_parent")
 
-    def __init__(self, data: ConfigCategory, key: str, name: str, _type: Type[T], _default: T):
-        if key not in data.data:
-            data.data[key] = _default
-        if not isinstance(data.data[key], _type):
-            raise ConfigError(f"'{data.key}.{key}' is not a {_type.__name__}")
-        self._value: T = data.data[key]
+    def __init__(self, parent: ConfigCategory, key: str, name: str, _type: Type[T], _default: T):
+        if key not in parent.data:
+            parent.data[key] = _default
+            save_config()
+        if not isinstance(parent.data[key], _type):
+            raise ConfigError(f"'{parent.key}.{key}' is not a {_type.__name__}")
+        self._value: T = parent.data[key]
+        self._parent = parent
         self.name = name
         self._key = key
         self._type = _type
@@ -43,6 +52,12 @@ class ConfigProperty(Generic[T]):
     @property
     def value(self) -> T:
         return self._value
+
+    @value.setter
+    def value(self, new_val: T):
+        self._value = new_val
+        self._parent.data[self._key] = new_val
+        save_config()
 
 
 class SmtpConfig(ConfigCategory):
@@ -86,6 +101,7 @@ class DebugConfig(ConfigCategory):
     def __init__(self, data: dict):
         super().__init__(data, "debug", "除錯設定")
         self.log = ConfigProperty[bool](self, "log", "除錯紀錄是否啟用", bool, False)
+        self.single_secret = ConfigProperty[bool](self, "single_secret", "使用固定的SECRET_KEY", bool, False)
 
 
 debug = DebugConfig(config)

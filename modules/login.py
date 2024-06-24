@@ -51,10 +51,10 @@ def send_email(target: str, content: str) -> bool:
     try:
         smtp.sendmail(email_sender, target, content)
     except smtplib.SMTPException:
-        smtp.connect(config.get("smtp.host"), config.get("smtp.port"))
+        smtp.connect(config.smtp.host.value, config.smtp.port.value)
         smtp.ehlo()
         smtp.starttls()
-        smtp.login(config.get("smtp.user"), config.get("smtp.password"))
+        smtp.login(config.smtp.user.value, config.smtp.password.value)
         try:
             smtp.sendmail(email_sender, target, content)
         except smtplib.SMTPException:
