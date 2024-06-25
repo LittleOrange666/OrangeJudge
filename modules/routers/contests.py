@@ -41,7 +41,8 @@ def contest_page(idx):
     if can_edit:
         questions = reversed(dat.announcements.filter_by(question=True).all())
     else:
-        questions = reversed(dat.announcements.filter_by(question=True, user=current_user.data).all())
+        user_data = current_user.data if current_user.is_authenticated else None
+        questions = reversed(dat.announcements.filter_by(question=True, user=user_data).all())
     return render_template("contest.html", cid=idx, data=info, can_edit=can_edit, can_see=can_see, target=target,
                            status=status, announcements=announcements, questions=questions)
 
