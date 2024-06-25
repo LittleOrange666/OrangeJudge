@@ -5,11 +5,11 @@
 {% block main %}
 <ul class="nav nav-tabs">
     <li class="nav-item" role="presentation">
-        <a class="nav-link" id="users_tab" data-bs-toggle="tab" data-bs-target="#users" type="button" role="tab"
+        <a class="nav-link active" id="users_tab" data-bs-toggle="tab" data-bs-target="#users" type="button" role="tab"
            aria-controls="users" aria-selected="true">使用者管理</a>
     </li>
     <li class="nav-item" role="presentation">
-        <a class="nav-link active" id="config_tab" data-bs-toggle="tab" data-bs-target="#config"
+        <a class="nav-link" id="config_tab" data-bs-toggle="tab" data-bs-target="#config"
            type="button" role="tab" aria-controls="config" aria-selected="false">設置</a>
     </li>
     <li class="nav-item" role="presentation">
@@ -96,4 +96,5 @@
     </div>
 </div>
 <script src="/static/admin.js"></script>
+<script src="/static/tab_memory.js"></script>
 {% endblock %}
