@@ -18,7 +18,7 @@ def run_test(dat: datas.Submission) -> None:
     source = f"submissions/{idx}/" + dat.source
     in_file = os.path.abspath(f"submissions/{idx}/" + dat.data["infile"])
     out_file = os.path.abspath(f"submissions/{idx}/" + dat.data["outfile"])
-    result = lang.run(source, env, [(in_file, out_file)])
+    result = lang.run(source, env, [(in_file, out_file)], dat)
     dat.result = {}
     dat.simple_result = result
     dat.completed = True

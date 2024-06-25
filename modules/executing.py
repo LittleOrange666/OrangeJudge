@@ -3,7 +3,7 @@ import os.path
 import subprocess
 from typing import Callable
 
-from modules import constants, tools
+from modules import constants, tools, datas
 
 
 def call(cmd: list[str], stdin: str = "", timeout: float | None = None) -> tuple[str, str, int]:
@@ -192,11 +192,11 @@ class Language:
                                              folder=os.path.dirname(filename), **self.kwargs)
         return exec_cmd
 
-    def run(self, file: str, env: Environment, tasks: list[tuple[str, str]]) -> str:
+    def run(self, file: str, env: Environment, tasks: list[tuple[str, str]], dat: datas.Submission) -> str:
         filename = env.send_file(file)
         filename, ce_msg = self.compile(filename, env)
         if ce_msg:
-            tools.write(ce_msg, os.path.dirname(file), "ce_msg.txt")
+            dat.ce_msg = ce_msg
             return "CE"
         exec_cmd = self.get_execmd(filename)
         for stdin, stdout in tasks:
