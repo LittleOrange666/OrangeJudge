@@ -197,7 +197,7 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
 
 
 def get_queue_position(dat: datas.Submission) -> int:
-    return max(dat.queue_position - last_judged.value, 0)
+    return max((dat.queue_position or 0) - queue_position.value, 0)
 
 
 def enqueue(idx: int) -> int:
