@@ -100,7 +100,7 @@ def submission(idx):
     path = "submissions/" + idx
     lang = dat.language
     source = tools.read(path, dat.source)
-    source = highlight(source, prepares[executing.langs[lang].name], HtmlFormatter())
+    source = highlight(source, prepares[executing.langs.get(lang, executing.langs["PlainText"]).name], HtmlFormatter())
     completed = dat.completed
     ce_msg = dat.ce_msg
     pdat: datas.Problem = dat.problem
