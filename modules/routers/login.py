@@ -3,6 +3,7 @@ import time
 
 from flask import abort, render_template, redirect, request, Response
 from flask_login import login_required, current_user, login_user, logout_user
+from werkzeug.utils import secure_filename
 from yarl import URL
 
 from modules import tools, server, login, constants, datas, locks, config
@@ -15,6 +16,7 @@ app = server.app
 def log(uid):
     if not current_user.has("admin"):
         abort(403)
+    uid = secure_filename(uid)
     if not tools.exists("logs", uid + ".log"):
         abort(404)
     return render_template("log.html", content=tools.read("logs", uid + ".log"))
