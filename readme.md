@@ -8,11 +8,36 @@
 
 建議裝在虛擬機或Docker裡面執行
 
-然後執行runserver.sh
-
+然後執行
+```shell
+./runserver.sh
+```
 初次執行會安裝需要的東東
 
+或是手動打
+```shell
+chmod +x tools/autoinit.sh
+sudo ./tools/autoinit.sh
+```
+再用
+```shell
+sudo python3 main.py
+```
+啟動伺服器
+
 然後到config.yaml裡面填上必要的東東
+
+如果安裝過程出現temporary failure resolving ...
+
+且無法跑程式
+
+可能可以用
+```shell
+sudo lxc-stop -n lxc-test
+sudo lxc-destroy -n lxc-test
+sudo ./tools/autoinit.sh
+```
+把沙盒砸掉重裝，可能會好
 
 剩下請自行通靈
 
@@ -21,3 +46,7 @@
 我不知道啥配置會好
 
 但建議用Ubuntu 22.04.3 LTS + Python 3.10.X
+
+非Ubuntu可能會爛
+
+Python版本太新可能會有套件裝不下來

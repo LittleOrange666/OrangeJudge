@@ -26,10 +26,10 @@ def my_problems():
 @login_required
 def all_problems():
     login.check_user("admin")
-    problem_obj = datas.Problem.query
+    problem_obj = datas.Problem.query.filter(datas.Problem.pid != "test")
     got_data, page_cnt, page_idx, show_pages = tools.pagination(problem_obj)
     problems_dat = []
-    for obj in reversed(got_data):
+    for obj in got_data:
         problems_dat.append({"pid": obj.pid, "name": obj.name})
     return render_template("my_problems.html", problems=problems_dat, title="所有題目", page_cnt=page_cnt,
                            page_idx=page_idx, show_pages=show_pages)
