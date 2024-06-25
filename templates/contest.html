@@ -22,10 +22,12 @@
         <a class="nav-link" id="status_tab" data-bs-toggle="tab" data-bs-target="#status" type="button" role="tab"
            aria-controls="status" aria-selected="false">解題動態</a>
     </li>
+    {% if current_user.is_authenticated %}
     <li class="nav-item" role="presentation">
         <a class="nav-link" id="my_status_tab" data-bs-toggle="tab" data-bs-target="#my_status" type="button" role="tab"
            aria-controls="my_status" aria-selected="false">我的解題動態</a>
     </li>
+    {% endif %}
     <li class="nav-item" role="presentation">
         <a class="nav-link" id="standing_tab" data-bs-toggle="tab" data-bs-target="#standing" type="button" role="tab"
            aria-controls="standing" aria-selected="false">記分板</a>
@@ -293,6 +295,7 @@
             </ul>
         </nav>
     </div>
+    {% if current_user.is_authenticated %}
     <div id="my_status" class="tab-pane fade">
         <div class="row">
             <div class="col-auto">
@@ -325,6 +328,7 @@
             </ul>
         </nav>
     </div>
+    {% endif %}
     <div id="standing" class="tab-pane fade">
         <p class="text-center h2 d-none text-danger" id="standing_error"></p>
         <p class="text-center h4 d-none text-info" id="standing_judging">目前並非最終結果</p>

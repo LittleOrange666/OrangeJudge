@@ -299,47 +299,53 @@ def resubmit(dat: datas.Submission):
 
 def contest_worker():
     while True:
-        mod = []
-        for dat in datas.Period.query.filter_by(running=True):
-            dat: datas.Period
-            if dat.is_over():
-                dat.running = False
-                dat.ended = True
-                cdat: datas.Contest = dat.contest
-                pretest = cdat.data["pretest"]
-                if pretest != "no":
-                    submissions = dat.submissions.filter_by(just_pretest=True).all()
-                    dic: dict[int, datas.Submission] = {}
-                    for submission in submissions:
-                        submission.just_pretest = False
-                        if submission.simple_result.lower() not in ("jc", "ce"):
-                            break_result(submission)
-                            if pretest == "all":
-                                resubmit(submission)
-                            else:
-                                dic[submission.user_id] = submission
-                    if pretest == "last":
-                        for v in dic.values():
-                            resubmit(v)
-                    datas.add(*submissions)
-                mod.append(dat)
-        datas.add(*mod)
-        sleep(10)
-        mod = []
-        for dat in datas.Period.query.filter_by(running=False, ended=False):
-            dat: datas.Period
-            if dat.is_running():
-                dat.running = True
-                dat.judging = True
-                mod.append(dat)
-        datas.add(*mod)
-        sleep(10)
-        for dat in datas.Period.query.filter_by(running=False, ended=True, judging=True):
-            dat: datas.Period
-            if dat.submissions.filter_by(completed=False).count() == 0:
-                dat.judging = False
+        with datas.DelayCommit():
+            for dat in datas.Period.query.filter_by(running=True):
+                dat: datas.Period
+                if dat.is_over():
+                    dat.running = False
+                    dat.ended = True
+                    cdat: datas.Contest = dat.contest
+                    pretest = cdat.data["pretest"]
+                    if pretest != "no":
+                        submissions = dat.submissions.filter_by(just_pretest=True).all()
+                        dic: dict[int, datas.Submission] = {}
+                        for submission in submissions:
+                            submission.just_pretest = False
+                            if submission.simple_result.lower() not in ("jc", "ce"):
+                                break_result(submission)
+                                if pretest == "all":
+                                    resubmit(submission)
+                                else:
+                                    dic[submission.user_id] = submission
+                        if pretest == "last":
+                            for v in dic.values():
+                                resubmit(v)
+                        datas.add(*submissions)
                 datas.add(dat)
-        sleep(10)
+        sleep(5)
+        with datas.DelayCommit():
+            for dat in datas.Period.query.filter_by(running=False, ended=False):
+                dat: datas.Period
+                if dat.is_running():
+                    dat.running = True
+                    dat.judging = True
+                    datas.add(dat)
+        sleep(5)
+        with datas.DelayCommit():
+            for dat in datas.Period.query.filter_by(running=False, ended=True, judging=True):
+                dat: datas.Period
+                if dat.submissions.filter_by(completed=False).count() == 0:
+                    dat.judging = False
+                    datas.add(dat)
+        sleep(5)
+        with datas.DelayCommit():
+            for dat in datas.Period.query.filter_by(running=False, ended=True, judging=False):
+                dat: datas.Period
+                if not dat.is_started():
+                    dat.ended = False
+                    datas.add(dat)
+        sleep(5)
 
 
 def init():
