@@ -65,7 +65,7 @@ def test():
 def submit():
     lang = request.form["lang"]
     code = request.form["code"].replace("\n\n", "\n")
-    if len(code) > config.judge.file_size.value*1024:
+    if len(code) > config.judge.file_size.value * 1024:
         abort(400)
     pid = request.form["pid"]
     pdat: datas.Problem = datas.Problem.query.filter_by(pid=pid).first_or_404()
@@ -263,11 +263,13 @@ def all_status_data():
     got_data, page_cnt, page_idx, show_pages = tools.pagination(status)
     out = []
     for obj in got_data:
+        obj: datas.Submission
         pid = obj.pid
         problem = datas.Problem.query.filter_by(pid=pid)
         problem_name = problem.first().name if problem.count() else "unknown"
         result = obj.simple_result or "blank"
-        can_see = current_user.has("admin") or current_user.id == obj.user.username
+        can_see = current_user.has("admin") or current_user.id == obj.user.username or \
+                  current_user.id == obj.problem.user.username
         out.append({"idx": str(obj.id),
                     "time": obj.time.timestamp(),
                     "user_id": obj.user.username,

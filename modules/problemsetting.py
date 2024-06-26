@@ -551,6 +551,36 @@ def upload_zip(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Pro
 
 
 @actions.bind
+def upload_testcase(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
+    input_name = secure_filename(form["input_name"])
+    output_name = secure_filename(form["output_name"])
+    if input_name == "" or output_name == "":
+        abort(400)
+    input_content = form["input_content"]
+    output_content = form["output_content"]
+    for o in dat["testcases"]:
+        if o["in"] == input_name or o["out"] == input_name or \
+                o["in"] == output_name or o["out"] == output_name:
+            abort(409)
+    with open(path + "/testcases/" + input_name, "w") as f:
+        f.write(input_content)
+    with open(path + "/testcases/" + output_name, "w") as f:
+        f.write(output_content)
+    dat["testcases"].append({"in": input_name, "out": output_name, "sample": False, "pretest": False})
+
+
+@actions.bind
+def remove_testcase(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
+    idx = tools.to_int(form["idx"])
+    if idx < 0 or idx >= len(dat["testcases"]):
+        abort(400)
+    obj = dat["testcases"].pop(idx)
+    os.remove(path + "/testcases/" + obj["in"])
+    os.remove(path + "/testcases/" + obj["out"])
+    return "tests"
+
+
+@actions.bind
 def upload_public_file(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
     get_files = request.files.getlist("files")
     for file in get_files:

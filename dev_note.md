@@ -3,7 +3,6 @@
 + 許多空白&斜線的處理不知道是不是OK的
 + 可偷用python
 + (出題)許多修改不應重新整理
-+ python 版本不固定
 + 登入狀態丟失?
 + create version 未檢查checker是否能正確check測資
 + interactive problem 的時間&空間計算不知道對不對
@@ -23,7 +22,6 @@
 + background action log (不完整)
 + better editer(自動縮排&空格縮排)
 + 出題小組 (虛擬使用者?)
-+ admin UI
 + code checker
 + import from Codeforces Polygon (部分完成, 可用但後續修改困難) (附加檔案未匯入)
 + API

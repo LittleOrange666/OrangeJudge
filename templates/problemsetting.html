@@ -440,6 +440,38 @@
                 </div>
             </form>
         </div>
+        <div class="card card-body">
+            <form the_action="upload_testcase">
+                <h4>手動新增</h4>
+                <div class="container">
+                    <div class="row">
+                        <div class="col">
+                            <label for="testcase_input_name" class="form-label">輸入檔名</label>
+                            <input class="form-control" name="input_name" id="testcase_input_name" required>
+                        </div>
+                        <div class="col">
+                            <label for="testcase_output_name" class="form-label">輸出檔名</label>
+                            <input class="form-control" name="output_name" id="testcase_output_name" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <label for="testcase_input_content" class="form-label">輸入內容</label>
+                            <textarea rows="3" class="form-control" name="input_content" id="testcase_input_content" required></textarea>
+                        </div>
+                        <div class="col">
+                            <label for="testcase_output_content" class="form-label">輸出內容</label>
+                            <textarea rows="3" class="form-control" name="output_content" id="testcase_output_content" required></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <button class="btn btn-primary submitter" data-msg-409="檔案名稱已被使用">
+                        新增測資
+                    </button>
+                </div>
+            </form>
+        </div>
         <div class="container-fluid">
             <h4>一般測資</h4>
             <div class="edit-detector"></div>
@@ -453,6 +485,7 @@
                     <th scope="col">Group</th>
                     <th scope="col">範測</th>
                     <th scope="col">pretest</th>
+                    <th scope="col"></th>
                 </tr>
                 </thead>
                 <tbody>
@@ -478,6 +511,12 @@
                     <td>
                         <input class="form-check-input is_pretest" type="checkbox" name="pretest_{{ i }}" value="yes"
                                data-checked="{{testcase['pretest']}}">
+                    </td>
+                    <td>
+                        <form the_action="remove_testcase">
+                            <input type="hidden" name="idx" value="{{ i }}">
+                            <button class="btn btn-danger submitter">刪除</button>
+                        </form>
                     </td>
                 </tr>
                 {% endfor %}
