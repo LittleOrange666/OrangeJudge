@@ -215,7 +215,8 @@
                 {% if can_edit %}
                 <td>
                     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#save_question_modal"
-                            data-id="{{ question.id }}" data-public="{{ question.public }}">回覆</button>
+                            data-id="{{ question.id }}" data-public="{{ question.public }}">回覆
+                    </button>
                     <form the_action="remove_announcement">
                         <input type="hidden" name="id" value="{{ question.id }}">
                         <button class="btn btn-danger submitter">
@@ -244,7 +245,8 @@
                                 <textarea class="form-control" id="save_question_content" name="content"></textarea>
                             </div>
                             <div class="form-check">
-                                <input class="form-check-input" type="checkbox" value="yes" name="public" id="save_question_check">
+                                <input class="form-check-input" type="checkbox" value="yes" name="public"
+                                       id="save_question_check">
                                 <label class="form-check-label" for="save_question_check">
                                     公開回覆
                                 </label>

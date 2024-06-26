@@ -69,7 +69,8 @@ def my_problem_page(idx):
             dat["groups"] = {}
         if "default" not in dat["groups"]:
             dat["groups"]["default"] = {}
-    action_files = os.listdir(f"preparing_problems/{idx}/actions")
+    action_files = os.listdir(f"preparing_problems/{idx}/actions") if \
+        os.path.isdir(f"preparing_problems/{idx}/actions") else []
     actions = []
     for f in action_files:
         if os.path.splitext(f)[1] == ".json":
