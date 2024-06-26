@@ -195,6 +195,7 @@ def problem_page(idx):
 
 
 @app.route("/problem_file/<idx>/<filename>", methods=['GET'])
+@server.limiter.limit("30 per 5 second")
 def problem_file(idx, filename):
     idx = secure_filename(idx)
     filename = secure_filename(filename)
