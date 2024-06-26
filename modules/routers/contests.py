@@ -200,7 +200,8 @@ def contest_standing(cid):
                         "pid": rmp[dat.pid],
                         "scores": scores,
                         "total_score": dat.result["total_score"],
-                        "time": dat.time.timestamp()})
+                        "time": dat.time.timestamp(),
+                        "pretest": dat.just_pretest})
     return jsonify({"submissions": ret,
                     "start_time": per.start_time.timestamp(),
                     "rule": cdat.data["type"],

@@ -103,7 +103,7 @@ def run_markdown(source: str) -> str:
                     v = v[1:]
                 args[k] = v
         source = source[end + 4:]
-    source = escape(source)
+    # source = escape(source)
     # 預處理spoiler
     reg1 = re.compile("^:::spoiler(?:_template|_repeat)?\\s+(\\S+ +.*)$", re.M)
     get = reg1.search(source)
