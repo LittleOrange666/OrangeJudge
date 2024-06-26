@@ -8,6 +8,7 @@ import markdown
 import mdx_math
 from pygments import highlight, lexers
 from pygments.formatters import HtmlFormatter
+from markupsafe import escape
 
 from modules import tools, constants
 
@@ -42,8 +43,8 @@ class Codehightlighter(HTMLParser):
             for k, v in attrs.items():
                 if k == "class" and v in prepares:
                     self.prepare = v
-        if tag in constants.danger_html_tags and not (tag == "script" and attrs["type"] == "math/tex"):
-            tag = "div"
+        # if tag in constants.danger_html_tags and not (tag == "script" and attrs["type"] == "math/tex"):
+        #    tag = "div"
         if self.prepare == "":
             if tag == "img" and "/" not in attrs["src"]:
                 attrs["src"] = "/problem_file/" + self.dirname + "/" + attrs["src"]
@@ -64,8 +65,8 @@ class Codehightlighter(HTMLParser):
                 self.text.append(f"<{tag}{atl}>")
 
     def handle_endtag(self, tag):
-        if tag in constants.danger_html_tags:
-            tag = "div"
+        # if tag in constants.danger_html_tags:
+        #    tag = "div"
         if self.prepare != "":
             self.prepare = ""
         else:
@@ -102,6 +103,7 @@ def run_markdown(source: str) -> str:
                     v = v[1:]
                 args[k] = v
         source = source[end + 4:]
+    source = escape(source)
     # 預處理spoiler
     reg1 = re.compile("^:::spoiler(?:_template|_repeat)?\\s+(\\S+ +.*)$", re.M)
     get = reg1.search(source)
