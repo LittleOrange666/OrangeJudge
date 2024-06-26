@@ -98,6 +98,7 @@ def problem_action():
 
 
 @app.route("/problemsetting_preview", methods=["GET"])
+@server.limiter.limit("30 per 5 second")
 @login_required
 def problem_preview():
     idx = request.args["pid"]
