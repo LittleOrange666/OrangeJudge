@@ -44,7 +44,7 @@ def create_problem():
     else:
         pid = request.form["pid"]  # 不用加 secure_filename 因為下面那個函數會檢查
         idx = problemsetting.create_problem(request.form["name"], pid, user.data)
-        return f"/problemsetting/{idx}?user={user.id}", 200
+        return f"/problemsetting/{idx}", 200
 
 
 @app.route("/problemsetting/<idx>", methods=['GET'])

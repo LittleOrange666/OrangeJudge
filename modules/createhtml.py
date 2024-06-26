@@ -42,7 +42,7 @@ class Codehightlighter(HTMLParser):
             for k, v in attrs.items():
                 if k == "class" and v in prepares:
                     self.prepare = v
-        if tag in constants.danger_html_tags:
+        if tag in constants.danger_html_tags and not (tag == "script" and attrs["type"] == "math/tex"):
             tag = "div"
         if self.prepare == "":
             if tag == "img" and "/" not in attrs["src"]:
