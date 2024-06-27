@@ -12,7 +12,6 @@ $("#uploadfile").on("change",function() {
     };
     reader.readAsText(file);
 });
-const lang_exts = {{ lang_exts|safe }};
 $("#uploadfile").prop("accept",lang_exts[$("#langoption").val()]);
 $("#langoption").on("change",function(){
     $("#uploadfile").prop("accept",lang_exts[$("#langoption").val()]);
