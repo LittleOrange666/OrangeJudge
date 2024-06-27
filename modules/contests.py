@@ -96,7 +96,7 @@ def change_settings(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Co
         abort(400)
     start_time = 0
     try:
-        start_time = datetime.fromisoformat(form["start_time"]).replace(second=0, microsecond=0).timestamp()
+        start_time = tools.to_datetime(form["start_time"], second=0, microsecond=0).timestamp()
     except ValueError:
         abort(400)
     if not form["elapsed_time"].isdigit():

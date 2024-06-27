@@ -25,9 +25,9 @@ $("pdf-file").each(function(){
 $("textarea").each(function(){
     $(this).data("default-rows",$(this).attr("rows"));
 });
-$("textarea").on("input",function(){
-    let rc = 1 + ($(this).val().match(/\n/g) || []).length;
-    $(this).attr("rows",Math.max(rc,+$(this).data("default-rows")));
+$("textarea").on("input",function(e){
+    $(this).css("height","100px");
+    $(this).css("height",e.target.scrollHeight);
 });
 $("textarea").trigger("input");
 $("textarea").on('keydown', function(e) {
@@ -52,8 +52,15 @@ $(".date-string").each(function(){
     $(this).text(timestamp_to_str($(this).text()));
 });
 $("input[type='datetime-local'][data-value]").each(function(){
-    let s = new Date(+$(this).data("value")*1000 - (new Date()).getTimezoneOffset() * 60000).toISOString();
-    $(this).val(s.substr(0,s.length-1));
+    let $this = $(this);
+    let s = new Date(+$this.data("value")*1000 - (new Date()).getTimezoneOffset() * 60000).toISOString();
+    $this.val(s.substr(0,s.length-1));
+    let nw = $("<input>").attr("type","hidden").attr("name",$this.attr("name")).val($this.data("value"));
+    $this.after(nw);
+    $this.removeAttr("name");
+    $this.on("input",function(){
+        nw.val(new Date($this.val()).getTime()/1000);
+    });
 });
 $(".countdown-timer").each(function(){
     let $this = $(this);

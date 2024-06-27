@@ -156,7 +156,7 @@ def virtual_register(cid):
     else:
         start_time: datetime
         try:
-            start_time = datetime.fromisoformat(request.form["start_time"]).replace(second=0, microsecond=0)
+            start_time = tools.to_datetime(request.form["start_time"], second=0, microsecond=0)
             per = datas.Period.query.filter_by(start_time=start_time, contest=dat, is_virtual=True)
             if per.count():
                 idx = per.first().id

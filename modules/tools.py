@@ -229,6 +229,16 @@ def to_int(text: str) -> int:
     return int(text)
 
 
+def to_float(text: str) -> float:
+    if text.count(".") > 1 or not text.replace(".", "").isdigit():
+        abort(400)
+    return float(text)
+
+
+def to_datetime(text: str, **replace_kwargs) -> datetime:
+    return datetime.fromtimestamp(to_float(text)).replace(**replace_kwargs)
+
+
 has_log: bool = config.debug.log.value
 
 

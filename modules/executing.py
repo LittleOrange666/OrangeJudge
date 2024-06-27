@@ -31,10 +31,13 @@ class Environment:
         self.safe: list[str] = ["sudo", "-u", "nobody"]
         self.judge: list[str] = ["sudo", "-u", "judge"]
 
+    def get_lxc_root(self):
+        return f"/var/lib/lxc/{self.lxc_name}/rootfs"
+
     def send_file(self, filepath: str, nxt: Callable[[str], None] | None = None) -> str:
         tools.log("send", filepath)
         file_abspath = os.path.abspath(filepath)
-        cmd = ["sudo", "cp", file_abspath, f"/var/lib/lxc/{self.lxc_name}/rootfs/{self.dirname}"]
+        cmd = ["sudo", "cp", file_abspath, f"{self.get_lxc_root()}/{self.dirname}"]
         call(cmd)
         if nxt is None:
             self.protected(filepath)
@@ -48,7 +51,7 @@ class Environment:
             source = os.path.basename(filepath)
         if self.dirname not in source:
             source = os.path.join("/" + self.dirname, source)
-        cmd = ["sudo", "mv", f"/var/lib/lxc/{self.lxc_name}/rootfs" + source,
+        cmd = ["sudo", "mv", self.get_lxc_root() + source,
                os.path.dirname(file_abspath)]
         call(cmd)
 
@@ -69,7 +72,7 @@ class Environment:
             filename if filename.count("/") <= 2 and "__pycache__" in filename else os.path.basename(filename))
 
     def fullfilepath(self, filename: str) -> str:
-        return f"/var/lib/lxc/{self.lxc_name}/rootfs" + self.filepath(filename)
+        return self.get_lxc_root() + self.filepath(filename)
 
     def simple_run(self, cmd: list[str]) -> tuple[str, str, int]:
         return call(self.prefix + cmd)
