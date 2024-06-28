@@ -184,30 +184,8 @@ def contest_standing(cid):
                (dt <= -cdat.data["standing"]["start_freeze"] or dt >= cdat.data["standing"]["end_freeze"]))
     if not can_see and not contests.check_super_access(cdat):
         abort(403)
-    per: datas.Period = datas.Period.query.get_or_404(cdat.main_period_id)
-    ret = []
-    mp = {}
-    rmp = {}
-    for k, v in cdat.data["problems"].items():
-        rmp[v["pid"]] = k
-    for dat in per.submissions:
-        dat: datas.Submission
-        if dat.completed and "group_results" in dat.result:
-            if dat.user_id not in mp:
-                mp[dat.user_id] = dat.user.display_name
-            scores = {k: v["gainscore"] for k, v in dat.result["group_results"].items()}
-            ret.append({"user": mp[dat.user_id],
-                        "pid": rmp[dat.pid],
-                        "scores": scores,
-                        "total_score": dat.result["total_score"],
-                        "time": dat.time.timestamp(),
-                        "pretest": dat.just_pretest})
-    return jsonify({"submissions": ret,
-                    "start_time": per.start_time.timestamp(),
-                    "rule": cdat.data["type"],
-                    "pids": list(cdat.data["problems"].keys()),
-                    "penalty": cdat.data["penalty"],
-                    "judging": per.judging})
+    dat = contests.get_standing(cid)
+    return jsonify(dat)
 
 
 @app.route("/contest/<cid>/question", methods=['POST'])

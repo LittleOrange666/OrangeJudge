@@ -1,8 +1,10 @@
+import multiprocessing
 import os
 from datetime import datetime, timedelta
 from multiprocessing import Process
 from time import sleep
 
+from cachetools import TTLCache, cached
 from flask import abort
 from flask_login import current_user
 from sqlalchemy.orm.attributes import flag_modified
@@ -280,6 +282,46 @@ def check_period(dat: datas.Contest) -> int:
         if cur_per.is_running():
             return per_id
     return 0
+
+
+standing_lock = multiprocessing.Lock()
+
+
+@cached(cache=TTLCache(maxsize=20, ttl=10), lock=standing_lock)
+def get_standing(cid: str):
+    cdat: datas.Contest = datas.Contest.query.filter_by(cid=cid).first_or_404()
+    ret = []
+    mp = {}
+    rmp = {}
+    for k, v in cdat.data["problems"].items():
+        rmp[v["pid"]] = k
+    for dat in cdat.submissions:
+        dat: datas.Submission
+        if dat.completed and "group_results" in dat.result:
+            if dat.user_id not in mp:
+                mp[dat.user_id] = dat.user.display_name
+            scores = {k: v["gainscore"] for k, v in dat.result["group_results"].items()}
+            ret.append({"user": mp[dat.user_id],
+                        "pid": rmp[dat.pid],
+                        "scores": scores,
+                        "total_score": dat.result["total_score"],
+                        "time": dat.time.timestamp(),
+                        "pretest": dat.just_pretest,
+                        "per": dat.period_id})
+    pers = []
+    for per in cdat.periods:
+        per: datas.Period
+        pers.append({"start_time": per.start_time.timestamp(),
+                     "judging": per.judging,
+                     "idx": per.id})
+    return {"submissions": ret,
+            "rule": cdat.data["type"],
+            "pids": list(cdat.data["problems"].keys()),
+            "penalty": cdat.data["penalty"],
+            "pers": pers,
+            "main_per": cdat.main_period_id,
+            "participants": cdat.data["participants"],
+            "virtual_participants": cdat.data["virtual_participants"]}
 
 
 def break_result(dat: datas.Submission):

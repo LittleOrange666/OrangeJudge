@@ -155,7 +155,205 @@ $(function() {
         });
     }
     {
+        var data;
+        var standing_ok = false;
+        function refresh_standing(){
+            if(!standing_ok) return;
+            $("#standing_loading").removeClass("d-none",true);
+            $("#standing_table thead tr").empty();
+            $("#standing_table tbody").empty();
+            if(data["judging"]){
+                $("#standing_judging").removeClass("d-none");
+            }else{
+                $("#standing_judging").addClass("d-none");
+            }
+            console.log(data);
+            let pers = {};
+            for(let o of data["pers"]){
+                pers[o["idx"]] = o;
+            }
+            let official_only = $("#standing_official_only").prop("checked");
+            if (data['rule']=="ioi"){
+                let out = {};
+                for(let obj of data['submissions']){
+                    let key = obj["user"]+";"+obj["per"];
+                    if (out[key] === undefined){
+                        out[key] = {"scores":{},"total_score":0,"last_update":0,
+                        "is_main":(obj["per"]==data["main_per"]),"is_practice":(obj["per"]=="null")}
+                        for(let pid of data["pids"]) out[obj["user"]]["scores"][pid] = {}
+                    }
+                    for (let k in obj["scores"]){
+                        out[key]["scores"][obj["pid"]][k] = Math.max(out[key]["scores"][obj["pid"]][k] || 0, obj["scores"][k]);
+                    }
+                    let tot = 0;
+                    for(let pid of data["pids"]){
+                        for (let k in out[key]["scores"][pid]){
+                            tot += out[key]["scores"][pid][k];
+                        }
+                    }
+                    if (Number(tot) != Number(out[key]["total_score"])){
+                        out[key]["total_score"] = tot;
+                        out[key]["last_update"] = obj["time"];
+                    }
+                }
+                let arr = [];
+                for (let k in out){
+                    let obj = out[k];
+                    obj["user"]  = k;
+                    arr.push(obj);
+                }
+                function le(x, y){
+                    if (x["is_practice"]<y["is_practice"]) return true;
+                    if (x["is_practice"]>y["is_practice"]) return false;
+                    if (x["total_score"]>y["total_score"]) return true;
+                    if (x["total_score"]<y["total_score"]) return false;
+                    return x["last_update"]<y["last_update"];
+                }
+                arr.sort(function(x, y) {
+                  if (le(x,y)) {
+                    return -1;
+                  }
+                  if (le(y,x)) {
+                    return 1;
+                  }
+                  return 0;
+                });
+                console.log(arr);
+                let tb = $("#standing_table");
+                let tl = tb.find("tr");
+                tl.append($('<th scope="col">').text("#"));
+                tl.append($('<th scope="col">').text("User"));
+                tl.append($('<th scope="col">').text("Score"));
+                for(let pid of data["pids"]){
+                    tl.append($('<th scope="col">').text(pid));
+                }
+                tl.append($('<th scope="col">').text("Time"));
+                let cur_rank = 1;
+                for(let obj of arr){
+                    if(official_only&&!obj["is_main"]) continue;
+                    let obj = arr[i];
+                    let key = obj["user"];
+                    let username = key.substring(0,key.lastIndexOf(";"));
+                    let per_id = key.substring(key.lastIndexOf(";")+1,key.length);
+                    let rank = "";
+                    if (obj["is_main"]){
+                        rank = ""+cur_rank;
+                        cur_rank++;
+                    }else if (obj["is_practice"]){
+                        rank = "*";
+                    }
+                    let tr = $("<tr>");
+                    tr.append($('<th scope="row">').text(rank));
+                    tr.append($('<td>').text(username));
+                    tr.append($('<td>').text(obj["total_score"]));
+                    for(let pid of data["pids"]){
+                        let cur = 0;
+                        for(let k in obj["scores"][pid]) cur += obj["scores"][pid][k];
+                        tr.append($('<td>').text(""+cur));
+                    }
+                    let time = "";
+                    if(!obj["is_practice"])  time = ""+Math.floor((obj["last_update"]-per[per_id]["start_time"])/60);
+                    tr.append($('<td>').text(time));
+                    tb.find("tbody").append(tr);
+                }
+            }else if(data['rule']=="icpc"){
+                let out = {};
+                let penalty = data['penalty'];
+                for(let obj of data['submissions']){
+                    let key = obj["user"]+";"+obj["per"];
+                    if (out[key] === undefined){
+                        out[key] = {"scores":{},"total_score":0,"total_penalty":0,
+                        "is_main":(obj["per"]==data["main_per"]),"is_practice":(obj["per"]==null)}
+                        for(let pid of data["pids"]) {
+                            out[key]["scores"][pid] = {"score":0,"penalty_cnt":0,"cnt":0,"penalty":0}
+                        }
+                    }
+                    let start_time = pers[data["main_per"]]["start_time"];
+                    if(obj["per"]) start_time = pers[obj["per"]]["start_time"];
+                    let cur_time = Math.floor((obj["time"]-start_time)/60);
+                    let cur = out[key]["scores"][obj["pid"]];
+                    if (obj["total_score"]>cur["score"]){
+                        cur["score"] = obj["total_score"];
+                        cur["penalty_cnt"] = cur["cnt"];
+                        cur["penalty"] = cur_time+cur["penalty_cnt"]*penalty;
+                    }
+                    cur["cnt"]++;
+                    let tot = 0;
+                    let totp = 0;
+                    for(let pid of data["pids"]){
+                        tot += out[key]["scores"][pid]["score"];
+                        totp += out[key]["scores"][pid]["penalty"];
+                    }
+                    out[key]["total_score"] = tot;
+                    out[key]["total_penalty"] = totp;
+                }
+                let arr = [];
+                for (let k in out){
+                    let obj = out[k];
+                    obj["user"] = k;
+                    arr.push(obj);
+                }
+                function le(x, y){
+                    if (x["is_practice"]<y["is_practice"]) return true;
+                    if (x["is_practice"]>y["is_practice"]) return false;
+                    if (x["total_score"]>y["total_score"]) return true;
+                    if (x["total_score"]<y["total_score"]) return false;
+                    return x["total_penalty"]<y["total_penalty"];
+                }
+                arr.sort(function(x, y) {
+                  if (le(x,y)) {
+                    return -1;
+                  }
+                  if (le(y,x)) {
+                    return 1;
+                  }
+                  return 0;
+                });
+                console.log(arr);
+                let tb = $("#standing_table");
+                let tl = tb.find("tr");
+                tl.append($('<th scope="col">').text("#"));
+                tl.append($('<th scope="col">').text("User"));
+                tl.append($('<th scope="col">').text("Score"));
+                tl.append($('<th scope="col">').text("Penalty"));
+                for(let pid of data["pids"]){
+                    tl.append($('<th scope="col">').text(pid));
+                }
+                let cur_rank = 1;
+                console.log(arr)
+                for(let obj of arr){
+                    if(official_only&&!obj["is_main"]) continue;
+                    let key = obj["user"];
+                    let username = key.substring(0,key.lastIndexOf(";"));
+                    let per_id = key.substring(key.lastIndexOf(";")+1,key.length);
+                    let tr = $("<tr>");
+                    let rank = "";
+                    if (obj["is_main"]){
+                        rank = ""+cur_rank;
+                        cur_rank++;
+                    }else if (obj["is_practice"]){
+                        rank = "*";
+                    }
+                    tr.append($('<th scope="row">').text(rank));
+                    tr.append($('<td>').text(username));
+                    tr.append($('<td>').text(obj["total_score"]));
+                    tr.append($('<td>').text(obj["is_practice"]?"":obj["total_penalty"]));
+                    for(let pid of data["pids"]){
+                        let cur = 0;
+                        let cnt = obj["scores"][pid]["penalty_cnt"];
+                        let rt = obj["scores"][pid]["penalty"]-cnt*penalty;
+                        for(let k in obj["scores"][pid]) cur += obj["scores"][pid][k];
+                        let line = ""+obj["scores"][pid]["score"];
+                        if(!obj["is_practice"]) line += "/"+rt+"+"+cnt;
+                        tr.append($('<td>').text(line));
+                    }
+                    tb.find("tbody").append(tr);
+                }
+            }
+            $("#standing_loading").addClass("d-none",true);
+        }
         function load_standing(){
+            standing_ok = false;
             $("#standing_loading").removeClass("d-none",true);
             $("#standing_error").addClass("d-none",true);
             $("#standing_table thead tr").empty();
@@ -173,153 +371,10 @@ $(function() {
                 }
                 $("#standing_loading").addClass("d-none",true);
                 throw new Error("Network response was not ok.");
-            }).then(function(data){
-                if(data["judging"]){
-                    $("#standing_judging").removeClass("d-none");
-                }else{
-                    $("#standing_judging").addClass("d-none");
-                }
-                console.log(data['submissions']);
-                if (data['rule']=="ioi"){
-                    let out = {};
-                    for(let obj of data['submissions']){
-                        if (out[obj["user"]] === undefined){
-                            out[obj["user"]] = {"scores":{},"total_score":0,"last_update":0}
-                            for(let pid of data["pids"]) out[obj["user"]]["scores"][pid] = {}
-                        }
-                        for (let k in obj["scores"]){
-                            out[obj["user"]]["scores"][obj["pid"]][k] = Math.max(out[obj["user"]]["scores"][obj["pid"]][k] || 0, obj["scores"][k]);
-                        }
-                        let tot = 0;
-                        for(let pid of data["pids"]){
-                            for (let k in out[obj["user"]]["scores"][pid]){
-                                tot += out[obj["user"]]["scores"][pid][k];
-                            }
-                        }
-                        if (Number(tot) != Number(out[obj["user"]]["total_score"])){
-                            out[obj["user"]]["total_score"] = tot;
-                            out[obj["user"]]["last_update"] = obj["time"];
-                        }
-                    }
-                    let arr = [];
-                    for (let k in out){
-                        let obj = out[k];
-                        obj["user"]  = k;
-                        arr.push(obj);
-                    }
-                    function le(x, y){
-                        if (x["total_score"]>y["total_score"]) return true;
-                        if (x["total_score"]<y["total_score"]) return false;
-                        return x["last_update"]<y["last_update"];
-                    }
-                    arr.sort(function(x, y) {
-                      if (le(x,y)) {
-                        return -1;
-                      }
-                      if (le(y,x)) {
-                        return 1;
-                      }
-                      return 0;
-                    });
-                    console.log(arr);
-                    let tb = $("#standing_table");
-                    let tl = tb.find("tr");
-                    tl.append($('<th scope="col">').text("#"));
-                    tl.append($('<th scope="col">').text("User"));
-                    tl.append($('<th scope="col">').text("Score"));
-                    for(let pid of data["pids"]){
-                        tl.append($('<th scope="col">').text(pid));
-                    }
-                    tl.append($('<th scope="col">').text("Time"));
-                    for(let i in arr){
-                        let obj = arr[i];
-                        let tr = $("<tr>");
-                        tr.append($('<th scope="row">').text(""+(+i+1)));
-                        tr.append($('<td>').text(obj["user"]));
-                        tr.append($('<td>').text(obj["total_score"]));
-                        for(let pid of data["pids"]){
-                            let cur = 0;
-                            for(let k in obj["scores"][pid]) cur += obj["scores"][pid][k];
-                            tr.append($('<td>').text(""+cur));
-                        }
-                        tr.append($('<td>').text(""+Math.floor((obj["last_update"]-data["start_time"])/60)));
-                        tb.find("tbody").append(tr);
-                    }
-                }else if(data['rule']=="icpc"){
-                    let out = {};
-                    let penalty = data['penalty'];
-                    for(let obj of data['submissions']){
-                        if (out[obj["user"]] === undefined){
-                            out[obj["user"]] = {"scores":{},"total_score":0,"total_penalty":0}
-                            for(let pid of data["pids"]) {
-                                out[obj["user"]]["scores"][pid] = {"score":0,"penalty_cnt":0,"cnt":0,"penalty":0}
-                            }
-                        }
-                        let cur_time = Math.floor((obj["time"]-data["start_time"])/60);
-                        let cur = out[obj["user"]]["scores"][obj["pid"]];
-                        if (obj["total_score"]>cur["score"]){
-                            cur["score"] = obj["total_score"];
-                            cur["penalty_cnt"] = cur["cnt"];
-                            cur["penalty"] = cur_time+cur["penalty_cnt"]*penalty;
-                        }
-                        cur["cnt"]++;
-                        let tot = 0;
-                        let totp = 0;
-                        for(let pid of data["pids"]){
-                            tot += out[obj["user"]]["scores"][pid]["score"];
-                            totp += out[obj["user"]]["scores"][pid]["penalty"];
-                        }
-                        out[obj["user"]]["total_score"] = tot;
-                        out[obj["user"]]["total_penalty"] = totp;
-                    }
-                    let arr = [];
-                    for (let k in out){
-                        let obj = out[k];
-                        obj["user"]  = k;
-                        arr.push(obj);
-                    }
-                    function le(x, y){
-                        if (x["total_score"]>y["total_score"]) return true;
-                        if (x["total_score"]<y["total_score"]) return false;
-                        return x["total_penalty"]<y["total_penalty"];
-                    }
-                    arr.sort(function(x, y) {
-                      if (le(x,y)) {
-                        return -1;
-                      }
-                      if (le(y,x)) {
-                        return 1;
-                      }
-                      return 0;
-                    });
-                    console.log(arr);
-                    let tb = $("#standing_table");
-                    let tl = tb.find("tr");
-                    tl.append($('<th scope="col">').text("#"));
-                    tl.append($('<th scope="col">').text("User"));
-                    tl.append($('<th scope="col">').text("Score"));
-                    tl.append($('<th scope="col">').text("Penalty"));
-                    for(let pid of data["pids"]){
-                        tl.append($('<th scope="col">').text(pid));
-                    }
-                    for(let i in arr){
-                        let obj = arr[i];
-                        let tr = $("<tr>");
-                        tr.append($('<th scope="row">').text(""+(+i+1)));
-                        tr.append($('<td>').text(obj["user"]));
-                        tr.append($('<td>').text(obj["total_score"]));
-                        tr.append($('<td>').text(obj["total_penalty"]));
-                        for(let pid of data["pids"]){
-                            let cur = 0;
-                            let cnt = obj["scores"][pid]["penalty_cnt"];
-                            let rt = obj["scores"][pid]["penalty"]-cnt*penalty;
-                            for(let k in obj["scores"][pid]) cur += obj["scores"][pid][k];
-                            tr.append($('<td>').text(""+obj["scores"][pid]["score"]+"/"+rt+"+"+cnt));
-                        }
-                        tb.find("tbody").append(tr);
-                    }
-                }
-                $("#standing_loading").addClass("d-none",true);
+            }).then(function(got_data){
+                data = got_data;
+                standing_ok = true;
+                refresh_standing();
             });
         }
         let inited = false;
@@ -329,6 +384,7 @@ $(function() {
                 load_standing();
             }
         });
+        $("#standing_official_only").on("change", refresh_standing);
         if (location.hash=="#standing") $("#standing_tab").click();
         $("#standing_refresh").click(load_standing);
         let auto_refresh = false;

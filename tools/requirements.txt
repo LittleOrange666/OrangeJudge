@@ -16,3 +16,4 @@ redis
 gunicorn
 pyyaml
 python3-memcached
+cachetools
