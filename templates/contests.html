@@ -34,7 +34,7 @@
         <td class="time-string">{{ contest.data["elapsed"] }}</td>
         <td>
             <div class="row">
-                {% if current_user.is_authenticated and contest.data["can_register"] and contest.data["start"] < cur_time%}
+                {% if current_user.is_authenticated and contest.data["can_register"] and contest.data["start"] > cur_time%}
                 <div class="col-auto">
                     {% if current_user.id not in contest.data["participants"] %}
                     <form method="post" action="/contest/{{ contest.cid }}/register">
