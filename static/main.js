@@ -26,12 +26,10 @@ $("textarea").each(function(){
     $(this).data("default-rows",$(this).attr("rows"));
 });
 $("textarea").on("input",function(){
-    $(this).css("height","10px");
     $(this).css("height",$(this).prop("scrollHeight")+"px");
 });
-window.setInterval(function(){
+window.setTimeout(function(){
     $("textarea").each(function(){
-        $(this).css("height","10px");
         $(this).css("height",$(this).prop("scrollHeight")+"px");
     });
 },1000);
