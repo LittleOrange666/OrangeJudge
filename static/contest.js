@@ -179,7 +179,7 @@ $(function() {
                     let key = obj["user"]+";"+obj["per"];
                     if (out[key] === undefined){
                         out[key] = {"scores":{},"total_score":0,"last_update":0,
-                        "is_main":(obj["per"]==data["main_per"]),"is_practice":(obj["per"]=="null")}
+                        "is_main":(obj["per"]==data["main_per"]),"is_practice":(obj["per"]==null)}
                         for(let pid of data["pids"]) out[key]["scores"][pid] = {}
                     }
                     for (let k in obj["scores"]){
