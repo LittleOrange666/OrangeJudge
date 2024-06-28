@@ -58,7 +58,10 @@ $("input[type='datetime-local'][data-value]").each(function(){
     let $this = $(this);
     let s = new Date(+$this.data("value")*1000 - (new Date()).getTimezoneOffset() * 60000).toISOString();
     $this.val(s.substr(0,s.length-1));
-    let nw = $("<input>").attr("type","hidden").attr("name",$this.attr("name")).val($this.data("value"));
+});
+$("input[type='datetime-local']").each(function(){
+    let $this = $(this);
+    let nw = $("<input>").attr("type","hidden").attr("name",$this.attr("name")).val(new Date($this.val()).getTime()/1000);
     $this.after(nw);
     $this.removeAttr("name");
     $this.on("input",function(){
