@@ -193,7 +193,7 @@ $(function() {
                     }
                     if (Number(tot) != Number(out[key]["total_score"])){
                         out[key]["total_score"] = tot;
-                        out[key]["last_update"] = obj["time"]-pers[obj["per"]]["start_time"];
+                        out[key]["last_update"] = obj["time"]-(obj["per"]==null?0:pers[obj["per"]]["start_time"]);
                     }
                 }
                 let arr = [];
