@@ -251,7 +251,7 @@ $(function() {
                         tr.append($('<td>').text(""+cur));
                     }
                     let time = "";
-                    if(!obj["is_practice"])  time = ""+Math.floor((obj["last_update"]-per[per_id]["start_time"])/60);
+                    if(!obj["is_practice"]) time = ""+Math.floor((obj["last_update"]-pers[per_id]["start_time"])/60);
                     tr.append($('<td>').text(time));
                     tb.find("tbody").append(tr);
                 }
