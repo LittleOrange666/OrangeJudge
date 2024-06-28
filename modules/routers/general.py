@@ -134,19 +134,18 @@ def submission(idx):
             results = result_data["results"]
             result["protected"] = protected = ((not problem_info.get('public_testcase', False) or bool(dat.period_id))
                                                and dat.user.username not in problem_info["users"])
-            if not protected:
-                for i in range(len(results)):
-                    tcl = len(problem_info["testcases"])
-                    it = i if i < tcl else i - tcl
-                    test_type = "testcases" if i < tcl else "testcases_gen"
-                    results[i] |= problem_info[test_type][it]
-                    if results[i]["result"] != "SKIP":
-                        results[i]["in"] = tools.read(f"{path}/testcases/{i}.in")
-                        results[i]["out"] = tools.read(f"{path}/testcases/{i}.ans")
-                    else:
-                        results[i]["in"] = results[i]["out"] = ""
-                    if results[i].get("has_output", False):
-                        results[i]["user_out"] = tools.read(f"{path}/testcases/{i}.out")
+            for i in range(len(results)):
+                tcl = len(problem_info["testcases"])
+                it = i if i < tcl else i - tcl
+                test_type = "testcases" if i < tcl else "testcases_gen"
+                results[i] |= problem_info[test_type][it]
+                if results[i]["result"] != "SKIP" and (not protected or super_access or results[i]["sample"]):
+                    results[i]["in"] = tools.read(f"{path}/testcases/{i}.in")
+                    results[i]["out"] = tools.read(f"{path}/testcases/{i}.ans")
+                else:
+                    results[i]["in"] = results[i]["out"] = ""
+                if results[i].get("has_output", False):
+                    results[i]["user_out"] = tools.read(f"{path}/testcases/{i}.out")
             result["results"] = results
             if "group_results" in result_data:
                 gpr = result_data["group_results"]
