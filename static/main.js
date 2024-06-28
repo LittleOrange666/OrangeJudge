@@ -29,7 +29,9 @@ $("textarea").on("input",function(e){
     $(this).css("height","10px");
     $(this).css("height",$(this).prop("scrollHeight")+"px");
 });
-$("textarea").trigger("input");
+$(function(){
+    $("textarea").trigger("input");
+});
 $("textarea").on('keydown', function(e) {
   if (e.key == 'Tab') {
     e.preventDefault();
