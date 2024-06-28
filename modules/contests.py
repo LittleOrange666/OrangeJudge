@@ -351,16 +351,18 @@ def contest_worker():
                     pretest = cdat.data["pretest"]
                     if pretest != "no":
                         submissions = dat.submissions.filter_by(just_pretest=True).all()
-                        dic: dict[int, datas.Submission] = {}
+                        dic: dict[tuple[int, str], datas.Submission] = {}
+                        datas.add(*submissions)
                         for submission in submissions:
                             submission: datas.Submission
                             submission.just_pretest = False
+                            key = (submission.user_id, submission.pid)
                             if submission.simple_result.lower() not in ("jc", "ce"):
                                 break_result(submission)
                                 if pretest == "all":
                                     resubmit(submission)
                                 else:
-                                    dic[submission.user_id] = submission
+                                    dic[key] = submission
                         if pretest == "last":
                             for v in dic.values():
                                 resubmit(v)
