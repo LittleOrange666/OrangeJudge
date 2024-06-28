@@ -353,6 +353,7 @@ def contest_worker():
                         submissions = dat.submissions.filter_by(just_pretest=True).all()
                         dic: dict[int, datas.Submission] = {}
                         for submission in submissions:
+                            submission: datas.Submission
                             submission.just_pretest = False
                             if submission.simple_result.lower() not in ("jc", "ce"):
                                 break_result(submission)

@@ -28,35 +28,39 @@ def problems():
                            show_pages=show_pages)
 
 
-@app.route('/test', methods=['GET', 'POST'])
+@app.route('/test', methods=['GET'])
 @login_required
 def test():
-    if request.method == 'GET':
-        return render_template("test.html", langs=executing.langs.keys())
-    else:
-        lang = request.form["lang"]
-        code = request.form["code"].replace("\n\n", "\n")
-        inp = request.form["input"]
-        if not inp.endswith("\n"):
-            inp += "\n"
-        if lang not in executing.langs:
-            abort(404)
-        ext = executing.langs[lang].data["source_ext"]
-        """
-        if tools.elapsed(current_user.folder, "submissions") < 5:
-            abort(429)
-        tools.append(idx + "\n", current_user.folder, "submissions")
-        """
-        dat = datas.Submission(source="Main" + ext, time=datetime.datetime.now(), user=current_user.data,
-                               problem=datas.Problem.query.filter_by(pid="test").first(), language=lang,
-                               data={"infile": "in.txt", "outfile": "out.txt"}, pid="test")
-        datas.add(dat)
-        idx = str(dat.id)
-        tools.write(code, f"submissions/{idx}/Main{ext}")
-        tools.write(inp, f"submissions/{idx}/in.txt")
-        dat.queue_position = tasks.enqueue(dat.id)
-        datas.add(dat)
-        return redirect("/submission/" + idx)
+    return render_template("test.html", langs=executing.langs.keys())
+
+
+@app.route('/test_submit', methods=['POST'])
+@server.limiter.limit(config.judge.limit.value)
+@login_required
+def test_submit():
+    lang = request.form["lang"]
+    code = request.form["code"].replace("\n\n", "\n")
+    inp = request.form["input"]
+    if not inp.endswith("\n"):
+        inp += "\n"
+    if lang not in executing.langs:
+        abort(404)
+    ext = executing.langs[lang].data["source_ext"]
+    """
+    if tools.elapsed(current_user.folder, "submissions") < 5:
+        abort(429)
+    tools.append(idx + "\n", current_user.folder, "submissions")
+    """
+    dat = datas.Submission(source="Main" + ext, time=datetime.datetime.now(), user=current_user.data,
+                           problem=datas.Problem.query.filter_by(pid="test").first(), language=lang,
+                           data={"infile": "in.txt", "outfile": "out.txt"}, pid="test", simple_result="waiting")
+    datas.add(dat)
+    idx = str(dat.id)
+    tools.write(code, f"submissions/{idx}/Main{ext}")
+    tools.write(inp, f"submissions/{idx}/in.txt")
+    dat.queue_position = tasks.enqueue(dat.id)
+    datas.add(dat)
+    return redirect("/submission/" + idx)
 
 
 @app.route("/submit", methods=['POST'])
@@ -109,7 +113,7 @@ def submission(idx):
             abort(403)
         inp = tools.read_default(path, dat.data["infile"])
         out = tools.read_default(path, dat.data["outfile"])
-        result = dat.simple_result or "blank"
+        result = dat.simple_result or "unknown"
         err = tools.read_default(path, "stderr.txt")
         ret = render_template("submission/test.html", lang=lang, source=source, inp=inp,
                               out=out, completed=completed, result=result, pos=tasks.get_queue_position(dat),
@@ -232,7 +236,7 @@ def my_submissions():
     out = []
     for dat in got_data:
         dat: datas.Submission
-        o = {"name": str(dat.id), "time": dat.time.timestamp(), "result": dat.simple_result or "blank"}
+        o = {"name": str(dat.id), "time": dat.time.timestamp(), "result": dat.simple_result or "unknown"}
         if dat.problem is None:
             continue
         if dat.problem.pid == "test":
@@ -268,7 +272,7 @@ def all_status_data():
         pid = obj.pid
         problem = datas.Problem.query.filter_by(pid=pid)
         problem_name = problem.first().name if problem.count() else "unknown"
-        result = obj.simple_result or "blank"
+        result = obj.simple_result or "unknown"
         can_see = current_user.has("admin") or current_user.id == obj.user.username or \
                   current_user.id == obj.problem.user.username
         out.append({"idx": str(obj.id),

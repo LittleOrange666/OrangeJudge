@@ -79,7 +79,7 @@ class ServerConfig(ConfigCategory):
         self.workers = ConfigProperty[int](self, "workers", "WSGI並行數量", int, 4)
         self.timeout = ConfigProperty[int](self, "timeout", "WSGI超時時間", int, 120)
         self.limits = ConfigProperty[list[str]](self, "limits", "請求頻率限制列表", list,
-                                                ["20 per 30 second", "2 per 1 second"])
+                                                ["30 per 30 second", "3 per 1 second"])
 
 
 server = ServerConfig(config)

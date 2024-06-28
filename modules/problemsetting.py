@@ -394,6 +394,7 @@ def do_import_polygon(pid: str, filename: str):
             dat["gen_groups"].append({"file1": gen, "file2": main_sol, "group": group, "type": "sol", "cmds": v,
                                       "status": "未更新"})
         dat["ex_gen_msg"] = {"solution": main_sol, "cmds": gen_cmds}
+    """
     fake_form = {k: "" for k in constants.polygon_statment}
     fake_form["samples"] = "[]"
     for k, v in constants.polygon_statment.items():
@@ -401,6 +402,7 @@ def do_import_polygon(pid: str, filename: str):
             fake_form[k] = zip_file.read(files[v]).decode()
     fake_form["statement_type"] = "latex"
     save_statement(fake_form, pid, path, dat)
+    """
     os.remove(filename)
 
 

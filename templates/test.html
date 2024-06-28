@@ -3,7 +3,7 @@
 {% block title %}測試{% endblock %}
 
 {% block main %}
-<form action="/test" method="post" target="_self">
+<form action="/test_submit" method="post" target="_self">
     <select class="form-select" aria-label="Default select example" name="lang">
         {% for lang in langs %}
         <option value="{{ lang }}">{{ lang }}</option>

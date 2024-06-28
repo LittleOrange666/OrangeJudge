@@ -83,6 +83,7 @@ def contest_status(cid, page_str):
     got_data, page_cnt, page_idx, show_pages = tools.pagination(status, True, page_str)
     out = []
     for obj in got_data:
+        obj: datas.Submission
         pid = obj.pid
         problem = "?"
         problem_name = "?"
@@ -90,7 +91,7 @@ def contest_status(cid, page_str):
             if v["pid"] == pid:
                 problem = k
                 problem_name = v["name"]
-        result = obj.simple_result or "blank"
+        result = obj.simple_result or "unknown"
         can_see = current_user.has("admin") or current_user.id == obj.user.username
         out.append({"idx": str(obj.id),
                     "time": obj.time.timestamp(),
