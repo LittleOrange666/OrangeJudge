@@ -180,7 +180,7 @@ $(function() {
                     if (out[key] === undefined){
                         out[key] = {"scores":{},"total_score":0,"last_update":0,
                         "is_main":(obj["per"]==data["main_per"]),"is_practice":(obj["per"]=="null")}
-                        for(let pid of data["pids"]) out[obj["user"]]["scores"][pid] = {}
+                        for(let pid of data["pids"]) out[key]["scores"][pid] = {}
                     }
                     for (let k in obj["scores"]){
                         out[key]["scores"][obj["pid"]][k] = Math.max(out[key]["scores"][obj["pid"]][k] || 0, obj["scores"][k]);
