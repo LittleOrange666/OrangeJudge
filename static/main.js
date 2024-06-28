@@ -25,13 +25,16 @@ $("pdf-file").each(function(){
 $("textarea").each(function(){
     $(this).data("default-rows",$(this).attr("rows"));
 });
-$("textarea").on("input",function(e){
+$("textarea").on("input",function(){
     $(this).css("height","10px");
     $(this).css("height",$(this).prop("scrollHeight")+"px");
 });
-$(function(){
-    $("textarea").trigger("input");
-});
+window.setInterval(function(){
+    $("textarea").each(function(){
+        $(this).css("height","10px");
+        $(this).css("height",$(this).prop("scrollHeight")+"px");
+    });
+},1000);
 $("textarea").on('keydown', function(e) {
   if (e.key == 'Tab') {
     e.preventDefault();
