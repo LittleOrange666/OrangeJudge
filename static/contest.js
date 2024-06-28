@@ -231,7 +231,6 @@ $(function() {
                 let cur_rank = 1;
                 for(let obj of arr){
                     if(official_only&&!obj["is_main"]) continue;
-                    let obj = arr[i];
                     let key = obj["user"];
                     let username = key.substring(0,key.lastIndexOf(";"));
                     let per_id = key.substring(key.lastIndexOf(";")+1,key.length);
