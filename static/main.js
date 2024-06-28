@@ -232,10 +232,10 @@ document.body.appendChild(copyer);
 $(copyer).hide();
 $("pre.can-copy").each(function() {
     let p = $(this);
+    let text = p.text();
     let copy = $('<button class="copy_btn">copy</button>');
     p.append(copy);
     p.css("position","relative");
-    let text = $(this).text();
     copy.click(function() {
         copyer.value = text;
         copyer.select();
