@@ -26,8 +26,8 @@ $("textarea").each(function(){
     $(this).data("default-rows",$(this).attr("rows"));
 });
 $("textarea").on("input",function(e){
-    $(this).css("height","100px");
-    $(this).css("height",e.target.scrollHeight);
+    $(this).css("height","10px");
+    $(this).css("height",$(this).prop("scrollHeight")+"px");
 });
 $("textarea").trigger("input");
 $("textarea").on('keydown', function(e) {

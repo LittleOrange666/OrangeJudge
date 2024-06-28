@@ -63,11 +63,10 @@ pdf-file > embed{
 
 textarea{
     resize:none;
-    tab-size: 4;/* 页面的样式表 */
-    overflow: hidden; /* 禁用滚动条 */
-    resize: none; /* 禁止用户手动调整文本框的尺寸 */
-    height: auto !important; /* 强制将高度设置为自适应 */
-    max-height: none !important; /* 禁用最大高度限制 */
+    tab-size: 4;
+    overflow: hidden;
+    resize: none;
+    max-height: none !important;
 }
 
 .close-sm {
