@@ -8,7 +8,7 @@
         <label for="start_time" class="form-label">開始時間</label>
         <input type="datetime-local" class="form-control" id="start_time" name="start_time" step="60" required>
     </div>
-    <button class="btn btn-primary submitter">確定</button>
+    <button class="btn btn-primary submitter" data-next="/contest/{{ cid }}">確定</button>
 </form>
 <script src="/static/virtual_register.js"></script>
 {% endblock %}
