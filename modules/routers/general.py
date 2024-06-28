@@ -133,7 +133,8 @@ def submission(idx):
             result["CE"] = result_data["CE"]
             results = result_data["results"]
             result["protected"] = protected = ((not problem_info.get('public_testcase', False) or bool(dat.period_id))
-                                               and dat.user.username not in problem_info["users"])
+                                               and current_user.id not in problem_info["users"]
+                                               and not current_user.has("admin"))
             for i in range(len(results)):
                 if results[i]["result"] != "SKIP" and (not protected or super_access or results[i]["sample"]):
                     results[i]["in"] = tools.read(f"{path}/testcases/{i}.in")
