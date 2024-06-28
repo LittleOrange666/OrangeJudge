@@ -193,7 +193,7 @@ $(function() {
                     }
                     if (Number(tot) != Number(out[key]["total_score"])){
                         out[key]["total_score"] = tot;
-                        out[key]["last_update"] = obj["time"];
+                        out[key]["last_update"] = obj["time"]-pers[obj["per"]]["start_time"];
                     }
                 }
                 let arr = [];
@@ -251,7 +251,7 @@ $(function() {
                         tr.append($('<td>').text(""+cur));
                     }
                     let time = "";
-                    if(!obj["is_practice"]) time = ""+Math.floor((obj["last_update"]-pers[per_id]["start_time"])/60);
+                    if(!obj["is_practice"]) time = ""+Math.floor(obj["last_update"]/60);
                     tr.append($('<td>').text(time));
                     tb.find("tbody").append(tr);
                 }

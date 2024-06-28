@@ -236,7 +236,10 @@ def to_float(text: str) -> float:
 
 
 def to_datetime(text: str, **replace_kwargs) -> datetime:
-    return datetime.fromtimestamp(to_float(text)).replace(**replace_kwargs)
+    try:
+        return datetime.fromtimestamp(to_float(text)).replace(**replace_kwargs)
+    except ValueError:
+        abort(400)
 
 
 has_log: bool = config.debug.log.value

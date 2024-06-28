@@ -156,24 +156,20 @@ def virtual_register(cid):
     if request.method == "GET":
         return render_template("virtual_register.html", cid=cid, name=dat.name)
     else:
-        start_time: datetime
-        try:
-            start_time = tools.to_datetime(request.form["start_time"], second=0, microsecond=0)
-            per = datas.Period.query.filter_by(start_time=start_time, contest=dat, is_virtual=True)
-            if per.count():
-                idx = per.first().id
-            else:
-                nw_per = datas.Period(start_time=start_time,
-                                      end_time=start_time + timedelta(minutes=dat.data["elapsed"]),
-                                      contest=dat,
-                                      is_virtual=True)
-                datas.add(nw_per)
-                idx = nw_per.id
-            dat.data["virtual_participants"][current_user.id] = idx
-            flag_modified(dat, "data")
-            datas.add(dat)
-        except ValueError:
-            abort(400)
+        start_time: datetime = tools.to_datetime(request.form["start_time"], second=0, microsecond=0)
+        per = datas.Period.query.filter_by(start_time=start_time, contest=dat, is_virtual=True)
+        if per.count():
+            idx = per.first().id
+        else:
+            nw_per = datas.Period(start_time=start_time,
+                                  end_time=start_time + timedelta(minutes=dat.data["elapsed"]),
+                                  contest=dat,
+                                  is_virtual=True)
+            datas.add(nw_per)
+            idx = nw_per.id
+        dat.data["virtual_participants"][current_user.id] = idx
+        flag_modified(dat, "data")
+        datas.add(dat)
         return "OK", 200
 
 
