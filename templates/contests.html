@@ -33,7 +33,8 @@
         <td class="date-string">{{ contest.data["start"] }}</td>
         <td class="time-string">{{ contest.data["elapsed"] }}</td>
         <td>
-            <div class="row">{% if current_user.is_authenticated and contest.data["can_register"]%}
+            <div class="row">
+                {% if current_user.is_authenticated and contest.data["can_register"] and contest.data["start"] < cur_time%}
                 <div class="col-auto">
                     {% if current_user.id not in contest.data["participants"] %}
                     <form method="post" action="/contest/{{ contest.cid }}/register">
@@ -49,7 +50,7 @@
                 {% if current_user.is_authenticated and contest.can_virtual() and current_user.id not in
                 contest.data["virtual_participants"] %}
                 <div class="col-auto">
-                    <a class="btn btn-primary" href="/contest/{{ contest.cid }}/virtual">模擬註冊</a>
+                    <a class="btn btn-secondary" href="/contest/{{ contest.cid }}/virtual">模擬註冊</a>
                 </div>
                 {% endif %}
             </div>

@@ -16,7 +16,7 @@ def contests_list():
     public_contests = datas.Contest.query
     got_data, page_cnt, page_idx, show_pages = tools.pagination(public_contests)
     return render_template("contests.html", contests=got_data, page_cnt=page_cnt, page_idx=page_idx,
-                           show_pages=show_pages)
+                           show_pages=show_pages, cur_time=time.time())
 
 
 @app.route("/create_contest", methods=["POST"])
@@ -120,7 +120,8 @@ def contest_action():
 @login_required
 def contest_register(cid):
     dat: datas.Contest = datas.Contest.query.filter_by(cid=cid).first_or_404()
-    if not dat.data["can_register"]:
+    per: datas.Period = datas.Period.query.get_or_404(dat.main_period_id)
+    if not dat.data["can_register"] or per.is_started():
         abort(403)
     if current_user.id in dat.data["participants"]:
         abort(409)
