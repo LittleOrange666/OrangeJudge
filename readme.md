@@ -6,6 +6,8 @@
 
 如要使用的話，可以直接clone下來或下載zip檔
 
+clone的時候記得加--recursive
+
 建議裝在虛擬機或Docker裡面執行
 
 然後執行
@@ -39,6 +41,10 @@ sudo ./tools/autoinit.sh
 ```
 把沙盒砸掉重裝，可能會好
 
+然後初次執行會建立帳密都是root的管理者帳號
+
+記得改密碼
+
 剩下請自行通靈
 
 本judge不保證能在 非 x86_64,x64,AMD64 架構主機上運行
@@ -47,6 +53,6 @@ sudo ./tools/autoinit.sh
 
 但建議用Ubuntu 22.04.3 LTS + Python 3.10.X
 
-非Ubuntu可能會爛
+非Ubuntu可能會爛，非Linux一定會爛
 
 Python版本太新可能會有套件裝不下來
