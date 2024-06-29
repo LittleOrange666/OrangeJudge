@@ -361,7 +361,7 @@ def contest_worker():
                                 break_result(submission)
                                 if pretest == "all":
                                     resubmit(submission)
-                                else:
+                                elif submission.simple_result.lower() == 'pretest passed':
                                     dic[key] = submission
                         if pretest == "last":
                             for v in dic.values():
