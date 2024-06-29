@@ -270,7 +270,7 @@ def all_status_data():
         problem_name = problem.first().name if problem.count() else "unknown"
         result = obj.simple_result or "unknown"
         can_see = current_user.has("admin") or current_user.id == obj.user.username or \
-                  current_user.id == obj.problem.user.username
+                  (obj.problem.user and obj.problem.user.username == current_user.id)
         out.append({"idx": str(obj.id),
                     "time": obj.time.timestamp(),
                     "user_id": obj.user.username,
