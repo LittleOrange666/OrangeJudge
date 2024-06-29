@@ -254,7 +254,7 @@ def check_status(dat: datas.Contest) -> tuple[str, int, bool]:
                 abort(409)
             if not vir_per.is_started():
                 return "waiting_virtual", vir_per.start_time.timestamp(), False
-            if not vir_per.is_started():
+            if vir_per.is_running():
                 return "running_virtual", vir_per.end_time.timestamp(), True
         if current_user.id in dat.data["participants"]:
             if not per.is_started():
