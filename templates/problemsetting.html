@@ -32,6 +32,10 @@
         <a class="nav-link" id="versions_tab" data-bs-toggle="tab" data-bs-target="#versions" type="button" role="tab"
            aria-controls="versions" aria-selected="false">版本控制</a>
     </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link" id="import_tab" data-bs-toggle="tab" data-bs-target="#import" type="button" role="tab"
+           aria-controls="import" aria-selected="false">匯出與匯入</a>
+    </li>
 </ul>
 <div class="tab-content">
     <div id="general_info" class="tab-pane fade show active">
@@ -97,19 +101,6 @@
             </form>
             {% endif %}
         </div>
-        <h3>引入Polygon題目</h3>
-        <form the_action="import_polygon">
-            <div class="mb-3">
-                <input type="file" class="form-control" accept=".zip" name="zip_file" required>
-            </div>
-            <div class="mb-3">
-                <button class="btn btn-primary submitter">
-                <span class="visually-hidden spinner-border spinner-border-sm" role="status"
-                      aria-hidden="true"></span>
-                    上傳zip檔
-                </button>
-            </div>
-        </form>
     </div>
     <div id="languages" class="tab-pane fade">
         <h3>語言</h3>
@@ -700,6 +691,42 @@
             {% endfor %}
             </tbody>
         </table>
+    </div>
+    <div id="import" class="tab-pane fade">
+        <h3>匯出與匯入</h3>
+        <div class="card card-body">
+            <h3>匯入Polygon題目</h3>
+            <form the_action="import_polygon">
+                <div class="mb-3">
+                    <input type="file" class="form-control" accept=".zip" name="zip_file" required>
+                </div>
+                <div class="mb-3">
+                    <button class="btn btn-primary submitter">
+                        上傳zip檔
+                    </button>
+                </div>
+            </form>
+        </div>
+        <div class="card card-body">
+            <form the_action="export_problem">
+                <div class="mb-3">
+                    <button class="btn btn-primary submitter" data-filename="problem.zip">
+                        匯出題目
+                    </button>
+                </div>
+            </form>
+            <h3>匯入題目</h3>
+            <form the_action="import_problem">
+                <div class="mb-3">
+                    <input type="file" class="form-control" accept=".zip" name="zip_file" required>
+                </div>
+                <div class="mb-3">
+                    <button class="btn btn-primary submitter">
+                        上傳zip檔
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 <script src="/static/problemsetting.js"></script>

@@ -68,6 +68,7 @@ class Problem:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.sql_data.new_data = self.dat
+        self.sql_data.name = self.dat["name"]
         flag_modified(self.sql_data, "new_data")
         if self.is_important_editing_now:
             self.sql_data.editing = False
@@ -346,21 +347,22 @@ def do_import_polygon(pid: str, filename: str):
     fn = "checker_" + os.path.basename(checker.get("path"))
     tools.write_binary(zip_file.read(files[checker.get("path")]), path, "file", fn)
     dat["checker_source"] = ["my", fn]
-    dat["files"].append({"name": fn, "type": constants.polygon_type.get(checker.get("type"), "C++17")})
+    nw_files = []
+    nw_files.append({"name": fn, "type": constants.polygon_type.get(checker.get("type"), "C++17")})
     interactor = assets.find("interactor")
     if interactor:
         source = interactor.find("source")
         fn = "interactor_" + os.path.basename(source.get("path"))
         tools.write_binary(zip_file.read(files[source.get("path")]), path, "file", fn)
         dat["interactor_source"] = fn
-        dat["files"].append({"name": fn, "type": constants.polygon_type.get(source.get("type"), "C++17")})
+        nw_files.append({"name": fn, "type": constants.polygon_type.get(source.get("type"), "C++17")})
         dat["is_interact"] = True
     main_sol = None
     for solution in assets.find("solutions").iter("solution"):
         source = solution.find("source")
         fn = "solution_" + os.path.basename(source.get("path"))
         tools.write_binary(zip_file.read(files[source.get("path")]), path, "file", fn)
-        dat["files"].append({"name": fn, "type": constants.polygon_type.get(source.get("type"), "C++17")})
+        nw_files.append({"name": fn, "type": constants.polygon_type.get(source.get("type"), "C++17")})
         if solution.get("tag") == "main":
             main_sol = fn
         tools.log(source.get("path"), solution.get("tag"))
@@ -368,7 +370,12 @@ def do_import_polygon(pid: str, filename: str):
         source = executable.find("source")
         fn = os.path.basename(source.get("path"))
         tools.write_binary(zip_file.read(files[source.get("path")]), path, "file", fn)
-        dat["files"].append({"name": fn, "type": constants.polygon_type.get(source.get("type"), "C++17")})
+        nw_files.append({"name": fn, "type": constants.polygon_type.get(source.get("type"), "C++17")})
+    for o in nw_files:
+        for old in dat["files"]:
+            if old["name"] == o["name"]:
+                dat["files"].remove(old)
+        dat["files"].append(o)
     if main_sol:
         mp = {}
         for cmd, group in gen_cmds:
@@ -542,10 +549,8 @@ def upload_zip(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Pro
     for o in ps:
         f0 = secure_filename(o[0].filename)
         f1 = secure_filename(o[1].filename)
-        with open(path + "/testcases/" + f0, "wb") as f:
-            f.write(zip_file.read(o[0]))
-        with open(path + "/testcases/" + f1, "wb") as f:
-            f.write(zip_file.read(o[1]))
+        tools.write_binary(zip_file.read(o[0]), f"{path}/testcases/{f0}")
+        tools.write_binary(zip_file.read(o[1]), f"{path}/testcases/{f1}")
         if (f0, f1) not in fps:
             dat["testcases"].append({"in": f0, "out": f1, "sample": "sample" in f0, "pretest": "pretest" in f0})
     os.remove(filename)
@@ -816,15 +821,6 @@ def public_problem(form: ImmutableMultiDict[str, str], pid: str, path: str, dat:
 
 
 @actions.bind
-def import_polygon(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
-    file = request.files["zip_file"]
-    filename = f"tmp/{tools.random_string()}.zip"
-    file.save(filename)
-    add_background_action({"action": "do_import_polygon", "pid": pid, "filename": filename})
-    return "general_info"
-
-
-@actions.bind
 def save_languages(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
     for k in executing.langs.keys():
         dat["languages"][k] = (form.get("lang_check_" + k, "off") == "on")
@@ -889,6 +885,55 @@ def remove_gen_group(form: ImmutableMultiDict[str, str], pid: str, path: str, da
     return "tests"
 
 
+@actions.bind
+def import_polygon(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
+    file = request.files["zip_file"]
+    filename = f"tmp/{tools.random_string()}.zip"
+    file.save(filename)
+    add_background_action({"action": "do_import_polygon", "pid": pid, "filename": filename})
+    return "import"
+
+
+@actions.bind
+def import_problem(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
+    zip_file = request.files["zip_file"]
+    filename = f"tmp/{tools.random_string()}.zip"
+    zip_file.save(filename)
+    dirs = ("file", "public_file", "testcases")
+    files = ("statement.html", "statement.md")
+    with AESZipFile(filename, "r") as zf:
+        for file in zf.filelist:
+            file: AESZipInfo
+            if file.filename in files:
+                zf.extract(file, path)
+            elif file.filename == "info.json":
+                users = dat.dat["users"]
+                public_testcase = dat.dat["public_testcase"]
+                dat.dat = json.loads(zf.read(file).decode())
+                dat.dat["users"] = users
+                dat.dat["public_testcase"] = public_testcase
+            else:
+                dir_name = os.path.dirname(file.filename)
+                if dir_name in dirs:
+                    zf.extract(file, path)
+    return "import"
+
+
+@actions.bind
+def export_problem(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
+    filename = f"tmp/{tools.random_string()}.zip"
+    dirs = ("file", "public_file", "testcases")
+    files = ("statement.html", "statement.md")
+    with AESZipFile(filename, "w") as zf:
+        for name in dirs:
+            for f in os.listdir(path + "/" + name):
+                zf.write(os.path.join(path, name, f), name + "/" + f)
+        for f in files:
+            zf.write(os.path.join(path, f), f)
+        zf.writestr("info.json", json.dumps(dat.dat, indent=4))
+    return sending_file(filename)
+
+
 def action(form: ImmutableMultiDict[str, str]) -> Response:
     with datas.DelayCommit():
         pid = secure_filename(form["pid"])
@@ -897,7 +942,10 @@ def action(form: ImmutableMultiDict[str, str]) -> Response:
         important = hasattr(func, "important") and getattr(func, "important")
         with Problem(pid, important) as dat:
             tp = actions.call(form["action"], form, pid, path, dat)
-            return redirect(f"/problemsetting/{pid}#{tp}")
+            if type(tp) is str:
+                return redirect(f"/problemsetting/{pid}#{tp}")
+            else:
+                return tp
 
 
 def sending_file(file: str) -> Response:
