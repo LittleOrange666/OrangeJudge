@@ -503,6 +503,12 @@ def save_statement(form: ImmutableMultiDict[str, str], pid: str, path: str, dat:
     obj["interaction"] = form["statement_interaction"]
     obj["scoring"] = form["statement_scoring"]
     obj["type"] = form.get("statement_type", "md")
+    render_statement(pid, dat)
+    return "statement"
+
+
+def render_statement(pid: str, dat: Problem):
+    obj = dat["statement"].copy()
     if obj["type"] == "latex":
         obj["main"], obj["input"], obj["output"], obj["interaction"], obj["scoring"] = \
             createhtml.run_latex(pid, [obj["main"], obj["input"], obj["output"], obj["interaction"], obj["scoring"]])
@@ -512,13 +518,12 @@ def save_statement(form: ImmutableMultiDict[str, str], pid: str, path: str, dat:
     if obj["output"]:
         full += "\n## 輸出說明\n" + obj["output"]
     if obj["interaction"]:
-        full += "\n## 互動說明\n" + form["statement_interaction"]
+        full += "\n## 互動說明\n" + obj["interaction"]
     if obj["scoring"]:
-        full += "\n## 配分\n" + form["statement_scoring"]
+        full += "\n## 配分\n" + obj["scoring"]
     tools.write(full, f"preparing_problems/{pid}/statement.md")
     createhtml.parse.dirname = pid
     tools.write(createhtml.run_markdown(full), f"preparing_problems/{pid}/statement.html")
-    return "statement"
 
 
 @make_important
@@ -916,6 +921,7 @@ def import_problem(form: ImmutableMultiDict[str, str], pid: str, path: str, dat:
                 dir_name = os.path.dirname(file.filename)
                 if dir_name in dirs:
                     zf.extract(file, path)
+    render_statement(pid, dat)
     return "import"
 
 

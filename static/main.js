@@ -28,11 +28,12 @@ $("textarea").each(function(){
 $("textarea").on("input",function(){
     $(this).css("height",$(this).prop("scrollHeight")+"px");
 });
-window.setTimeout(function(){
+window.setInterval(function(){
     $("textarea").each(function(){
+	if (+$(this).prop("scrollHeight")<+$(this).prop("offsetHeight"))$(this).css("height","100px");
         $(this).css("height",$(this).prop("scrollHeight")+"px");
     });
-},1000);
+},500);
 $("textarea").on('keydown', function(e) {
   if (e.key == 'Tab') {
     e.preventDefault();
