@@ -914,7 +914,7 @@ def import_problem(form: ImmutableMultiDict[str, str], pid: str, path: str, dat:
             elif file.filename == "info.json":
                 users = dat.dat["users"]
                 public_testcase = dat.dat["public_testcase"]
-                dat.dat = json.loads(zf.read(file).decode())
+                dat.dat |= json.loads(zf.read(file).decode())
                 dat.dat["users"] = users
                 dat.dat["public_testcase"] = public_testcase
             else:
