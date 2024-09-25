@@ -61,22 +61,22 @@
 {% for i,testcase in enumerate(result["results"]) %}
 {% if testcase["result"] != "SKIP" and (not protected or super_access or testcase["sample"])  %}
 <div class="test-case">
-    <div>Input {{ i+1 }}:</div>
+    <div>Input {{ i + 1 }}:</div>
     <pre>{{ testcase["in"] }}</pre>
 </div>
 {% if testcase["has_output"] %}
 <div class="test-case">
-    <div>Output {{ i+1 }}:</div>
+    <div>Output {{ i + 1 }}:</div>
     <pre>{{ testcase["user_out"] }}</pre>
 </div>
 {% endif %}
 <div class="test-case">
-    <div>Answer {{ i+1 }}:</div>
+    <div>Answer {{ i + 1 }}:</div>
     <pre>{{ testcase["out"] }}</pre>
 </div>
 {% endif %}
 <div class="test-case">
-    <div>Result {{ i+1 }}: {{ testcase["result"] }}</div>
+    <div>Result {{ i + 1 }}: {{ testcase["result"] }}</div>
     {% if testcase["result"] != "SKIP" and (not protected or super_access or testcase["sample"]) %}
     <pre>{{ testcase["info"] }}</pre>
     {% endif %}

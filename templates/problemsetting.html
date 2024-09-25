@@ -153,12 +153,12 @@
                 {% for i,sample in enumerate(dat.get('manual_samples',[])) %}
                 <div class="row">
                     <div class="col">
-                        <label for="sample_input_{{ i }}" class="form-label">Input {{ i+1 }}</label>
+                        <label for="sample_input_{{ i }}" class="form-label">Input {{ i + 1 }}</label>
                         <textarea class="form-control" id="sample_input_{{ i }}"
                                   rows="3">{{ sample[0] }}</textarea>
                     </div>
                     <div class="col">
-                        <label for="sample_output_{{ i }}" class="form-label">Output {{ i+1 }}</label>
+                        <label for="sample_output_{{ i }}" class="form-label">Output {{ i + 1 }}</label>
                         <textarea class="form-control" id="sample_output_{{ i }}"
                                   rows="3">{{ sample[1] }}</textarea>
                     </div>
@@ -585,7 +585,7 @@
             </div>
             {% for i,gen_group in enumerate(dat.get("gen_groups",[])) %}
             <br>
-            <h4>生成測資組{{ i+1 }}</h4>
+            <h4>生成測資組{{ i + 1 }}</h4>
             <div class="card card-body">
                 <form the_action="update_gen_group">
                     <input type="hidden" name="idx" value="{{ i }}">

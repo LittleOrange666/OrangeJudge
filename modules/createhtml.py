@@ -8,7 +8,6 @@ import markdown
 import mdx_math
 from pygments import highlight, lexers
 from pygments.formatters import HtmlFormatter
-from markupsafe import escape
 
 from modules import tools, constants
 

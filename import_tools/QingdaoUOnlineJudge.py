@@ -1,6 +1,7 @@
 import html
 import json
 import re
+import os
 
 import requests
 from pyzipper import AESZipFile
@@ -14,12 +15,20 @@ def nl(s: str) -> str:
 
 
 def main():
-    web = input("請輸入網址: ")
+    web = ""
+    if os.path.exist("web.txt"):
+        with open("web.txt") as f:
+            web = f.read()
+    while not web:
+        web = input("請輸入網址: ").strip()
     if web.endswith("/"):
         web = web[:-1]
     if not web.startswith("http"):
         web = "https://" + web
     cookie = ""
+    if os.path.exist("cookie.txt"):
+        with open("cookie.txt") as f:
+            cookie = f.read()
     while not cookie:
         cookie = input("請輸入Cookie: ").strip()
 
