@@ -3,78 +3,80 @@
 {% block title %}競賽列表{% endblock %}
 
 {% block main %}
-<h1>競賽列表</h1>
-{% if current_user.is_authenticated and current_user.may_has("make_problems") %}
-<form method="post" action="/create_contest">
-    <div class="row">
-        <div class="col-auto">
-            <input type="text" class="form-control" name="contest_name" placeholder="競賽名稱" pattern="^.{1,120}$"
-                   required>
-        </div>
-        <div class="col-auto">
-            <button class="btn btn-primary submitter" data-redirect="true">建立新的競賽</button>
-        </div>
-    </div>
-</form>
-{% endif %}
-<table class="table table-hover table-striped">
-    <thead>
-    <tr>
-        <th scope="col">競賽名稱</th>
-        <th scope="col">開始時間</th>
-        <th scope="col">持續時間</th>
-        <th scope="col">操作</th>
-    </tr>
-    </thead>
-    <tbody>
-    {% for contest in contests %}
-    <tr>
-        <th scope="row"><a href="/contest/{{ contest.cid }}">{{ contest.name }}</a></th>
-        <td class="date-string">{{ contest.data["start"] }}</td>
-        <td class="time-string">{{ contest.data["elapsed"] }}</td>
-        <td>
+    <h1>競賽列表</h1>
+    {% if current_user.is_authenticated and current_user.may_has("make_problems") %}
+        <form method="post" action="/create_contest">
             <div class="row">
-                {% if current_user.is_authenticated and contest.data["can_register"] and contest.data["start"] > cur_time%}
                 <div class="col-auto">
-                    {% if current_user.id not in contest.data["participants"] %}
-                    <form method="post" action="/contest/{{ contest.cid }}/register">
-                        <button class="btn btn-primary submitter">註冊</button>
-                    </form>
-                    {% else %}
-                    <form method="post" action="/contest/{{ contest.cid }}/unregister">
-                        <button class="btn btn-danger submitter">取消註冊</button>
-                    </form>
-                    {% endif %}
+                    <input type="text" class="form-control" name="contest_name" placeholder="競賽名稱"
+                           pattern="^.{1,120}$"
+                           required>
                 </div>
-                {% endif %}
-                {% if current_user.is_authenticated and contest.can_virtual() and current_user.id not in
-                contest.data["virtual_participants"] %}
                 <div class="col-auto">
-                    <a class="btn btn-secondary" href="/contest/{{ contest.cid }}/virtual">模擬註冊</a>
+                    <button class="btn btn-primary submitter" data-redirect="true">建立新的競賽</button>
                 </div>
-                {% endif %}
             </div>
-        </td>
-    </tr>
-    {% endfor %}
-    </tbody>
-</table>
-<nav aria-label="Page navigation example">
-    <ul class="pagination">
-        <li class="page-item" data-disabled="{{ page_idx == 1 }}">
-            <a class="page-link" data-args="page={{ page_idx-1 }}" aria-label="Previous">
-                <span aria-hidden="true">&laquo;</span>
-            </a>
-        </li>
-        {% for page in show_pages %}
-        <li class="page-item" data-active="{{ page==page_idx }}"><a class="page-link" data-args="page={{ page }}">{{
-            page }}</a></li>
+        </form>
+    {% endif %}
+    <table class="table table-hover table-striped">
+        <thead>
+        <tr>
+            <th scope="col">競賽名稱</th>
+            <th scope="col">開始時間</th>
+            <th scope="col">持續時間</th>
+            <th scope="col">操作</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for contest in contests %}
+            <tr>
+                <th scope="row"><a href="/contest/{{ contest.cid }}">{{ contest.name }}</a></th>
+                <td class="date-string">{{ contest.data["start"] }}</td>
+                <td class="time-string">{{ contest.data["elapsed"] }}</td>
+                <td>
+                    <div class="row">
+                        {% if current_user.is_authenticated and contest.data["can_register"] and contest.data["start"] > cur_time %}
+                            <div class="col-auto">
+                                {% if current_user.id not in contest.data["participants"] %}
+                                    <form method="post" action="/contest/{{ contest.cid }}/register">
+                                        <button class="btn btn-primary submitter">註冊</button>
+                                    </form>
+                                {% else %}
+                                    <form method="post" action="/contest/{{ contest.cid }}/unregister">
+                                        <button class="btn btn-danger submitter">取消註冊</button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                        {% if current_user.is_authenticated and contest.can_virtual() and current_user.id not in
+                contest.data["virtual_participants"] %}
+                            <div class="col-auto">
+                                <a class="btn btn-secondary" href="/contest/{{ contest.cid }}/virtual">模擬註冊</a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
         {% endfor %}
-        <li class="page-item" data-disabled="{{ page_idx == page_cnt }}">
-            <a class="page-link" data-args="page={{ page_idx + 1 }}" aria-label="Next">
-                <span aria-hidden="true">&raquo;</span>
-            </a>
-        </li>
-    </ul>
-</nav>
+        </tbody>
+    </table>
+    <nav aria-label="Page navigation example">
+        <ul class="pagination">
+            <li class="page-item" data-disabled="{{ page_idx == 1 }}">
+                <a class="page-link" data-args="page={{ page_idx-1 }}" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+            {% for page in show_pages %}
+                <li class="page-item" data-active="{{ page==page_idx }}"><a class="page-link"
+                                                                            data-args="page={{ page }}">{{ page }}</a>
+                </li>
+            {% endfor %}
+            <li class="page-item" data-disabled="{{ page_idx == page_cnt }}">
+                <a class="page-link" data-args="page={{ page_idx + 1 }}" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
 {% endblock %}

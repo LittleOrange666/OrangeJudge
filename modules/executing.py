@@ -45,6 +45,12 @@ class Environment:
             nxt(filepath)
         return self.filepath(file_abspath)
 
+    def rename(self, filename: str, nwname: str) -> str:
+        folder = f"{self.get_lxc_root()}/{self.dirname}"
+        cmd = ["sudo", "mv", f"{self.get_lxc_root()}{filename}", f"{folder}/{nwname}"]
+        call(cmd)
+        return self.filepath(nwname)
+
     def get_file(self, filepath: str, source: None | str = None) -> None:
         file_abspath = os.path.abspath(filepath)
         if source is None:
@@ -168,14 +174,29 @@ class Language:
         self.base_exec_cmd = self.get_execmd(exec_name)
         call(["sudo", "lxc-attach", "-n", constants.lxc_name, "--"] + ["chmod", "755", exec_name])
 
-    def compile(self, filename: str, env: Environment) -> tuple[str, str]:
+    def compile(self, filename: str, env: Environment, runner_filename: str | None = None) -> tuple[str, str]:
         if self.data["require_compile"]:
+            if runner_filename is not None:
+                if not self.supports_runner():
+                    return filename, "Runner not supported"
+            dirname = os.path.dirname(filename)
             new_filename = os.path.splitext(filename)[0]
-            dirname = os.path.dirname(new_filename)
             new_filename = env.filepath(self.data["exec_name"].format(os.path.basename(new_filename), **self.kwargs))
-            compile_cmd = self.data["compile_cmd"][:]
-            for i in range(len(compile_cmd)):
-                compile_cmd[i] = compile_cmd[i].format(filename, new_filename, **self.kwargs)
+            if runner_filename is not None:
+                compile_cmd = self.data["compile_runner_cmd"][:]
+                if not self.supports_runner():
+                    return filename, "Runner not supported"
+                new_runner_filename = os.path.splitext(runner_filename)[0]
+                new_runner_filename = env.filepath(self.data["exec_name"].format(os.path.basename(new_runner_filename),
+                                                                                 **self.kwargs))
+                for i in range(len(compile_cmd)):
+                    compile_cmd[i] = compile_cmd[i].format(filename, new_filename, runner_filename, new_runner_filename,
+                                                           **self.kwargs)
+                new_filename = new_runner_filename
+            else:
+                compile_cmd = self.data["compile_cmd"][:]
+                for i in range(len(compile_cmd)):
+                    compile_cmd[i] = compile_cmd[i].format(filename, new_filename, **self.kwargs)
             out = env.simple_run(compile_cmd)
             new_filename = env.simple_path(new_filename)
             env.executable(new_filename)
@@ -230,6 +251,9 @@ class Language:
             env.get_file(stdout)
             env.rm_file(stdin)
             return f"OK: {timeusage}ms, {memusage}KB"
+
+    def supports_runner(self):
+        return "compile_runner_cmd" in self.data
 
 
 langs: dict[str, Language] = {}

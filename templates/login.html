@@ -3,21 +3,21 @@
 {% block title %}登入{% endblock %}
 
 {% block main %}
-<form method="post" action="/login">
-    <div class="mb-3 col-5 offset-2">
-        <label for="user_id" class="form-label">User Id</label>
-        <input type="text" class="form-control" id="user_id" name="user_id" placeholder="user id" required>
-    </div>
-    <div class="mb-3 col-5 offset-2">
-        <label for="password" class="form-label">Password</label>
-        <input type="password" class="form-control" id="password" name="password" placeholder="Password" required>
-    </div>
-    <div class="mb-3 col-5 offset-2">
-        <button type="submit" class="btn btn-primary">登入</button>
-        <a href="/signup" class="btn btn-secondary">註冊</a>
-        <a href="/forget_password" class="btn btn-warning">忘記密碼</a>
-    </div>
-    <input type="text" name="next" id="next" hidden>
-</form>
-<script src="/static/login.js"></script>
+    <form method="post" action="/login">
+        <div class="mb-3 col-5 offset-2">
+            <label for="user_id" class="form-label">User Id</label>
+            <input type="text" class="form-control" id="user_id" name="user_id" placeholder="user id" required>
+        </div>
+        <div class="mb-3 col-5 offset-2">
+            <label for="password" class="form-label">Password</label>
+            <input type="password" class="form-control" id="password" name="password" placeholder="Password" required>
+        </div>
+        <div class="mb-3 col-5 offset-2">
+            <button type="submit" class="btn btn-primary">登入</button>
+            <a href="/signup" class="btn btn-secondary">註冊</a>
+            <a href="/forget_password" class="btn btn-warning">忘記密碼</a>
+        </div>
+        <input type="text" name="next" id="next" hidden>
+    </form>
+    <script src="/static/login.js"></script>
 {% endblock %}

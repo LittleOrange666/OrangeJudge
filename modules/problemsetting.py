@@ -347,8 +347,7 @@ def do_import_polygon(pid: str, filename: str):
     fn = "checker_" + os.path.basename(checker.get("path"))
     tools.write_binary(zip_file.read(files[checker.get("path")]), path, "file", fn)
     dat["checker_source"] = ["my", fn]
-    nw_files = []
-    nw_files.append({"name": fn, "type": constants.polygon_type.get(checker.get("type"), "C++17")})
+    nw_files = [{"name": fn, "type": constants.polygon_type.get(checker.get("type"), "C++17")}]
     interactor = assets.find("interactor")
     if interactor:
         source = interactor.find("source")
@@ -469,7 +468,7 @@ def action_not_found(*args):
 
 
 @actions.bind
-def save_general_info(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
+def save_general_info(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem) -> str | Response:
     dat["name"] = form["title"]
     ml = form["memorylimit"]
     tl = form["timelimit"]
@@ -487,14 +486,14 @@ def save_general_info(form: ImmutableMultiDict[str, str], pid: str, path: str, d
 
 
 @actions.bind
-def create_version(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
+def create_version(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem) -> str | Response:
     description = form["description"]
     add_background_action({"action": "creating_version", "pid": pid, "description": description})
     return "versions"
 
 
 @actions.bind
-def save_statement(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
+def save_statement(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem) -> str | Response:
     dat["manual_samples"] = tools.form_json(form["samples"])
     obj = dat["statement"]
     obj["main"] = form["statement_main"]
@@ -528,7 +527,7 @@ def render_statement(pid: str, dat: Problem):
 
 @make_important
 @actions.bind
-def upload_zip(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
+def upload_zip(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem) -> str | Response:
     input_ext = form["input_ext"]
     output_ext = form["output_ext"]
     file = request.files["zip_file"]
@@ -563,7 +562,7 @@ def upload_zip(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Pro
 
 
 @actions.bind
-def upload_testcase(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
+def upload_testcase(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem) -> str | Response:
     input_name = secure_filename(form["input_name"])
     output_name = secure_filename(form["output_name"])
     if input_name == "" or output_name == "":
@@ -579,10 +578,11 @@ def upload_testcase(form: ImmutableMultiDict[str, str], pid: str, path: str, dat
     with open(path + "/testcases/" + output_name, "w") as f:
         f.write(output_content)
     dat["testcases"].append({"in": input_name, "out": output_name, "sample": False, "pretest": False})
+    return "tests"
 
 
 @actions.bind
-def remove_testcase(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
+def remove_testcase(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem) -> str | Response:
     idx = tools.to_int(form["idx"])
     if idx < 0 or idx >= len(dat["testcases"]):
         abort(400)
@@ -593,7 +593,7 @@ def remove_testcase(form: ImmutableMultiDict[str, str], pid: str, path: str, dat
 
 
 @actions.bind
-def upload_public_file(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
+def upload_public_file(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem) -> str | Response:
     get_files = request.files.getlist("files")
     for file in get_files:
         fn = secure_filename(file.filename)
@@ -610,7 +610,7 @@ def upload_public_file(form: ImmutableMultiDict[str, str], pid: str, path: str, 
 
 
 @actions.bind
-def remove_public_file(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
+def remove_public_file(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem) -> str | Response:
     filename = form["filename"]
     filepath = path + "/public_file/" + secure_filename(filename)
     if os.path.exists(filepath):
@@ -621,7 +621,7 @@ def remove_public_file(form: ImmutableMultiDict[str, str], pid: str, path: str, 
 
 
 @actions.bind
-def upload_file(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
+def upload_file(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem) -> str | Response:
     get_files = request.files.getlist("files")
     for file in get_files:
         fn = secure_filename(file.filename)
@@ -637,7 +637,7 @@ def upload_file(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Pr
 
 
 @actions.bind
-def create_file(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
+def create_file(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem) -> str | Response:
     filename = secure_filename(form["filename"])
     if len(filename) == 0 or len(filename) > 100:
         abort(400)
@@ -649,7 +649,7 @@ def create_file(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Pr
 
 
 @actions.bind
-def remove_file(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
+def remove_file(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem) -> str | Response:
     filename = secure_filename(form["filename"])
     filepath = path + "/file/" + filename
     target = None
@@ -668,7 +668,7 @@ def remove_file(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Pr
 
 
 @actions.bind
-def save_file_content(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
+def save_file_content(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem) -> str | Response:
     filename = form["filename"]
     filename = secure_filename(filename)
     content = form["content"]
@@ -688,7 +688,7 @@ def save_file_content(form: ImmutableMultiDict[str, str], pid: str, path: str, d
 
 
 @actions.bind
-def choose_checker(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
+def choose_checker(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem) -> str | Response:
     tp = form["checker_type"]
     if tp not in ("my", "default"):
         abort(400)
@@ -701,19 +701,37 @@ def choose_checker(form: ImmutableMultiDict[str, str], pid: str, path: str, dat:
 
 
 @actions.bind
-def choose_interactor(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
+def choose_interactor(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem) -> str | Response:
     tp = "my"
     name = secure_filename(form[tp + "_interactor"])
     use = form.get("enable_interactor", "off") == "on"
     if not any(o["name"] == name for o in dat["files"]):
-        abort(404)
-    dat["interactor_source"] = name
-    dat["is_interact"] = use
+        dat["is_interact"] = False
+        dat["interactor_source"] = "unknown"
+    else:
+        dat["interactor_source"] = name
+        dat["is_interact"] = use
     return "judge"
 
 
 @actions.bind
-def save_testcase(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
+def choose_runner(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem) -> str | Response:
+    use = form.get("enable_runner", "off") == "on"
+    if "runner_source" not in dat:
+        dat["runner_source"] = {}
+    for k in executing.langs.keys():
+        name = secure_filename(form["my_runner_"+k])
+        if not any(o["name"] == name for o in dat["files"]):
+            if k in dat["runner_source"]:
+                del dat["runner_source"][k]
+        else:
+            dat["runner_source"][k] = name
+    dat["runner_enabled"] = use
+    return "judge"
+
+
+@actions.bind
+def save_testcase(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem) -> str | Response:
     try:
         modify = json.loads(form["modify"])
     except json.decoder.JSONDecodeError:
@@ -743,13 +761,13 @@ def save_testcase(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: 
 
 
 @actions.bind
-def do_generate(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
+def do_generate(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem) -> str | Response:
     add_background_action({"action": "generate_testcase", "pid": pid})
     return "tests"
 
 
 @actions.bind
-def create_group(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
+def create_group(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem) -> str | Response:
     name = secure_filename(form["name"].strip())
     if name in dat["groups"]:
         abort(409)
@@ -758,7 +776,7 @@ def create_group(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: P
 
 
 @actions.bind
-def remove_group(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
+def remove_group(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem) -> str | Response:
     name = secure_filename(form["name"])
     if name not in dat["groups"]:
         abort(404)
@@ -772,7 +790,7 @@ def remove_group(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: P
 
 
 @actions.bind
-def save_groups(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
+def save_groups(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem) -> str | Response:
     d = {}
     dr = {}
     for k in dat["groups"]:
@@ -810,7 +828,7 @@ def save_groups(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Pr
 
 
 @actions.bind
-def protect_problem(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
+def protect_problem(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem) -> str | Response:
     if not dat.sql_data.is_public:
         abort(409)
     dat.sql_data.is_public = False
@@ -818,7 +836,7 @@ def protect_problem(form: ImmutableMultiDict[str, str], pid: str, path: str, dat
 
 
 @actions.bind
-def public_problem(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
+def public_problem(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem) -> str | Response:
     if dat.sql_data.is_public:
         abort(409)
     dat.sql_data.is_public = True
@@ -826,14 +844,14 @@ def public_problem(form: ImmutableMultiDict[str, str], pid: str, path: str, dat:
 
 
 @actions.bind
-def save_languages(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
+def save_languages(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem) -> str | Response:
     for k in executing.langs.keys():
         dat["languages"][k] = (form.get("lang_check_" + k, "off") == "on")
     return "languages"
 
 
 @actions.bind
-def create_gen_group(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
+def create_gen_group(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem) -> str | Response:
     file1 = form["file1"]
     if not any(o["name"] == file1 for o in dat["files"]):
         abort(404)
@@ -856,10 +874,11 @@ def create_gen_group(form: ImmutableMultiDict[str, str], pid: str, path: str, da
         dat["gen_groups"] = []
     dat["gen_groups"].append({"file1": file1, "file2": file2, "group": group, "type": tp, "cmds": out_cmds,
                               "status": "未更新"})
+    return "tests"
 
 
 @actions.bind
-def update_gen_group(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
+def update_gen_group(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem) -> str | Response:
     file1 = form["file1"]
     if not any(o["name"] == file1 for o in dat["files"]):
         abort(404)
@@ -882,7 +901,7 @@ def update_gen_group(form: ImmutableMultiDict[str, str], pid: str, path: str, da
 
 
 @actions.bind
-def remove_gen_group(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
+def remove_gen_group(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem) -> str | Response:
     idx = tools.to_int(form["idx"])
     if "gen_groups" not in dat or idx < 0 or idx >= len(dat["gen_groups"]):
         abort(400)
@@ -891,7 +910,7 @@ def remove_gen_group(form: ImmutableMultiDict[str, str], pid: str, path: str, da
 
 
 @actions.bind
-def import_polygon(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
+def import_polygon(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem) -> str | Response:
     file = request.files["zip_file"]
     filename = f"tmp/{tools.random_string()}.zip"
     file.save(filename)
@@ -900,7 +919,7 @@ def import_polygon(form: ImmutableMultiDict[str, str], pid: str, path: str, dat:
 
 
 @actions.bind
-def import_problem(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
+def import_problem(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem) -> str | Response:
     zip_file = request.files["zip_file"]
     filename = f"tmp/{tools.random_string()}.zip"
     zip_file.save(filename)
@@ -926,7 +945,7 @@ def import_problem(form: ImmutableMultiDict[str, str], pid: str, path: str, dat:
 
 
 @actions.bind
-def export_problem(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem):
+def export_problem(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem) -> str | Response:
     filename = f"tmp/{tools.random_string()}.zip"
     dirs = ("file", "public_file", "testcases")
     files = ("statement.html", "statement.md")

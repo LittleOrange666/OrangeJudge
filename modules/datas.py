@@ -72,6 +72,10 @@ class Problem(db.Model):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
+    def lang_allowed(self, lang: str) -> bool:
+        return (self.data["languages"].get(lang, True) and
+                (not self.data.get("runner_enabled", False) or lang in self.data.get("runner_source", {})))
+
 
 class Contest(db.Model):
     __tablename__ = 'contests'

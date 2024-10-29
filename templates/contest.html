@@ -1,545 +1,566 @@
 {% extends "base.html" %}
 
-{% block title %}競賽 - {{data['name']}}{% endblock %}
+{% block title %}競賽 - {{ data['name'] }}{% endblock %}
 
 {% block main %}
-<div class="row">
-    <div class="col-auto">
-        <p class="h2" id="contest_status" data-status="{{ status }}"></p>
+    <div class="row">
+        <div class="col-auto">
+            <p class="h2" id="contest_status" data-status="{{ status }}"></p>
+        </div>
+        <div class="col-auto">
+            {% if target %}
+                <p class="h2 text-secondary countdown-timer" data-target="{{ target }}"></p>
+            {% endif %}
+        </div>
     </div>
-    <div class="col-auto">
-        {% if target %}
-        <p class="h2 text-secondary countdown-timer" data-target="{{ target }}"></p>
+    <ul class="nav nav-tabs">
+        <li class="nav-item" role="presentation">
+            <a class="nav-link active" id="index_page_tab" data-bs-toggle="tab" data-bs-target="#index_page"
+               type="button" role="tab" aria-controls="index_page" aria-selected="true">首頁</a>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link" id="status_tab" data-bs-toggle="tab" data-bs-target="#status" type="button" role="tab"
+               aria-controls="status" aria-selected="false">解題動態</a>
+        </li>
+        {% if current_user.is_authenticated %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" id="my_status_tab" data-bs-toggle="tab" data-bs-target="#my_status" type="button"
+                   role="tab"
+                   aria-controls="my_status" aria-selected="false">我的解題動態</a>
+            </li>
         {% endif %}
-    </div>
-</div>
-<ul class="nav nav-tabs">
-    <li class="nav-item" role="presentation">
-        <a class="nav-link active" id="index_page_tab" data-bs-toggle="tab" data-bs-target="#index_page"
-           type="button" role="tab" aria-controls="index_page" aria-selected="true">首頁</a>
-    </li>
-    <li class="nav-item" role="presentation">
-        <a class="nav-link" id="status_tab" data-bs-toggle="tab" data-bs-target="#status" type="button" role="tab"
-           aria-controls="status" aria-selected="false">解題動態</a>
-    </li>
-    {% if current_user.is_authenticated %}
-    <li class="nav-item" role="presentation">
-        <a class="nav-link" id="my_status_tab" data-bs-toggle="tab" data-bs-target="#my_status" type="button" role="tab"
-           aria-controls="my_status" aria-selected="false">我的解題動態</a>
-    </li>
-    {% endif %}
-    <li class="nav-item" role="presentation">
-        <a class="nav-link" id="standing_tab" data-bs-toggle="tab" data-bs-target="#standing" type="button" role="tab"
-           aria-controls="standing" aria-selected="false">記分板</a>
-    </li>
-    {% if can_edit %}
-    <li class="nav-item" role="presentation">
-        <a class="nav-link" id="edit_tab" data-bs-toggle="tab" data-bs-target="#edit" type="button" role="tab"
-           aria-controls="edit" aria-selected="false">管理</a>
-    </li>
-    {% endif %}
-    <li class="nav-item" role="presentation">
-        <a class="nav-link" id="participants_tab" data-bs-toggle="tab" data-bs-target="#participants" type="button"
-           role="tab"
-           aria-controls="participants" aria-selected="false">參賽者</a>
-    </li>
-</ul>
-<div class="tab-content">
-    <div id="index_page" class="tab-pane fade show active">
-        {% if can_see %}
-        <table class="table table-hover table-striped">
-            <thead>
-            <tr>
-                <th scope="col">#</th>
-                <th scope="col">名稱</th>
-                {% if can_edit %}
-                <th scope="col"></th>
-                {% endif %}
-            </tr>
-            </thead>
-            <tbody>
-            {% for idx, problem in data["problems"].items() %}
-            <tr class="problem" data-index="{{ idx }}">
-                <th scope="row"><a href="/contest/{{ cid }}/problem/{{ idx }}">{{ idx }}</a></th>
-                <td><a href="/contest/{{ cid }}/problem/{{ idx }}">{{ problem['name'] }}</a></td>
-                {% if can_edit %}
-                <td>
-                    <form the_action="remove_problem">
-                        <input name="idx" value="{{ idx }}" hidden>
-                        <button class="btn btn-danger submitter">刪除題目</button>
-                    </form>
-                </td>
-                {% endif %}
-            </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <p class="h3">您目前無法觀看題目</p>
-        {% endif %}
+        <li class="nav-item" role="presentation">
+            <a class="nav-link" id="standing_tab" data-bs-toggle="tab" data-bs-target="#standing" type="button"
+               role="tab"
+               aria-controls="standing" aria-selected="false">記分板</a>
+        </li>
         {% if can_edit %}
-        <button class="btn btn-primary" id="save_order">儲存順序</button>
-        <form the_action="add_problem">
-            <div class="row">
-                <div class="col-auto">
-                    <input type="text" class="form-control" name="pid" placeholder="題目編號" required>
-                </div>
-                <div class="col-auto">
-                    <button class="btn btn-primary submitter">添加題目</button>
-                </div>
-            </div>
-        </form>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" id="edit_tab" data-bs-toggle="tab" data-bs-target="#edit" type="button" role="tab"
+                   aria-controls="edit" aria-selected="false">管理</a>
+            </li>
         {% endif %}
-        <p class="h3">公告</p>
-        {% if can_edit %}
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#announcement_modal">
-            發布公告
-        </button>
-        <form the_action="send_announcement">
-            <div class="modal fade" id="announcement_modal" tabindex="-1" aria-labelledby="announcement_modal"
-                 aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">發布公告</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="mb-3">
-                                <label for="announcement_title" class="col-form-label">標題:</label>
-                                <input type="text" class="form-control" id="announcement_title" name="title">
-                            </div>
-                            <div class="mb-3">
-                                <label for="announcement_content" class="col-form-label">內容:</label>
-                                <textarea class="form-control" id="announcement_content" name="content"></textarea>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
-                            <button type="button" class="btn btn-primary submitter">發布</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </form>
-        {% endif %}
-        <table class="table table-hover table-striped">
-            <thead>
-            <tr>
-                <th scope="col">#</th>
-                <th scope="col">時間</th>
-                <th scope="col">發佈者/提問者</th>
-                <th scope="col">內容</th>
-                <th scope="col">回覆者</th>
-                <th scope="col">回覆</th>
-                <th scope="col"></th>
-            </tr>
-            </thead>
-            <tbody>
-            {% for announcement in announcements %}
-            <tr>
-                <th scope="row">{{ loop.index }}</th>
-                <td class="date-string">{{ announcement.time.timestamp() }}</td>
-                <td>{{ announcement.user.username }}</td>
-                <td><p class="fw-bold h4">{{ announcement.title }}</p>
-                    <p class="message-area">{{ announcement.content }}</p></td>
-                <td>{{ announcement.reply_name or "" }}</td>
-                <td class="message-area">{{ announcement.reply or "" }}</td>
-                {% if can_edit %}
-                <td>
-                    <form the_action="remove_announcement">
-                        <input type="hidden" name="id" value="{{ announcement.id }}">
-                        <button class="btn btn-danger submitter">
-                            移除
-                        </button>
-                    </form>
-                </td>
-                {% endif %}
-            </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-        <p class="h3">詢問</p>
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#question_modal">
-            提出問題
-        </button>
-        <form action="/contest/{{ cid }}/question" method="post">
-            <div class="modal fade" id="question_modal" tabindex="-1" aria-labelledby="question_modal"
-                 aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">提出問題</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="mb-3">
-                                <label for="question_title" class="col-form-label">標題:</label>
-                                <input type="text" class="form-control" id="question_title" name="title">
-                            </div>
-                            <div class="mb-3">
-                                <label for="question_content" class="col-form-label">內容:</label>
-                                <textarea class="form-control" id="question_content" name="content"></textarea>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
-                            <button type="button" class="btn btn-primary submitter">提交</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </form>
-        <table class="table table-hover table-striped">
-            <thead>
-            <tr>
-                <th scope="col">#</th>
-                <th scope="col">時間</th>
-                <th scope="col">提問者</th>
-                <th scope="col">內容</th>
-                <th scope="col">回覆者</th>
-                <th scope="col">回覆</th>
-                <th scope="col"></th>
-            </tr>
-            </thead>
-            <tbody>
-            {% for question in questions %}
-            <tr class="question-tr" data-id="{{ question.id }}">
-                <th scope="row">{{ loop.index }}</th>
-                <td class="date-string">{{ question.time.timestamp() }}</td>
-                <td>{{ question.user.username }}</td>
-                <td><p class="fw-bold h4">{{ question.title }}</p>
-                    <p class="message-area">{{ question.content }}</p></td>
-                <td>{{ question.reply_name or "" }}</td>
-                <td class="message-area reply">{{ question.reply or "" }}</td>
-                {% if can_edit %}
-                <td>
-                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#save_question_modal"
-                            data-id="{{ question.id }}" data-public="{{ question.public }}">回覆
-                    </button>
-                    <form the_action="remove_announcement">
-                        <input type="hidden" name="id" value="{{ question.id }}">
-                        <button class="btn btn-danger submitter">
-                            移除
-                        </button>
-                    </form>
-                </td>
-                {% endif %}
-            </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-        <form the_action="save_question">
-            <input type="hidden" name="id" value="" id="save_question_id">
-            <div class="modal fade" id="save_question_modal" tabindex="-1" aria-labelledby="save_question_modal"
-                 aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">回覆問題</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="mb-3">
-                                <label for="save_question_content" class="col-form-label">內容:</label>
-                                <textarea class="form-control" id="save_question_content" name="content"></textarea>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" value="yes" name="public"
-                                       id="save_question_check">
-                                <label class="form-check-label" for="save_question_check">
-                                    公開回覆
-                                </label>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
-                            <button type="button" class="btn btn-primary submitter">儲存回覆</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </form>
-    </div>
-    <div id="status" class="tab-pane fade">
-        <div class="row">
-            <div class="col-auto">
-                <select class="form-select" aria-label="題目編號" id="status_filter_pid">
-                    <option value="" selected>所有</option>
-                    {% for k in data["problems"] %}
-                    <option value="{{ k }}">{{ k }}</option>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link" id="participants_tab" data-bs-toggle="tab" data-bs-target="#participants" type="button"
+               role="tab"
+               aria-controls="participants" aria-selected="false">參賽者</a>
+        </li>
+    </ul>
+    <div class="tab-content">
+        <div id="index_page" class="tab-pane fade show active">
+            {% if can_see %}
+                <table class="table table-hover table-striped">
+                    <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">名稱</th>
+                        {% if can_edit %}
+                            <th scope="col"></th>
+                        {% endif %}
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for idx, problem in data["problems"].items() %}
+                        <tr class="problem" data-index="{{ idx }}">
+                            <th scope="row"><a href="/contest/{{ cid }}/problem/{{ idx }}">{{ idx }}</a></th>
+                            <td><a href="/contest/{{ cid }}/problem/{{ idx }}">{{ problem['name'] }}</a></td>
+                            {% if can_edit %}
+                                <td>
+                                    <form the_action="remove_problem">
+                                        <input name="idx" value="{{ idx }}" hidden>
+                                        <button class="btn btn-danger submitter">刪除題目</button>
+                                    </form>
+                                </td>
+                            {% endif %}
+                        </tr>
                     {% endfor %}
-                </select>
-            </div>
-            <div class="col-auto">
-                <input type="text" class="form-control" placeholder="使用者id" id="status_filter_username">
-            </div>
-            <div class="col-auto">
-                <button class="btn btn-primary" id="status_filter">篩選</button>
-            </div>
+                    </tbody>
+                </table>
+            {% else %}
+                <p class="h3">您目前無法觀看題目</p>
+            {% endif %}
+            {% if can_edit %}
+                <button class="btn btn-primary" id="save_order">儲存順序</button>
+                <form the_action="add_problem">
+                    <div class="row">
+                        <div class="col-auto">
+                            <input type="text" class="form-control" name="pid" placeholder="題目編號" required>
+                        </div>
+                        <div class="col-auto">
+                            <button class="btn btn-primary submitter">添加題目</button>
+                        </div>
+                    </div>
+                </form>
+            {% endif %}
+            <p class="h3">公告</p>
+            {% if can_edit %}
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal"
+                        data-bs-target="#announcement_modal">
+                    發布公告
+                </button>
+                <form the_action="send_announcement">
+                    <div class="modal fade" id="announcement_modal" tabindex="-1" aria-labelledby="announcement_modal"
+                         aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">發布公告</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                            aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="mb-3">
+                                        <label for="announcement_title" class="col-form-label">標題:</label>
+                                        <input type="text" class="form-control" id="announcement_title" name="title">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="announcement_content" class="col-form-label">內容:</label>
+                                        <textarea class="form-control" id="announcement_content"
+                                                  name="content"></textarea>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉
+                                    </button>
+                                    <button type="button" class="btn btn-primary submitter">發布</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            {% endif %}
+            <table class="table table-hover table-striped">
+                <thead>
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">時間</th>
+                    <th scope="col">發佈者/提問者</th>
+                    <th scope="col">內容</th>
+                    <th scope="col">回覆者</th>
+                    <th scope="col">回覆</th>
+                    <th scope="col"></th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for announcement in announcements %}
+                    <tr>
+                        <th scope="row">{{ loop.index }}</th>
+                        <td class="date-string">{{ announcement.time.timestamp() }}</td>
+                        <td>{{ announcement.user.username }}</td>
+                        <td><p class="fw-bold h4">{{ announcement.title }}</p>
+                            <p class="message-area">{{ announcement.content }}</p></td>
+                        <td>{{ announcement.reply_name or "" }}</td>
+                        <td class="message-area">{{ announcement.reply or "" }}</td>
+                        {% if can_edit %}
+                            <td>
+                                <form the_action="remove_announcement">
+                                    <input type="hidden" name="id" value="{{ announcement.id }}">
+                                    <button class="btn btn-danger submitter">
+                                        移除
+                                    </button>
+                                </form>
+                            </td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            <p class="h3">詢問</p>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#question_modal">
+                提出問題
+            </button>
+            <form action="/contest/{{ cid }}/question" method="post">
+                <div class="modal fade" id="question_modal" tabindex="-1" aria-labelledby="question_modal"
+                     aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">提出問題</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                        aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <label for="question_title" class="col-form-label">標題:</label>
+                                    <input type="text" class="form-control" id="question_title" name="title">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="question_content" class="col-form-label">內容:</label>
+                                    <textarea class="form-control" id="question_content" name="content"></textarea>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
+                                <button type="button" class="btn btn-primary submitter">提交</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+            <table class="table table-hover table-striped">
+                <thead>
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">時間</th>
+                    <th scope="col">提問者</th>
+                    <th scope="col">內容</th>
+                    <th scope="col">回覆者</th>
+                    <th scope="col">回覆</th>
+                    <th scope="col"></th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for question in questions %}
+                    <tr class="question-tr" data-id="{{ question.id }}">
+                        <th scope="row">{{ loop.index }}</th>
+                        <td class="date-string">{{ question.time.timestamp() }}</td>
+                        <td>{{ question.user.username }}</td>
+                        <td><p class="fw-bold h4">{{ question.title }}</p>
+                            <p class="message-area">{{ question.content }}</p></td>
+                        <td>{{ question.reply_name or "" }}</td>
+                        <td class="message-area reply">{{ question.reply or "" }}</td>
+                        {% if can_edit %}
+                            <td>
+                                <button class="btn btn-primary" data-bs-toggle="modal"
+                                        data-bs-target="#save_question_modal"
+                                        data-id="{{ question.id }}" data-public="{{ question.public }}">回覆
+                                </button>
+                                <form the_action="remove_announcement">
+                                    <input type="hidden" name="id" value="{{ question.id }}">
+                                    <button class="btn btn-danger submitter">
+                                        移除
+                                    </button>
+                                </form>
+                            </td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            <form the_action="save_question">
+                <input type="hidden" name="id" value="" id="save_question_id">
+                <div class="modal fade" id="save_question_modal" tabindex="-1" aria-labelledby="save_question_modal"
+                     aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">回覆問題</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                        aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <label for="save_question_content" class="col-form-label">內容:</label>
+                                    <textarea class="form-control" id="save_question_content" name="content"></textarea>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="yes" name="public"
+                                           id="save_question_check">
+                                    <label class="form-check-label" for="save_question_check">
+                                        公開回覆
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
+                                <button type="button" class="btn btn-primary submitter">儲存回覆</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
         </div>
-        <table class="table table-hover table-striped">
-            <thead>
-            <tr>
-                <th scope="col">解題編號</th>
-                <th scope="col">時間</th>
-                <th scope="col">提交者</th>
-                <th scope="col">題目</th>
-                <th scope="col">語言</th>
-                <th scope="col">結果</th>
-            </tr>
-            </thead>
-            <tbody id="status_table">
-            </tbody>
-        </table>
-        <nav aria-label="Page navigation example">
-            <ul class="pagination" id="status_page">
-            </ul>
-        </nav>
-    </div>
-    {% if current_user.is_authenticated %}
-    <div id="my_status" class="tab-pane fade">
-        <div class="row">
-            <div class="col-auto">
-                <select class="form-select" aria-label="題目編號" id="my_status_filter_pid">
-                    <option value="" selected>所有</option>
-                    {% for k in data["problems"] %}
-                    <option value="{{ k }}">{{ k }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-auto">
-                <button class="btn btn-primary" id="my_status_filter">篩選</button>
-            </div>
-        </div>
-        <table class="table table-hover table-striped">
-            <thead>
-            <tr>
-                <th scope="col">解題編號</th>
-                <th scope="col">時間</th>
-                <th scope="col">題目</th>
-                <th scope="col">語言</th>
-                <th scope="col">結果</th>
-            </tr>
-            </thead>
-            <tbody id="my_status_table">
-            </tbody>
-        </table>
-        <nav aria-label="Page navigation example">
-            <ul class="pagination" id="my_status_page">
-            </ul>
-        </nav>
-    </div>
-    {% endif %}
-    <div id="standing" class="tab-pane fade">
-        <p class="text-center h2 d-none text-danger" id="standing_error"></p>
-        <p class="text-center h4 d-none text-info" id="standing_judging">目前並非最終結果</p>
-        <div class="row">
-            <div class="col-auto">
-                <button class="btn btn-primary" id="standing_refresh">刷新</button>
-            </div>
-            <div class="form-check col-auto">
-                <input class="form-check-input" type="checkbox" value="" id="standing_auto_refresh">
-                <label class="form-check-label" for="standing_auto_refresh">
-                    自動刷新
-                </label>
-            </div>
-            <div class="form-check col-auto">
-                <input class="form-check-input" type="checkbox" value="" id="standing_official_only">
-                <label class="form-check-label" for="standing_official_only">
-                    僅正式排名
-                </label>
-            </div>
-        </div>
-        <div class="d-flex align-items-center" id="standing_loading">
-            <strong>Loading...</strong>
-            <div class="spinner-border ms-auto" role="status" aria-hidden="true"></div>
-        </div>
-        <table class="table table-hover table-striped" id="standing_table">
-            <thead>
-            <tr>
-            </tr>
-            </thead>
-            <tbody>
-            </tbody>
-        </table>
-    </div>
-    {% if can_edit %}
-    <div id="edit" class="tab-pane fade">
-        <form the_action="change_settings">
-            <div class="mb-3">
-                <label for="contest_title" class="form-label">比賽名稱</label>
-                <input type="text" class="form-control" id="contest_title" name="contest_title" placeholder="比賽名稱"
-                       value="{{ data['name'] }}" required pattern=".{1,120}">
-            </div>
-            <h4>比賽時間</h4>
-            <div class="mb-3">
-                <label for="start_time" class="form-label">開始時間</label>
-                <input type="datetime-local" class="form-control" id="start_time" name="start_time"
-                       data-value="{{ data['start'] }}" step="60" required>
-            </div>
-            <div class="mb-3">
-                <label for="elapsed_time" class="form-label">持續時間(分鐘)</label>
-                <input type="number" class="form-control" id="elapsed_time" name="elapsed_time" placeholder="持續時間"
-                       value="{{ data['elapsed'] }}" required>
-            </div>
-            <div class="radio-selector" data-value="{{ data['type'] }}">
-                <h4>計分規則</h4>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="rule_type" id="rule_type1" value="icpc">
-                    <label class="form-check-label" for="rule_type1">
-                        ACM ICPC
-                    </label>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="rule_type" id="rule_type2" value="ioi">
-                    <label class="form-check-label" for="rule_type2">
-                        IOI style
-                    </label>
-                </div>
-            </div>
-            <div class="mb-3">
-                <label for="penalty" class="form-label">罰時(分鐘)</label>
-                <input type="number" class="form-control" id="penalty" name="penalty" placeholder="罰時"
-                       value="{{ data['penalty'] }}" required>
-            </div>
-            <div class="radio-selector" data-value="{{ data['pretest'] }}">
-                <h4>後測</h4>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="pretest_type" id="pretest_type1" value="no">
-                    <label class="form-check-label" for="pretest_type1">
-                        無後測
-                    </label>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="pretest_type" id="pretest_type2" value="all">
-                    <label class="form-check-label" for="pretest_type2">
-                        對所有提交計分
-                    </label>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="pretest_type" id="pretest_type3" value="last">
-                    <label class="form-check-label" for="pretest_type3">
-                        對最後提交計分
-                    </label>
-                </div>
-            </div>
-            <div class="radio-selector" data-value="{{ 'yes' if data['can_register'] else 'no' }}">
-                <h4>自行報名</h4>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="register_type" id="register_type1" value="yes">
-                    <label class="form-check-label" for="register_type1">
-                        是
-                    </label>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="register_type" id="register_type2" value="no">
-                    <label class="form-check-label" for="register_type2">
-                        否
-                    </label>
-                </div>
-            </div>
-            <div class="radio-selector" data-value="{{ data['practice'] }}">
-                <h4>賽後練習</h4>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="practice_type" id="practice_type1" value="no">
-                    <label class="form-check-label" for="practice_type1">
-                        不開放
-                    </label>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="practice_type" id="practice_type2"
-                           value="private">
-                    <label class="form-check-label" for="practice_type2">
-                        僅參賽者
-                    </label>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="practice_type" id="practice_type3"
-                           value="public">
-                    <label class="form-check-label" for="practice_type3">
-                        公開
-                    </label>
-                </div>
-            </div>
-            <div class="radio-selector" data-value="{{ 'yes' if data['standing']['public'] else 'no' }}">
-                <h4>記分板可見</h4>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="show_standing" id="show_standing1" value="yes">
-                    <label class="form-check-label" for="show_standing1">
-                        是
-                    </label>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="show_standing" id="show_standing2" value="no">
-                    <label class="form-check-label" for="show_standing2">
-                        否
-                    </label>
-                </div>
-            </div>
-            <div class="mb-3">
-                <label for="freeze_time" class="form-label">封版時間(分鐘)</label>
-                <input type="number" class="form-control" id="freeze_time" name="freeze_time" placeholder="封版時間"
-                       value="{{ data['standing']['start_freeze'] }}" required>
-            </div>
-            <div class="mb-3">
-                <label for="unfreeze_time" class="form-label">解封時間(分鐘)</label>
-                <input type="number" class="form-control" id="unfreeze_time" name="unfreeze_time" placeholder="解封時間"
-                       value="{{ data['standing']['end_freeze'] }}" required>
-            </div>
-            <div class="row">
-                <button class="btn btn-primary submitter">儲存設定</button>
-            </div>
-        </form>
-    </div>
-    {% endif %}
-    <div id="participants" class="tab-pane fade">
-        {% if can_edit %}
-        <br>
-        <form the_action="add_participant">
+        <div id="status" class="tab-pane fade">
             <div class="row">
                 <div class="col-auto">
-                    <input type="text" class="form-control" name="username" placeholder="參賽者id" required>
+                    <select class="form-select" aria-label="題目編號" id="status_filter_pid">
+                        <option value="" selected>所有</option>
+                        {% for k in data["problems"] %}
+                            <option value="{{ k }}">{{ k }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
                 <div class="col-auto">
-                    <button class="btn btn-primary submitter" data-msg-404="找不到該使用者id"
-                            data-msg-409="該使用者已被添加">添加參賽者
-                    </button>
+                    <input type="text" class="form-control" placeholder="使用者id" id="status_filter_username">
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-primary" id="status_filter">篩選</button>
                 </div>
             </div>
-        </form>
+            <table class="table table-hover table-striped">
+                <thead>
+                <tr>
+                    <th scope="col">解題編號</th>
+                    <th scope="col">時間</th>
+                    <th scope="col">提交者</th>
+                    <th scope="col">題目</th>
+                    <th scope="col">語言</th>
+                    <th scope="col">結果</th>
+                </tr>
+                </thead>
+                <tbody id="status_table">
+                </tbody>
+            </table>
+            <nav aria-label="Page navigation example">
+                <ul class="pagination" id="status_page">
+                </ul>
+            </nav>
+        </div>
+        {% if current_user.is_authenticated %}
+            <div id="my_status" class="tab-pane fade">
+                <div class="row">
+                    <div class="col-auto">
+                        <select class="form-select" aria-label="題目編號" id="my_status_filter_pid">
+                            <option value="" selected>所有</option>
+                            {% for k in data["problems"] %}
+                                <option value="{{ k }}">{{ k }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-auto">
+                        <button class="btn btn-primary" id="my_status_filter">篩選</button>
+                    </div>
+                </div>
+                <table class="table table-hover table-striped">
+                    <thead>
+                    <tr>
+                        <th scope="col">解題編號</th>
+                        <th scope="col">時間</th>
+                        <th scope="col">題目</th>
+                        <th scope="col">語言</th>
+                        <th scope="col">結果</th>
+                    </tr>
+                    </thead>
+                    <tbody id="my_status_table">
+                    </tbody>
+                </table>
+                <nav aria-label="Page navigation example">
+                    <ul class="pagination" id="my_status_page">
+                    </ul>
+                </nav>
+            </div>
         {% endif %}
-        <table class="table table-hover table-striped">
-            <thead>
-            <tr>
-                <th scope="col">#</th>
-                <th scope="col">ID</th>
-                {% if can_edit %}
-                <th scope="col"></th>
-                {% endif %}
-            </tr>
-            </thead>
-            <tbody>
-            {% for user in data["participants"] %}
-            <tr>
-                <th scope="row">{{ loop.index }}</th>
-                <td><a href="/user/{{ user }}" target="_blank">{{ user }}</a></td>
-                {% if can_edit %}
-                <td>
-                    <form the_action="remove_participant">
-                        <input name="username" value="{{ user }}" hidden>
-                        <button class="btn btn-danger submitter">移除參賽者</button>
-                    </form>
-                </td>
-                {% endif %}
-            </tr>
-            {% endfor %}
-            </tbody>
-        </table>
+        <div id="standing" class="tab-pane fade">
+            <p class="text-center h2 d-none text-danger" id="standing_error"></p>
+            <p class="text-center h4 d-none text-info" id="standing_judging">目前並非最終結果</p>
+            <div class="row">
+                <div class="col-auto">
+                    <button class="btn btn-primary" id="standing_refresh">刷新</button>
+                </div>
+                <div class="form-check col-auto">
+                    <input class="form-check-input" type="checkbox" value="" id="standing_auto_refresh">
+                    <label class="form-check-label" for="standing_auto_refresh">
+                        自動刷新
+                    </label>
+                </div>
+                <div class="form-check col-auto">
+                    <input class="form-check-input" type="checkbox" value="" id="standing_official_only">
+                    <label class="form-check-label" for="standing_official_only">
+                        僅正式排名
+                    </label>
+                </div>
+            </div>
+            <div class="d-flex align-items-center" id="standing_loading">
+                <strong>Loading...</strong>
+                <div class="spinner-border ms-auto" role="status" aria-hidden="true"></div>
+            </div>
+            <table class="table table-hover table-striped" id="standing_table">
+                <thead>
+                <tr>
+                </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+        {% if can_edit %}
+            <div id="edit" class="tab-pane fade">
+                <form the_action="change_settings">
+                    <div class="mb-3">
+                        <label for="contest_title" class="form-label">比賽名稱</label>
+                        <input type="text" class="form-control" id="contest_title" name="contest_title"
+                               placeholder="比賽名稱"
+                               value="{{ data['name'] }}" required pattern=".{1,120}">
+                    </div>
+                    <h4>比賽時間</h4>
+                    <div class="mb-3">
+                        <label for="start_time" class="form-label">開始時間</label>
+                        <input type="datetime-local" class="form-control" id="start_time" name="start_time"
+                               data-value="{{ data['start'] }}" step="60" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="elapsed_time" class="form-label">持續時間(分鐘)</label>
+                        <input type="number" class="form-control" id="elapsed_time" name="elapsed_time"
+                               placeholder="持續時間"
+                               value="{{ data['elapsed'] }}" required>
+                    </div>
+                    <div class="radio-selector" data-value="{{ data['type'] }}">
+                        <h4>計分規則</h4>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="rule_type" id="rule_type1" value="icpc">
+                            <label class="form-check-label" for="rule_type1">
+                                ACM ICPC
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="rule_type" id="rule_type2" value="ioi">
+                            <label class="form-check-label" for="rule_type2">
+                                IOI style
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="penalty" class="form-label">罰時(分鐘)</label>
+                        <input type="number" class="form-control" id="penalty" name="penalty" placeholder="罰時"
+                               value="{{ data['penalty'] }}" required>
+                    </div>
+                    <div class="radio-selector" data-value="{{ data['pretest'] }}">
+                        <h4>後測</h4>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="pretest_type" id="pretest_type1"
+                                   value="no">
+                            <label class="form-check-label" for="pretest_type1">
+                                無後測
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="pretest_type" id="pretest_type2"
+                                   value="all">
+                            <label class="form-check-label" for="pretest_type2">
+                                對所有提交計分
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="pretest_type" id="pretest_type3"
+                                   value="last">
+                            <label class="form-check-label" for="pretest_type3">
+                                對最後提交計分
+                            </label>
+                        </div>
+                    </div>
+                    <div class="radio-selector" data-value="{{ 'yes' if data['can_register'] else 'no' }}">
+                        <h4>自行報名</h4>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="register_type" id="register_type1"
+                                   value="yes">
+                            <label class="form-check-label" for="register_type1">
+                                是
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="register_type" id="register_type2"
+                                   value="no">
+                            <label class="form-check-label" for="register_type2">
+                                否
+                            </label>
+                        </div>
+                    </div>
+                    <div class="radio-selector" data-value="{{ data['practice'] }}">
+                        <h4>賽後練習</h4>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="practice_type" id="practice_type1"
+                                   value="no">
+                            <label class="form-check-label" for="practice_type1">
+                                不開放
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="practice_type" id="practice_type2"
+                                   value="private">
+                            <label class="form-check-label" for="practice_type2">
+                                僅參賽者
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="practice_type" id="practice_type3"
+                                   value="public">
+                            <label class="form-check-label" for="practice_type3">
+                                公開
+                            </label>
+                        </div>
+                    </div>
+                    <div class="radio-selector" data-value="{{ 'yes' if data['standing']['public'] else 'no' }}">
+                        <h4>記分板可見</h4>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="show_standing" id="show_standing1"
+                                   value="yes">
+                            <label class="form-check-label" for="show_standing1">
+                                是
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="show_standing" id="show_standing2"
+                                   value="no">
+                            <label class="form-check-label" for="show_standing2">
+                                否
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="freeze_time" class="form-label">封版時間(分鐘)</label>
+                        <input type="number" class="form-control" id="freeze_time" name="freeze_time"
+                               placeholder="封版時間"
+                               value="{{ data['standing']['start_freeze'] }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="unfreeze_time" class="form-label">解封時間(分鐘)</label>
+                        <input type="number" class="form-control" id="unfreeze_time" name="unfreeze_time"
+                               placeholder="解封時間"
+                               value="{{ data['standing']['end_freeze'] }}" required>
+                    </div>
+                    <div class="row">
+                        <button class="btn btn-primary submitter">儲存設定</button>
+                    </div>
+                </form>
+            </div>
+        {% endif %}
+        <div id="participants" class="tab-pane fade">
+            {% if can_edit %}
+                <br>
+                <form the_action="add_participant">
+                    <div class="row">
+                        <div class="col-auto">
+                            <input type="text" class="form-control" name="username" placeholder="參賽者id" required>
+                        </div>
+                        <div class="col-auto">
+                            <button class="btn btn-primary submitter" data-msg-404="找不到該使用者id"
+                                    data-msg-409="該使用者已被添加">添加參賽者
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            {% endif %}
+            <table class="table table-hover table-striped">
+                <thead>
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">ID</th>
+                    {% if can_edit %}
+                        <th scope="col"></th>
+                    {% endif %}
+                </tr>
+                </thead>
+                <tbody>
+                {% for user in data["participants"] %}
+                    <tr>
+                        <th scope="row">{{ loop.index }}</th>
+                        <td><a href="/user/{{ user }}" target="_blank">{{ user }}</a></td>
+                        {% if can_edit %}
+                            <td>
+                                <form the_action="remove_participant">
+                                    <input name="username" value="{{ user }}" hidden>
+                                    <button class="btn btn-danger submitter">移除參賽者</button>
+                                </form>
+                            </td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
-</div>
-<script src="/static/tab_memory.js"></script>
-<script src="/static/contest.js"></script>
-<input id="cid" value="{{ cid }}" hidden>
-<input id="username" value="{{ current_user.id if current_user.is_authenticated else 'unknow' }}" hidden>
+    <script src="/static/tab_memory.js"></script>
+    <script src="/static/contest.js"></script>
+    <input id="cid" value="{{ cid }}" hidden>
+    <input id="username" value="{{ current_user.id if current_user.is_authenticated else 'unknow' }}" hidden>
 {% endblock %}

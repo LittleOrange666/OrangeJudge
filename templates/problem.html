@@ -1,81 +1,80 @@
 {% extends "base.html" %}
 
-{% block title %}{% if is_contest %}競賽 - {{ cname }} - {{ pidx }}{% else %}問題{% if preview %}(預覽){% endif %}{% endif %} - {{ dat["name"] }}{% endblock %}
+{% block title %}{% if is_contest %}競賽 - {{ cname }} - {{ pidx }}{% else %}問題{% if preview %}(預覽)
+{% endif %}{% endif %} - {{ dat["name"] }}{% endblock %}
 
 {% block navbar %}
-{% if is_contest %}
-<li class="nav-item">
-    <a class="nav-link active" aria-current="page" href="/contest/{{ cid }}">競賽頁面({{ cname }})</a>
-</li>
-{% endif%}
+    {% if is_contest %}
+        <li class="nav-item">
+            <a class="nav-link active" aria-current="page" href="/contest/{{ cid }}">競賽頁面({{ cname }})</a>
+        </li>
+    {% endif %}
 {% endblock %}
 
 {% block main %}
-<h1 class="text-center">{% if is_contest %}{{ pidx }}. {% endif %}{{ dat["name"] }}</h1>
-<p class="text-center">Time Limit:{{ dat["timelimit"] }}ms</p>
-<p class="text-center">Memory Limit:{{ dat["memorylimit"] }}MB</p>
-{{ statement|safe }}
-<div class="container test-case">
-    {% for i,sample in samples %}
-    <div class="row">
-        <div class="col"><h3>範例輸入 #{{ i+1 }}</h3></div>
-        <div class="col"><h3>範例輸出 #{{ i+1 }}</h3></div>
+    <h1 class="text-center">{% if is_contest %}{{ pidx }}. {% endif %}{{ dat["name"] }}</h1>
+    <p class="text-center">Time Limit:{{ dat["timelimit"] }}ms</p>
+    <p class="text-center">Memory Limit:{{ dat["memorylimit"] }}MB</p>
+    {{ statement|safe }}
+    <div class="container test-case">
+        {% for i,sample in samples %}
+            <div class="row">
+                <div class="col"><h3>範例輸入 #{{ i + 1 }}</h3></div>
+                <div class="col"><h3>範例輸出 #{{ i + 1 }}</h3></div>
+            </div>
+            <div class="row">
+                <div class="col">
+                    <pre class="can-copy">{{ sample[0] }}</pre>
+                </div>
+                <div class="col">
+                    <pre class="can-copy">{{ sample[1] }}</pre>
+                </div>
+            </div>
+        {% endfor %}
     </div>
-    <div class="row">
-        <div class="col">
-            <pre class="can-copy">{{ sample[0] }}</pre>
-        </div>
-        <div class="col">
-            <pre class="can-copy">{{ sample[1] }}</pre>
-        </div>
-    </div>
-    {% endfor %}
-</div>
-{% if current_user.is_authenticated and not preview %}
-<br>
-<form action="/submit" method="post" target="_self">
-    <input name="pid" value="{{ pid }}" hidden>
-    {% if is_contest %}
-    <input name="cid" value="{{ cid }}" hidden>
-    <input name="pidx" value="{{ pidx }}" hidden>
-    {% endif %}
-    <select class="form-select" aria-label="Default select example" name="lang" id="langoption">
-        {% for lang in langs %}
-        {% if dat["languages"].get(lang,True) %}
-        <option value="{{ lang }}">{{ lang }}
+    {% if current_user.is_authenticated and not preview %}
+        <br>
+        <form action="/submit" method="post" target="_self">
+            <input name="pid" value="{{ pid }}" hidden>
+            {% if is_contest %}
+                <input name="cid" value="{{ cid }}" hidden>
+                <input name="pidx" value="{{ pidx }}" hidden>
             {% endif %}
-            {% endfor %}
-    </select>
-    <div class="mb-3">
-        <label for="codeTextarea" class="form-label">Code:</label>
-        <input class="form-control" type="file" id="uploadfile"/>
-        <textarea class="form-control" name="code" id="codeTextarea" rows="3"></textarea>
-    </div>
+            <select class="form-select" aria-label="Default select example" name="lang" id="langoption">
+                {% for lang in langs %}
+                    <option value="{{ lang }}">{{ lang }}
+                {% endfor %}
+            </select>
+            <div class="mb-3">
+                <label for="codeTextarea" class="form-label">Code:</label>
+                <input class="form-control" type="file" id="uploadfile"/>
+                <textarea class="form-control" name="code" id="codeTextarea" rows="3"></textarea>
+            </div>
 
-    <div class="mb-3">
-        <button type="submit" class="btn btn-primary mb-3">Submit</button>
-    </div>
-</form>
-<script>
-const lang_exts = {{ lang_exts|safe }};
-</script>
-<script src="/static/problem.js"></script>
-{% endif %}
+            <div class="mb-3">
+                <button type="submit" class="btn btn-primary mb-3">Submit</button>
+            </div>
+        </form>
+        <script>
+            const lang_exts = {{ lang_exts|safe }};
+        </script>
+        <script src="/static/problem.js"></script>
+    {% endif %}
 {% endblock %}
 
 {% block script %}
-{% if preview %}
-$("*[inner_embed]").each(function(){
-let s = $(this).attr("src");
-let l = s.split("/")
-let link = "/problemsetting_preview?pid="+l[2]+"&type=public_file&name="+l[3];
-$(this).attr("src",link);
-});
-{% endif %}
-{% if is_contest %}
-$("*[inner_embed]").each(function(){
-let link = $(this).attr("src") + "?cid={{ cid }}";
-$(this).attr("src",link);
-});
-{% endif %}
+    {% if preview %}
+        $("*[inner_embed]").each(function(){
+        let s = $(this).attr("src");
+        let l = s.split("/")
+        let link = "/problemsetting_preview?pid="+l[2]+"&type=public_file&name="+l[3];
+        $(this).attr("src",link);
+        });
+    {% endif %}
+    {% if is_contest %}
+        $("*[inner_embed]").each(function(){
+        let link = $(this).attr("src") + "?cid={{ cid }}";
+        $(this).attr("src",link);
+        });
+    {% endif %}
 {% endblock %}

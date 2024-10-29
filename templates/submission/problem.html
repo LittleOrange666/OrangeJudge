@@ -3,96 +3,96 @@
 {% block title %}結果{% endblock %}
 
 {% block navbar %}
-{% if contest %}
-<li class="nav-item">
-    <a class="nav-link active" aria-current="page" href="/contest/{{ cid }}">競賽頁面({{ contest }})</a>
-</li>
-{% endif%}
+    {% if contest %}
+        <li class="nav-item">
+            <a class="nav-link active" aria-current="page" href="/contest/{{ cid }}">競賽頁面({{ contest }})</a>
+        </li>
+    {% endif %}
 {% endblock %}
 
 {% block main %}
-{% if contest %}
-<div class="test-case">Contest: <a href="/contest/{{ cid }}">{{ contest }}</a></div>
-{% endif%}
-<div class="test-case">Problem: <a href="{{ link }}">{{ pname }}</a></div>
-
-<div class="test-case">Lang: {{ lang }}</div>
-
-<div class="test-case">
-    <div>Source:</div>
-    {{ source|safe }}
-</div>
-{% if completed and not je %}
-{% if result["CE"] %}
-<div class="test-case">
-    <div>Compilation Error</div>
-    {% if ce_msg %}
-    <pre>{{ ce_msg }}</pre>
+    {% if contest %}
+        <div class="test-case">Contest: <a href="/contest/{{ cid }}">{{ contest }}</a></div>
     {% endif %}
-</div>
-{% else %}
-{% if "total_score" in result.keys() %}
-<div class="test-case">Total Score: {{ result["total_score"] }}</div>
-{% endif %}
-{% if group_results %}
-<table class="table table-hover">
-    <thead>
-    <tr class="table-light">
-        <th scope="col">Group</th>
-        <th scope="col">result</th>
-        <th scope="col">Time(ms)</th>
-        <th scope="col">Memory(KB)</th>
-        <th scope="col">Score</th>
-    </tr>
-    </thead>
-    <tbody>
-    {% for name, gp_result in group_results.items() %}
-    <tr class="{{ gp_result['class'] }}">
-        <th scope="row">{{ name }}</th>
-        <td>{{ gp_result["result"] }}</td>
-        <td>{{ gp_result["time"] }}</td>
-        <td>{{ gp_result["mem"] }}</td>
-        <td>{{ gp_result["gainscore"] }}</td>
-    </tr>
-    {% endfor %}
-    </tbody>
-</table>
-{% endif %}
-{% for i,testcase in enumerate(result["results"]) %}
-{% if testcase["result"] != "SKIP" and (not protected or super_access or testcase["sample"])  %}
-<div class="test-case">
-    <div>Input {{ i + 1 }}:</div>
-    <pre>{{ testcase["in"] }}</pre>
-</div>
-{% if testcase["has_output"] %}
-<div class="test-case">
-    <div>Output {{ i + 1 }}:</div>
-    <pre>{{ testcase["user_out"] }}</pre>
-</div>
-{% endif %}
-<div class="test-case">
-    <div>Answer {{ i + 1 }}:</div>
-    <pre>{{ testcase["out"] }}</pre>
-</div>
-{% endif %}
-<div class="test-case">
-    <div>Result {{ i + 1 }}: {{ testcase["result"] }}</div>
-    {% if testcase["result"] != "SKIP" and (not protected or super_access or testcase["sample"]) %}
-    <pre>{{ testcase["info"] }}</pre>
+    <div class="test-case">Problem: <a href="{{ link }}">{{ pname }}</a></div>
+
+    <div class="test-case">Lang: {{ lang }}</div>
+
+    <div class="test-case">
+        <div>Source:</div>
+        {{ source|safe }}
+    </div>
+    {% if completed and not je %}
+        {% if result["CE"] %}
+            <div class="test-case">
+                <div>Compilation Error</div>
+                {% if ce_msg %}
+                    <pre>{{ ce_msg }}</pre>
+                {% endif %}
+            </div>
+        {% else %}
+            {% if "total_score" in result.keys() %}
+                <div class="test-case">Total Score: {{ result["total_score"] }}</div>
+            {% endif %}
+            {% if group_results %}
+                <table class="table table-hover">
+                    <thead>
+                    <tr class="table-light">
+                        <th scope="col">Group</th>
+                        <th scope="col">result</th>
+                        <th scope="col">Time(ms)</th>
+                        <th scope="col">Memory(KB)</th>
+                        <th scope="col">Score</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for name, gp_result in group_results.items() %}
+                        <tr class="{{ gp_result['class'] }}">
+                            <th scope="row">{{ name }}</th>
+                            <td>{{ gp_result["result"] }}</td>
+                            <td>{{ gp_result["time"] }}</td>
+                            <td>{{ gp_result["mem"] }}</td>
+                            <td>{{ gp_result["gainscore"] }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            {% endif %}
+            {% for i,testcase in enumerate(result["results"]) %}
+                {% if testcase["result"] != "SKIP" and (not protected or super_access or testcase["sample"]) %}
+                    <div class="test-case">
+                        <div>Input {{ i + 1 }}:</div>
+                        <pre>{{ testcase["in"] }}</pre>
+                    </div>
+                    {% if testcase["has_output"] %}
+                        <div class="test-case">
+                            <div>Output {{ i + 1 }}:</div>
+                            <pre>{{ testcase["user_out"] }}</pre>
+                        </div>
+                    {% endif %}
+                    <div class="test-case">
+                        <div>Answer {{ i + 1 }}:</div>
+                        <pre>{{ testcase["out"] }}</pre>
+                    </div>
+                {% endif %}
+                <div class="test-case">
+                    <div>Result {{ i + 1 }}: {{ testcase["result"] }}</div>
+                    {% if testcase["result"] != "SKIP" and (not protected or super_access or testcase["sample"]) %}
+                        <pre>{{ testcase["info"] }}</pre>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% else %}
+        {% if je %}
+            <div class="test-case">Judge Error, id = '{{ logid }}'</div>
+        {% else %}
+            {% if pos == 0 %}
+                <div class="test-case">Judging</div>
+            {% else %}
+                <div class="test-case">In queue ({{ pos }})</div>
+            {% endif %}
+            <meta http-equiv="refresh" content="5">
+        {% endif %}
     {% endif %}
-</div>
-{% endfor %}
-{% endif %}
-{% else %}
-{% if je %}
-<div class="test-case">Judge Error, id = '{{ logid }}'</div>
-{% else %}
-{% if pos == 0 %}
-<div class="test-case">Judging</div>
-{% else %}
-<div class="test-case">In queue ({{ pos }})</div>
-{% endif %}
-<meta http-equiv="refresh" content="5">
-{% endif %}
-{% endif %}
 {% endblock %}

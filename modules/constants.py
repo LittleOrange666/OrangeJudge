@@ -39,7 +39,8 @@ default_problem_info: dict = {"name": "unknown", "timelimit": "1000", "memorylim
                               "files": [], "checker_source": ["default", "unknown"], "is_interact": False,
                               "groups": {"default": {"score": 100, "rule": "min", "dependency": []}},
                               "interactor_source": "unknown", "manual_samples": [],
-                              "languages": {}, "public_testcase": False, "gen_groups": []}
+                              "languages": {}, "public_testcase": False, "gen_groups": [],
+                              "runner_source": {}, "runner_enabled": False}
 
 email_reg: Pattern = re.compile("^[\\w\\-.]+@([\\w\\-]+\\.)+[\\w-]{2,4}$")
 
@@ -80,3 +81,7 @@ default_contest_info: dict = {"name": "unknown", "users": [], "problems": {}, "s
 # type icpc ioi ioic cf
 
 danger_html_tags = ("script", "style")
+
+source_file_name = "Main"
+
+runner_source_file_name = "Runner"

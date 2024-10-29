@@ -3,40 +3,40 @@
 {% block title %}登入{% endblock %}
 
 {% block main %}
-<form method="post" action="/signup" onsubmit="return validateForm()">
-    <div class="mb-3 col-7 offset-2">
-        <label for="email" class="form-label">電子信箱</label>
-        <div class="input-group mb-3">
-            <input type="email" class="form-control" id="email" name="email" placeholder="email" required>
-            {% if need_verify %}
-            <button class="btn btn-outline-secondary" type="button" id="get-code">取得驗證碼</button>
-            {% endif %}
+    <form method="post" action="/signup" onsubmit="return validateForm()">
+        <div class="mb-3 col-7 offset-2">
+            <label for="email" class="form-label">電子信箱</label>
+            <div class="input-group mb-3">
+                <input type="email" class="form-control" id="email" name="email" placeholder="email" required>
+                {% if need_verify %}
+                    <button class="btn btn-outline-secondary" type="button" id="get-code">取得驗證碼</button>
+                {% endif %}
+            </div>
         </div>
-    </div>
-    {% if need_verify %}
-    <div class="mb-3 col-7 offset-2">
-        <label for="verify" class="form-label">驗證碼</label>
-        <input type="text" class="form-control" id="verify" name="verify" placeholder="驗證碼" required>
-    </div>
-    {% endif %}
-    <div class="mb-3 col-7 offset-2">
-        <label for="user_id" class="form-label">User Id</label>
-        <input type="text" class="form-control" id="user_id" name="user_id" placeholder="user id" required
-               pattern="^[A-Za-z0-9_]{2,80}$">
-    </div>
-    <div class="mb-3 col-7 offset-2">
-        <label for="password" class="form-label">密碼</label>
-        <input type="password" class="form-control" id="password" name="password" placeholder="密碼" required
-               pattern="^.{6,}$">
-    </div>
-    <div class="mb-3 col-7 offset-2">
-        <label for="password_again" class="form-label">重複密碼</label>
-        <input type="password" class="form-control" id="password_again" placeholder="重複密碼" required>
-    </div>
-    <div class="mb-3 col-7 offset-2">
-        <button type="submit" class="btn btn-primary">註冊</button>
-    </div>
-    <input type="text" name="next" id="next" hidden>
-</form>
-<script src="/static/signup.js"></script>
+        {% if need_verify %}
+            <div class="mb-3 col-7 offset-2">
+                <label for="verify" class="form-label">驗證碼</label>
+                <input type="text" class="form-control" id="verify" name="verify" placeholder="驗證碼" required>
+            </div>
+        {% endif %}
+        <div class="mb-3 col-7 offset-2">
+            <label for="user_id" class="form-label">User Id</label>
+            <input type="text" class="form-control" id="user_id" name="user_id" placeholder="user id" required
+                   pattern="^[A-Za-z0-9_]{2,80}$">
+        </div>
+        <div class="mb-3 col-7 offset-2">
+            <label for="password" class="form-label">密碼</label>
+            <input type="password" class="form-control" id="password" name="password" placeholder="密碼" required
+                   pattern="^.{6,}$">
+        </div>
+        <div class="mb-3 col-7 offset-2">
+            <label for="password_again" class="form-label">重複密碼</label>
+            <input type="password" class="form-control" id="password_again" placeholder="重複密碼" required>
+        </div>
+        <div class="mb-3 col-7 offset-2">
+            <button type="submit" class="btn btn-primary">註冊</button>
+        </div>
+        <input type="text" name="next" id="next" hidden>
+    </form>
+    <script src="/static/signup.js"></script>
 {% endblock %}

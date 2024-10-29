@@ -4,6 +4,7 @@
   "source_ext": ".java",
   "exec_name": "{0}.class",
   "compile_cmd": ["/usr/lib/jvm/{arg}/bin/javac", "{0}"],
+  "compile_runner_cmd": ["/usr/lib/jvm/{arg}/bin/javac", "{0}", "{2}"],
   "exec_cmd": ["/usr/lib/jvm/{arg}/bin/java","-classpath","{folder}","{1}"],
   "base_name": "BaseJava{idx}",
   "branches": {

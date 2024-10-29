@@ -3,7 +3,7 @@
 {% block title %}Error log{% endblock %}
 
 {% block main %}
-{% for line in content.split("\n") %}
-<p>{{ line }}</p>
-{% endfor %}
+    {% for line in content.split("\n") %}
+        <p>{{ line }}</p>
+    {% endfor %}
 {% endblock %}

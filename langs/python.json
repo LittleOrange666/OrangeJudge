@@ -4,6 +4,7 @@
   "source_ext": ".py",
   "exec_name": "__pycache__/{0}.{ext}.pyc",
   "compile_cmd": ["{arg}", "-m","py_compile", "{0}"],
+  "compile_runner_cmd": ["{arg}", "-m","py_compile", "{0}", "{2}"],
   "exec_cmd": ["{arg}","{0}"],
   "branches": {
     "Python3.10": {

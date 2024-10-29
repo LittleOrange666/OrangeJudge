@@ -4,6 +4,7 @@
   "source_ext": ".c",
   "exec_name": "{0}",
   "compile_cmd": ["gcc","-O2","-DEVAL","-pipe","-static","-s","{arg}", "{0}", "-o", "{1}"],
+  "compile_runner_cmd": ["gcc","-O2","-DEVAL","-pipe","-static","-s","{arg}", "{0}", "{2}", "-o", "{3}"],
   "exec_cmd": ["{0}"],
   "branches": {
     "C90": {

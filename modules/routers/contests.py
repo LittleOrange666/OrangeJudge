@@ -1,4 +1,3 @@
-import json
 import time
 from datetime import datetime, timedelta
 
@@ -7,6 +6,7 @@ from flask_login import login_required, current_user
 from sqlalchemy.orm.attributes import flag_modified
 
 from modules import server, login, contests, datas, tools, executing
+from modules.routers.general import render_problem
 
 app = server.app
 
@@ -58,15 +58,8 @@ def contest_problem(cid, pid):
     pdat: datas.Problem = datas.Problem.query.filter_by(pid=idx).first_or_404()
     path = "problems/" + idx
     dat = pdat.data
-    statement = tools.read(path, "statement.html")
-    lang_exts = json.dumps({k: v.data["source_ext"] for k, v in executing.langs.items()})
-    samples = dat.get("manual_samples", []) + [[tools.read(path, k, o["in"]), tools.read(path, k, o["out"])]
-                                               for k in ("testcases", "testcases_gen") for o in dat.get(k, []) if
-                                               o.get("sample", False)]
-    return render_template("problem.html", dat=dat, statement=statement,
-                           langs=executing.langs.keys(), lang_exts=lang_exts, pid=idx,
-                           preview=False, samples=enumerate(samples), is_contest=True, cid=cid,
-                           cname=cdat.name, pidx=pid)
+    langs = [lang for lang in executing.langs.keys() if pdat.lang_allowed(lang)]
+    return render_problem(dat, idx, path, langs, s_contest=True, cid=cid, cname=cdat.name, pidx=pid)
 
 
 @app.route("/contest/<cid>/status/<page_str>", methods=["POST"])

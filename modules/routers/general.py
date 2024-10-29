@@ -46,17 +46,18 @@ def test_submit():
     if lang not in executing.langs:
         abort(404)
     ext = executing.langs[lang].data["source_ext"]
+    fn = constants.source_file_name + ext
     """
     if tools.elapsed(current_user.folder, "submissions") < 5:
         abort(429)
     tools.append(idx + "\n", current_user.folder, "submissions")
     """
-    dat = datas.Submission(source="Main" + ext, time=datetime.datetime.now(), user=current_user.data,
+    dat = datas.Submission(source=fn, time=datetime.datetime.now(), user=current_user.data,
                            problem=datas.Problem.query.filter_by(pid="test").first(), language=lang,
                            data={"infile": "in.txt", "outfile": "out.txt"}, pid="test", simple_result="waiting")
     datas.add(dat)
     idx = str(dat.id)
-    tools.write(code, f"submissions/{idx}/Main{ext}")
+    tools.write(code, f"submissions/{idx}/{fn}")
     tools.write(inp, f"submissions/{idx}/in.txt")
     dat.queue_position = tasks.enqueue(dat.id)
     datas.add(dat)
@@ -75,10 +76,11 @@ def submit():
     pdat: datas.Problem = datas.Problem.query.filter_by(pid=pid).first_or_404()
     if lang not in executing.langs:
         abort(404)
-    if not pdat.data["languages"].get(lang, True):
+    if not pdat.lang_allowed(lang):
         abort(400)
     ext = executing.langs[lang].data["source_ext"]
-    dat = datas.Submission(source="Main" + ext, time=datetime.datetime.now(), user=current_user.data,
+    fn = constants.source_file_name + ext
+    dat = datas.Submission(source=fn, time=datetime.datetime.now(), user=current_user.data,
                            problem=pdat, language=lang, data={}, pid=pid, simple_result="waiting")
     if "cid" in request.form:
         cdat: datas.Contest = datas.Contest.query.filter_by(cid=request.form["cid"]).first_or_404()
@@ -91,7 +93,7 @@ def submit():
                 dat.just_pretest = True
     datas.add(dat)
     idx = str(dat.id)
-    tools.write(code, f"submissions/{idx}/Main{ext}")
+    tools.write(code, f"submissions/{idx}/{fn}")
     dat.queue_position = tasks.enqueue(dat.id)
     datas.add(dat)
     return redirect("/submission/" + idx)
@@ -184,14 +186,19 @@ def problem_page(idx):
             abort(403)
         if not current_user.has("admin") and current_user.id not in dat.get("users", []):
             abort(403)
+    langs = [lang for lang in executing.langs.keys() if pdat.lang_allowed(lang)]
+    return render_problem(dat, idx, path, langs, is_contest=False)
+
+
+def render_problem(dat, idx, path, langs, **kwargs):
     statement = tools.read(path, "statement.html")
     lang_exts = json.dumps({k: v.data["source_ext"] for k, v in executing.langs.items()})
     samples = dat.get("manual_samples", []) + [[tools.read(path, k, o["in"]), tools.read(path, k, o["out"])]
                                                for k in ("testcases", "testcases_gen") for o in dat.get(k, []) if
                                                o.get("sample", False)]
     return render_template("problem.html", dat=dat, statement=statement,
-                           langs=executing.langs.keys(), lang_exts=lang_exts, pid=idx,
-                           preview=False, samples=enumerate(samples), is_contest=False)
+                           langs=langs, lang_exts=lang_exts, pid=idx,
+                           preview=False, samples=enumerate(samples), **kwargs)
 
 
 @app.route("/problem_file/<idx>/<filename>", methods=['GET'])

@@ -33,7 +33,12 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
     pid = pdat.pid
     problem_path = f"problems/{pid}/"
     problem_info = constants.default_problem_info | pdat.data
-    filename, ce_msg = lang.compile(env.send_file(source), env)
+    if problem_info.get("runner_enabled", False):
+        judge_runner = env.send_file(problem_path + "file/" + problem_info.get("runner_source", {}).get(dat.language))
+        judge_runner = env.rename(judge_runner, constants.runner_source_file_name + lang.data["source_ext"])
+        filename, ce_msg = lang.compile(env.send_file(source), env, judge_runner)
+    else:
+        filename, ce_msg = lang.compile(env.send_file(source), env)
     out_info = {"CE": False}
     results = []
     groups = {}

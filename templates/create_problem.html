@@ -3,18 +3,18 @@
 {% block title %}新建題目{% endblock %}
 
 {% block main %}
-<form action="/problemsetting_new" method="post" target="_self">
-    <div class="mb-3">
-        <label for="pid_input" class="form-label">題目ID(留空會自動生成)</label>
-        <input type="text" class="form-control" id="pid_input" name="pid" pattern="^[A-Za-z0-9_]{1,20}$"
-               title="至多20個英文字母、數字或底線">
-    </div>
-    <div class="mb-3">
-        <label for="name_input" class="form-label">題目名稱</label>
-        <input type="text" class="form-control" id="name_input" name="name" pattern="^.{1,120}$" required>
-    </div>
-    <div class="mb-3">
-        <button class="btn btn-primary mb-3 submitter" data-redirect="true">建立</button>
-    </div>
-</form>
+    <form action="/problemsetting_new" method="post" target="_self">
+        <div class="mb-3">
+            <label for="pid_input" class="form-label">題目ID(留空會自動生成)</label>
+            <input type="text" class="form-control" id="pid_input" name="pid" pattern="^[A-Za-z0-9_]{1,20}$"
+                   title="至多20個英文字母、數字或底線">
+        </div>
+        <div class="mb-3">
+            <label for="name_input" class="form-label">題目名稱</label>
+            <input type="text" class="form-control" id="name_input" name="name" pattern="^.{1,120}$" required>
+        </div>
+        <div class="mb-3">
+            <button class="btn btn-primary mb-3 submitter" data-redirect="true">建立</button>
+        </div>
+    </form>
 {% endblock %}
