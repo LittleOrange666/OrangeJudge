@@ -12,6 +12,7 @@ sudo pip3 install -r tools/requirements.txt
 sudo lxc-create lxc-test -t ubuntu
 sudo lxc-start -n lxc-test
 sudo lxc-attach -n lxc-test -- sudo apt-get update
+sudo lxc-attach -n lxc-test -- sudo apt-get -y install gcc
 sudo lxc-attach -n lxc-test -- sudo apt-get -y install g++
 sudo lxc-attach -n lxc-test -- sudo apt-get -y install bzip2
 sudo lxc-attach -n lxc-test -- sudo apt-get -y install make

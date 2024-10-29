@@ -1,0 +1,20 @@
+{
+  "name": "C",
+  "require_compile": true,
+  "source_ext": ".c",
+  "exec_name": "{0}",
+  "compile_cmd": ["gcc","-O2","-DEVAL","-pipe","-static","-s","{arg}", "{0}", "-o", "{1}"],
+  "exec_cmd": ["{0}"],
+  "branches": {
+    "C90": {
+      "arg": "-std=c90"
+    },
+    "C99": {
+      "arg": "-std=c99"
+    },
+    "C11": {
+      "arg": "-std=c11"
+    }
+  },
+  "default_branch": "C99"
+}
