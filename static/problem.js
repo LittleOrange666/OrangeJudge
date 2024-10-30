@@ -1,4 +1,5 @@
-$("#uploadfile").on("change",function() {
+const lang_opt = $("#langoption");
+$("#uploadfile").on("change", function () {
     let files = $(this).prop("files");
     if (!files.length) {
         return false;
@@ -11,13 +12,11 @@ $("#uploadfile").on("change",function() {
         target.val(null);
     };
     reader.readAsText(file);
+}).prop("accept", lang_exts[lang_opt.val()]);
+lang_opt.on("change", function () {
+    $("#uploadfile").prop("accept", lang_exts[lang_opt.val()]);
+    localStorage.lang = lang_opt.val();
 });
-$("#uploadfile").prop("accept",lang_exts[$("#langoption").val()]);
-$("#langoption").on("change",function(){
-    $("#uploadfile").prop("accept",lang_exts[$("#langoption").val()]);
-    localStorage.lang = $("#langoption").val();
-});
-if(localStorage.lang){
-    $("#langoption").val(localStorage.lang);
-    $("#langoption").trigger("change");
+if (localStorage.lang) {
+    lang_opt.val(localStorage.lang).trigger("change");
 }

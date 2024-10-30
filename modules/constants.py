@@ -40,7 +40,7 @@ default_problem_info: dict = {"name": "unknown", "timelimit": "1000", "memorylim
                               "groups": {"default": {"score": 100, "rule": "min", "dependency": []}},
                               "interactor_source": "unknown", "manual_samples": [],
                               "languages": {}, "public_testcase": False, "gen_groups": [],
-                              "runner_source": {}, "runner_enabled": False}
+                              "runner_source": {}, "runner_enabled": False, "libraries": []}
 
 email_reg: Pattern = re.compile("^[\\w\\-.]+@([\\w\\-]+\\.)+[\\w-]{2,4}$")
 

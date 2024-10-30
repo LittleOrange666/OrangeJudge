@@ -1,264 +1,309 @@
-var main = $("#main_area");
-var $body = (window.opera) ? (document.compatMode == "CSS1Compat" ? $('html') : $('body')) : $('html,body');
+const main = $("#main_area");
 //code copy
-var copyer = document.createElement("textarea");
+const copyer = document.createElement("textarea");
 document.body.appendChild(copyer);
 $(copyer).hide();
-$("div.highlight").addClass("codehilite");
-$("div.highlight").removeClass("highlight");
-$("div.codehilite").each(function() {
-    let text = $(this).text();
+function add_copy() {
     let p = $(this);
+    let text = p.text();
     let copy = $('<button class="copy_btn">copy</button>');
     p.append(copy);
-    p.css("position","relative");
-    copy.click(function() {
+    p.css("position", "relative");
+    copy.click(function () {
         copyer.value = text;
         copyer.select();
         copyer.setSelectionRange(0, 99999);
         navigator.clipboard.writeText(copyer.value);
     });
-});
-$("pdf-file").each(function(){
-    $(this).append('<embed src="'+$(this).attr("src")+'" type="application/pdf" width="100%" height="100%">')
-});
-$("textarea").each(function(){
-    $(this).data("default-rows",$(this).attr("rows"));
-});
-$("textarea").on("input",function(){
-    $(this).css("height",$(this).prop("scrollHeight")+"px");
-});
-window.setInterval(function(){
-    $("textarea").each(function(){
-	if (+$(this).prop("scrollHeight")<+$(this).prop("offsetHeight"))$(this).css("height","100px");
-        $(this).css("height",$(this).prop("scrollHeight")+"px");
-    });
-},500);
-$("textarea").on('keydown', function(e) {
-  if (e.key == 'Tab') {
-    e.preventDefault();
-    var start = this.selectionStart;
-    var end = this.selectionEnd;
-
-    // set textarea value to: text before caret + tab + text after caret
-    this.value = this.value.substring(0, start) +
-      "    " + this.value.substring(end);
-
-    // put caret at right position again
-    this.selectionStart =
-      this.selectionEnd = start + 1;
-  }
-});
-function timestamp_to_str(i){
-    return new Date(+i*1000).toLocaleString()
 }
-$(".date-string").each(function(){
+$("div.highlight").addClass("codehilite").removeClass("highlight").each(add_copy);
+$("pre.can-copy").each(add_copy);
+$("pdf-file").each(function () {
+    $(this).append('<embed src="' + $(this).attr("src") + '" type="application/pdf" width="100%" height="100%">')
+});
+window.setInterval(function () {
+    $("textarea").each(function () {
+        if (+$(this).prop("scrollHeight") < +$(this).prop("offsetHeight")) $(this).css("height", "100px");
+        $(this).css("height", $(this).prop("scrollHeight") + "px");
+    });
+}, 500);
+// textarea resolver
+$("textarea").on("input", function () {
+    $(this).css("height", $(this).prop("scrollHeight") + "px");
+}).on('keydown', function (e) {
+    const start = this.selectionStart;
+    const end = this.selectionEnd;
+    const indent = 4;
+    const indents = " ".repeat(indent);
+    const old = this.value;
+    if (e.key === 'Tab') {
+        e.preventDefault();
+        let nw = old;
+        if (start===end) {
+            if (e.shiftKey){
+                if (start>=4 && old.substring(start-indent, start)===indents){
+                    this.value = old.substring(0, start-indent) + old.substring(start);
+                    this.selectionStart = this.selectionEnd = start - indent;
+                }
+            }else{
+                this.value = old.substring(0, start) + indents + old.substring(end);
+                this.selectionStart = this.selectionEnd = start + indent;
+            }
+        }else{
+            let pln = old.substring(0, start).lastIndexOf("\n");
+            let de = 0;
+            if (pln!==-1) de = start - pln - 1;
+            if (e.shiftKey) {
+                let cur = start;
+                cur = nw.indexOf("\n",cur)+1;
+                let cnt = 0;
+                while (cur!==0&&cur<=end - indent*cnt) {
+                    if (nw.substring(cur, cur+indent)===indents){
+                        cnt++;
+                        nw = nw.substring(0, cur) + nw.substring(cur+indent);
+                    }
+                    cur = nw.indexOf("\n",cur)+1;
+                }
+                this.selectionEnd = end - indent*cnt;
+                if (nw.substring(start-de,start-de+indent)===indents){
+                    cnt++;
+                    this.value = nw.substring(0, start-de) + nw.substring(start-de+indent);
+                    this.selectionStart = start - indent;
+                }
+            }else{
+                let cur = start;
+                cur = nw.indexOf("\n",cur)+1;
+                let cnt = 1;
+                while (cur!==0&&cur<=end + indent*cnt) {
+                    cnt++;
+                    nw = nw.substring(0, cur) + indents + nw.substring(cur);
+                    cur = nw.indexOf("\n",cur+indent)+1;
+                }
+                this.value = nw.substring(0, start-de) + indents + nw.substring(start-de);
+                this.selectionEnd = end + indent*cnt;
+                this.selectionStart = start + indent;
+            }
+        }
+    }else if (e.key === "Backspace"){
+        if (start===end){
+            if (old.substring(start-indent, start)===indents){
+                e.preventDefault();
+                this.value = old.substring(0, start-indent) + old.substring(start);
+                this.selectionStart = this.selectionEnd = start - indent;
+            }
+        }
+    }else if (e.key === "Delete"){
+        if (start===end){
+            if (old.substring(start, start+indent)===indents){
+                e.preventDefault();
+                this.value = old.substring(0, start) + old.substring(start+indent);
+            }
+        }
+    }
+}).each(function () {
+    $(this).data("default-rows", $(this).attr("rows"));
+});
+
+function timestamp_to_str(i) {
+    return new Date(+i * 1000).toLocaleString()
+}
+
+$(".date-string").each(function () {
     $(this).text(timestamp_to_str($(this).text()));
 });
-$("input[type='datetime-local'][data-value]").each(function(){
+$("input[type='datetime-local'][data-value]").each(function () {
     let $this = $(this);
-    let s = new Date(+$this.data("value")*1000 - (new Date()).getTimezoneOffset() * 60000).toISOString();
-    $this.val(s.substr(0,s.length-1));
+    let s = new Date(+$this.data("value") * 1000 - (new Date()).getTimezoneOffset() * 60000).toISOString();
+    $this.val(s.substring(0, s.length - 1));
 });
-$("input[type='datetime-local']").each(function(){
+$("input[type='datetime-local']").each(function () {
     let $this = $(this);
-    let nw = $("<input>").attr("type","hidden").attr("name",$this.attr("name")).val(new Date($this.val()).getTime()/1000);
+    let nw = $("<input>").attr("type", "hidden").attr("name", $this.attr("name")).val(new Date($this.val()).getTime() / 1000);
     $this.after(nw);
     $this.removeAttr("name");
-    $this.on("input",function(){
-        nw.val(new Date($this.val()).getTime()/1000);
+    $this.on("input", function () {
+        nw.val(new Date($this.val()).getTime() / 1000);
     });
 });
-$(".countdown-timer").each(function(){
+$(".countdown-timer").each(function () {
     let $this = $(this);
-    let target = +$this.data("target")*1000;
-    let is_zero = target - (new Date()).getTime()<=0;
-    window.setInterval(function(){
-        let delta = Math.max(0,target - (new Date()).getTime());
-        delta = Math.floor(delta/1000);
-        let sec = ""+(delta%60);
-        let min = ""+(Math.floor(delta/60)%60);
-        let hr = ""+Math.floor(delta/3600);
-        if(sec.length<2) sec = "0"+sec;
-        if(min.length<2) min = "0"+min;
-        $this.text(hr+":"+min+":"+sec);
-        if (!is_zero && (delta<=0)) location.reload();
-    },100);
+    let target = +$this.data("target") * 1000;
+    let is_zero = target - (new Date()).getTime() <= 0;
+    window.setInterval(function () {
+        let delta = Math.max(0, target - (new Date()).getTime());
+        delta = Math.floor(delta / 1000);
+        let sec = "" + (delta % 60);
+        let min = "" + (Math.floor(delta / 60) % 60);
+        let hr = "" + Math.floor(delta / 3600);
+        if (sec.length < 2) sec = "0" + sec;
+        if (min.length < 2) min = "0" + min;
+        $this.text(hr + ":" + min + ":" + sec);
+        if (!is_zero && (delta <= 0)) location.reload();
+    }, 100);
 });
-$("select[data-value]").each(function(){
+$("select[data-value]").each(function () {
     let val = $(this).data("value");
     $(this).val(val).change();
 });
-$(".time-string").each(function(){
+$(".time-string").each(function () {
     let t = Math.floor(+$(this).text());
-    let d = Math.floor(t/1440);
-    let h = Math.floor((t%1440)/60);
-    let m = t%60;
-    $(this).text((d>0?d+':':'')+(h<10?"0":"")+h+":"+(m<10?"0":"")+m);
+    let d = Math.floor(t / 1440);
+    let h = Math.floor((t % 1440) / 60);
+    let m = t % 60;
+    $(this).text((d > 0 ? d + ':' : '') + (h < 10 ? "0" : "") + h + ":" + (m < 10 ? "0" : "") + m);
 });
-var myModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('myModal'));
-function show_modal(title, text, refresh, next_page){
+const myModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('myModal'));
+
+function show_modal(title, text, refresh, next_page) {
     document.getElementById('myModal').focus();
     $("#myModalTitle").text(title);
     $("#myModalText").text(text);
     if (next_page) {
         console.log("branch 1");
-        $("#myModal").on("hidden.bs.modal", function(){
+        $("#myModal").on("hidden.bs.modal", function () {
             location.href = next_page;
         });
-    }else if (refresh) {
+    } else if (refresh) {
         console.log("branch 2");
-        $("#myModal").on("hidden.bs.modal", function(){
+        $("#myModal").on("hidden.bs.modal", function () {
             location.reload();
         });
     }
     myModal.show();
 }
-$("input[data-checked]").each(function(){
-    $(this).prop("checked",$(this).data("checked")==="True")
+
+$("input[data-checked]").each(function () {
+    $(this).prop("checked", $(this).data("checked") === "True")
 });
-$("div.radio-selector[data-value]").each(function(){
+$("div.radio-selector[data-value]").each(function () {
     let val = $(this).data("value");
-    $(this).find("input[value="+val+"]").prop("checked",true);
+    $(this).find("input[value=" + val + "]").prop("checked", true);
 });
-$("*[data-disabled]").each(function(){
-    if($(this).data("disabled")==="True"){
-        $(this).prop("disabled",true);
+$("*[data-disabled]").each(function () {
+    if ($(this).data("disabled") === "True") {
+        $(this).prop("disabled", true);
         $(this).addClass("disabled");
     }
 });
-$("*[data-active]").each(function(){
-    if($(this).data("active")==="True"){
+$("*[data-active]").each(function () {
+    if ($(this).data("active") === "True") {
         $(this).addClass("active");
     }
 });
-$("a[data-args]").each(function(){
+$("a[data-args]").each(function () {
     let o = $(this).data("args").split("=");
     let url = new URL(location.href);
-    if (url.searchParams.has(o[0])){
-        url.searchParams.set(o[0],o[1]);
-    }else{
-        url.searchParams.append(o[0],o[1]);
+    if (url.searchParams.has(o[0])) {
+        url.searchParams.set(o[0], o[1]);
+    } else {
+        url.searchParams.append(o[0], o[1]);
     }
-    $(this).attr("href",url.href);
+    $(this).attr("href", url.href);
 });
 let url = new URL(location.href);
 url.pathname = "/login"
-url.searchParams.append("next",location.pathname);
-if (location.pathname=="/login"){
+url.searchParams.append("next", location.pathname);
+if (location.pathname === "/login") {
     $("#login_btn").hide();
-}else{
-    $("#login_btn").attr("href",url.href)
+} else {
+    $("#login_btn").attr("href", url.href)
 }
+
 function _uuid() {
-  var d = Date.now();
-  if (typeof performance !== 'undefined' && typeof performance.now === 'function'){
-    d += performance.now(); //use high-precision timer if available
-  }
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-    var r = (d + Math.random() * 16) % 16 | 0;
-    d = Math.floor(d / 16);
-      return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-  });
+    let d = Date.now();
+    if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
+        d += performance.now(); //use high-precision timer if available
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        const r = (d + Math.random() * 16) % 16 | 0;
+        d = Math.floor(d / 16);
+        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
 }
-$("form").each(function(){
+
+$("form").each(function () {
     $(this).append($("#csrf_token").clone().removeAttr("id"));
 });
-function fetching(form){
-    return fetch(form.attr("action"),{
+
+function fetching(form) {
+    return fetch(form.attr("action"), {
         method: form.attr("method"),
         headers: {"x-csrf-token": $("#csrf_token").val()},
         body: new FormData(form[0])
     });
 }
-function post(url, data, callback){
+
+function post(url, data, callback) {
     $.ajax({
         url: url,
         method: "POST",
         contentType: "application/x-www-form-urlencoded",
         headers: {"x-csrf-token": $("#csrf_token").val()},
         data: data,
-        error: function(xhr, status, content){
+        error: function (xhr, status, content) {
             callback(content, status, xhr)
         },
-        success: function(content, status, xhr){
+        success: function (content, status, xhr) {
             callback(content, status, xhr)
         }
     });
 }
-$(".submitter").each(function(){
+
+$(".submitter").each(function () {
     let spin = $('<span class="visually-hidden spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
     $(this).prepend(spin);
-});
-$(".submitter").click(function(e){
+}).click(function (e) {
     e.preventDefault();
     let $this = $(this);
     let action_name = $this.text().trim();
     let ok = true;
-    $this.parents("form").find("input,select,textarea").each(function(){
-        if($(this).prop("required")&&!$(this).val()) ok = false;
+    $this.parents("form").find("input,select,textarea").each(function () {
+        if ($(this).prop("required") && !$(this).val()) ok = false;
     });
-    if(!ok){
-        show_modal("錯誤","部分資訊未填寫");
+    if (!ok) {
+        show_modal("錯誤", "部分資訊未填寫");
         return;
     }
-    $this.parents("form").find("input,select,textarea").each(function(){
-        if($(this).prop("required")&&$(this).prop("pattern")&&!$(this).val().match(RegExp($(this).prop("pattern")))) ok = false;
+    $this.parents("form").find("input,select,textarea").each(function () {
+        if ($(this).prop("required") && $(this).prop("pattern") && !$(this).val().match(RegExp($(this).prop("pattern")))) ok = false;
     });
-    if(!ok||$this.parents("form")[0].onsubmit&&!$this.parents("form")[0].onsubmit()){
-        show_modal("錯誤","輸入格式不正確");
+    if (!ok || $this.parents("form")[0].onsubmit && !$this.parents("form")[0].onsubmit()) {
+        show_modal("錯誤", "輸入格式不正確");
         return;
     }
     $this.find("span").removeClass("visually-hidden");
     let modals = $this.parents(".modal");
     let modal = null;
-    if(modals.length) modal = bootstrap.Modal.getOrCreateInstance(modals[0]);
+    if (modals.length) modal = bootstrap.Modal.getOrCreateInstance(modals[0]);
     console.log(modal)
     fetching($this.parents("form").first()).then(function (response) {
         console.log(response);
-        if(modal) modal.hide();
+        if (modal) modal.hide();
         $this.find("span").addClass("visually-hidden");
-        if(response.ok) {
-            let link = null;
-            if(!!$this.data("redirect")){
-                response.text().then(function(text){
-                    show_modal("成功","成功"+action_name, !$this.data("no-refresh"), text);
+        if (response.ok) {
+            if (!!$this.data("redirect")) {
+                response.text().then(function (text) {
+                    show_modal("成功", "成功" + action_name, !$this.data("no-refresh"), text);
                 });
-            }else if($this.data("filename")){
-                response.blob().then(function(blob){
+            } else if ($this.data("filename")) {
+                response.blob().then(function (blob) {
                     let url = window.URL.createObjectURL(blob);
                     let a = $("<a/>").attr("href", url).attr("download", $this.data("filename"));
                     a[0].click();
                     window.URL.revokeObjectURL(url);
                 });
-            }else{
-                show_modal("成功","成功"+action_name, !$this.data("no-refresh"), $this.data("next"));
+            } else {
+                show_modal("成功", "成功" + action_name, !$this.data("no-refresh"), $this.data("next"));
             }
-        }else if (response.status==500){
-            response.text().then(function(text){
-                show_modal("失敗", "伺服器內部錯誤，log uid="+text);
+        } else if (response.status === 500) {
+            response.text().then(function (text) {
+                show_modal("失敗", "伺服器內部錯誤，log uid=" + text);
             });
-        }else {
-            let msg = $this.data("msg-"+response.status);
-            if(!msg&&response.status==400) msg = "輸入格式不正確"
-            if(!msg&&response.status==403) msg = "您似乎沒有權限執行此操作"
-            show_modal("失敗",msg?msg:"Error Code: " + response.status);
+        } else {
+            let msg = $this.data("msg-" + response.status);
+            if (!msg && response.status === 400) msg = "輸入格式不正確"
+            if (!msg && response.status === 403) msg = "您似乎沒有權限執行此操作"
+            show_modal("失敗", msg ? msg : "Error Code: " + response.status);
         }
-    });
-});
-var copyer = document.createElement("textarea");
-document.body.appendChild(copyer);
-$(copyer).hide();
-$("pre.can-copy").each(function() {
-    let p = $(this);
-    let text = p.text();
-    let copy = $('<button class="copy_btn">copy</button>');
-    p.append(copy);
-    p.css("position","relative");
-    copy.click(function() {
-        copyer.value = text;
-        copyer.select();
-        copyer.setSelectionRange(0, 99999);
-        navigator.clipboard.writeText(copyer.value);
     });
 });

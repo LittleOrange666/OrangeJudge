@@ -33,6 +33,8 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
     pid = pdat.pid
     problem_path = f"problems/{pid}/"
     problem_info = constants.default_problem_info | pdat.data
+    for fn in problem_info.get("library", []):
+        env.send_file(problem_path + "file/" + fn)
     if problem_info.get("runner_enabled", False):
         judge_runner = env.send_file(problem_path + "file/" + problem_info.get("runner_source", {}).get(dat.language))
         judge_runner = env.rename(judge_runner, constants.runner_source_file_name + lang.data["source_ext"])

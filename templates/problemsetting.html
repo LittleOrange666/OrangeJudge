@@ -378,6 +378,39 @@
                     <button class="btn btn-primary submitter">設定固定主程式</button>
                 </form>
             </div>
+            <div class="container-fluid">
+                <h4>輔助檔案</h4>
+                {% for file in dat.get("library",[]) %}
+                <form the_action="remove_library">
+                    <input type="hidden" name="name" value="{{ file }}">
+                    <div class="row">
+                        <div class="col-auto">
+                            <p>{{ file }}</p>
+                        </div>
+                        <div class="col-auto">
+                            <button class="btn btn-danger submitter"
+                            data-msg-409="該檔案不在列表中">刪除</button>
+                        </div>
+                    </div>
+                </form>
+                {% endfor %}
+                <form the_action="add_library">
+                    <div class="row">
+                        <div class="col-auto">
+                            <select class="form-select alternative_fileselect" name="library">
+                                <option selected>選擇檔案</option>
+                                {% for file in dat["files"] %}
+                                    <option value="{{ file['name'] }}">{{ file['name'] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-auto">
+                            <button class="btn btn-primary submitter"
+                            data-msg-404="未知的檔案" data-msg-409="該檔案已加入">加入</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
         </div>
         <div id="tests" class="tab-pane fade">
             <h3>測資</h3>

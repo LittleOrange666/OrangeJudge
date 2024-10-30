@@ -26,13 +26,14 @@
     border: 0px;
 }
 
-.auto_nl{
+.auto_nl {
     white-space: pre-line;
 }
 
 .test-case {
     font-size: 1.1rem;
 }
+
 .test-case pre {
     border: 1px solid #aaa;
     background-color: #eee;
@@ -47,26 +48,26 @@ pdf-file {
     position: relative;
 }
 
-pdf-file:after{
+pdf-file:after {
     content: "";
     display: block;
     padding-bottom: 100%;
 }
 
-pdf-file > embed{
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+pdf-file > embed {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
 }
 
-textarea{
-    resize:none;
+textarea {
+    resize: none;
     tab-size: 4;
     overflow: hidden;
-    resize: none;
     max-height: none !important;
+    font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
 .close-sm {
@@ -80,7 +81,7 @@ textarea{
 }
 
 .message-area {
-    white-space:pre;
+    white-space: pre;
     word-break: break-all;
     width: 20%;
     max-width: 20%;

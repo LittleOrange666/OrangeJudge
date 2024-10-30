@@ -720,13 +720,39 @@ def choose_runner(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: 
     if "runner_source" not in dat:
         dat["runner_source"] = {}
     for k in executing.langs.keys():
-        name = secure_filename(form["my_runner_"+k])
+        name = secure_filename(form["my_runner_" + k])
         if not any(o["name"] == name for o in dat["files"]):
             if k in dat["runner_source"]:
                 del dat["runner_source"][k]
         else:
             dat["runner_source"][k] = name
     dat["runner_enabled"] = use
+    return "judge"
+
+
+@actions.bind
+def add_library(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem) -> str | Response:
+    if "library" not in dat:
+        dat["library"] = []
+    name = form["library"]
+    if not any(o["name"] == name for o in dat["files"]):
+        abort(404)
+    elif name in dat["library"]:
+        abort(409)
+    else:
+        dat["library"].append(name)
+    return "judge"
+
+
+@actions.bind
+def remove_library(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem) -> str | Response:
+    if "library" not in dat:
+        dat["library"] = []
+    name = form["name"]
+    if name not in dat["library"]:
+        abort(409)
+    else:
+        dat["library"].remove(name)
     return "judge"
 
 
@@ -850,8 +876,7 @@ def save_languages(form: ImmutableMultiDict[str, str], pid: str, path: str, dat:
     return "languages"
 
 
-@actions.bind
-def create_gen_group(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem) -> str | Response:
+def prepare_gen_group(form: ImmutableMultiDict[str, str], dat: Problem):
     file1 = form["file1"]
     if not any(o["name"] == file1 for o in dat["files"]):
         abort(404)
@@ -864,6 +889,12 @@ def create_gen_group(form: ImmutableMultiDict[str, str], pid: str, path: str, da
     tp = form["type"]
     if tp not in ("sol", "gen"):
         abort(400)
+    return file1, file2, group, tp
+
+
+@actions.bind
+def create_gen_group(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem) -> str | Response:
+    file1, file2, group, tp = prepare_gen_group(form, dat)
     cnt = tools.to_int(form["mul"])
     cmds = form["cmds"].split("\n")
     out_cmds = []
@@ -879,18 +910,7 @@ def create_gen_group(form: ImmutableMultiDict[str, str], pid: str, path: str, da
 
 @actions.bind
 def update_gen_group(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem) -> str | Response:
-    file1 = form["file1"]
-    if not any(o["name"] == file1 for o in dat["files"]):
-        abort(404)
-    file2 = form["file2"]
-    if not any(o["name"] == file2 for o in dat["files"]):
-        abort(404)
-    group = form["group"]
-    if group not in dat["groups"]:
-        abort(404)
-    tp = form["type"]
-    if tp not in ("sol", "gen"):
-        abort(400)
+    file1, file2, group, tp = prepare_gen_group(form, dat)
     idx = tools.to_int(form["idx"])
     cmds = form["cmds"].split("\n")
     if "gen_groups" not in dat or idx < 0 or idx >= len(dat["gen_groups"]):
