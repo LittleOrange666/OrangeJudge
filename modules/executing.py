@@ -192,6 +192,7 @@ class Language:
                 for i in range(len(compile_cmd)):
                     compile_cmd[i] = compile_cmd[i].format(filename, new_filename, runner_filename, new_runner_filename,
                                                            **self.kwargs)
+                new_filename = env.simple_path(new_filename)
                 new_filename = new_runner_filename
             else:
                 compile_cmd = self.data["compile_cmd"][:]
