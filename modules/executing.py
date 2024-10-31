@@ -201,7 +201,8 @@ class Language:
                     compile_cmd[i] = compile_cmd[i].format(filename, new_filename, **self.kwargs)
             out = env.simple_run(compile_cmd)
             if other_file is not None:
-                env.simple_path(other_file)
+                other_file = env.simple_path(other_file)
+                env.executable(other_file)
             new_filename = env.simple_path(new_filename)
             env.executable(new_filename)
             new_filename = os.path.join(dirname, new_filename)
