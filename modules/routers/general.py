@@ -9,7 +9,6 @@ from pygments.formatters import HtmlFormatter
 from werkzeug.utils import secure_filename
 
 from modules import tools, server, constants, executing, tasks, datas, contests, login, config
-from tasks import queue_position
 
 app = server.app
 
