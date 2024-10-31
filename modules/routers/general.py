@@ -9,6 +9,7 @@ from pygments.formatters import HtmlFormatter
 from werkzeug.utils import secure_filename
 
 from modules import tools, server, constants, executing, tasks, datas, contests, login, config
+from tasks import queue_position
 
 app = server.app
 
@@ -81,7 +82,8 @@ def submit():
     ext = executing.langs[lang].data["source_ext"]
     fn = constants.source_file_name + ext
     dat = datas.Submission(source=fn, time=datetime.datetime.now(), user=current_user.data,
-                           problem=pdat, language=lang, data={}, pid=pid, simple_result="waiting")
+                           problem=pdat, language=lang, data={}, pid=pid, simple_result="waiting",
+                           queue_position=0)
     if "cid" in request.form:
         cdat: datas.Contest = datas.Contest.query.filter_by(cid=request.form["cid"]).first_or_404()
         contests.check_access(cdat)
