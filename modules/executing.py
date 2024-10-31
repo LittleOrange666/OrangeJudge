@@ -182,6 +182,7 @@ class Language:
             dirname = os.path.dirname(filename)
             new_filename = os.path.splitext(filename)[0]
             new_filename = env.filepath(self.data["exec_name"].format(os.path.basename(new_filename), **self.kwargs))
+            other_file = None
             if runner_filename is not None:
                 compile_cmd = self.data["compile_runner_cmd"][:]
                 if not self.supports_runner():
@@ -192,13 +193,15 @@ class Language:
                 for i in range(len(compile_cmd)):
                     compile_cmd[i] = compile_cmd[i].format(filename, new_filename, runner_filename, new_runner_filename,
                                                            **self.kwargs)
-                new_filename = env.simple_path(new_filename)
+                other_file = new_filename
                 new_filename = new_runner_filename
             else:
                 compile_cmd = self.data["compile_cmd"][:]
                 for i in range(len(compile_cmd)):
                     compile_cmd[i] = compile_cmd[i].format(filename, new_filename, **self.kwargs)
             out = env.simple_run(compile_cmd)
+            if other_file is not None:
+                env.simple_path(other_file)
             new_filename = env.simple_path(new_filename)
             env.executable(new_filename)
             new_filename = os.path.join(dirname, new_filename)
