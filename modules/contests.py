@@ -10,6 +10,7 @@ from flask_login import current_user
 from sqlalchemy.orm.attributes import flag_modified
 from werkzeug.datastructures import ImmutableMultiDict
 
+from constants import Permission
 from . import tools, constants, datas, tasks
 
 actions = tools.Switcher()
@@ -223,7 +224,7 @@ def action(form: ImmutableMultiDict[str, str], cdat: datas.Contest):
 
 
 def check_super_access(dat: datas.Contest) -> bool:
-    return current_user.is_authenticated and (current_user.has("admin") or current_user.id in dat.data["users"])
+    return current_user.is_authenticated and (current_user.has(Permission.admin) or current_user.id in dat.data["users"])
 
 
 def check_access(dat: datas.Contest):

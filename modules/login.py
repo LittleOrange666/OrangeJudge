@@ -5,6 +5,7 @@ from flask import request, abort
 from flask_login import LoginManager, UserMixin, current_user
 from werkzeug.utils import secure_filename
 
+from constants import Permission
 from . import server, datas, config
 
 smtp = smtplib.SMTP(config.smtp.host.value, config.smtp.port.value)
@@ -22,17 +23,16 @@ class User(UserMixin):
     def folder(self) -> str:
         return f"accounts/{self.id}/"
 
-    def has(self, key: str) -> bool:
-        prems = self.data.permission_list()
-        if key == "root":
-            return "root" in prems
-        return key in prems or "admin" in prems or "root" in prems
+    def has_str(self, key: str) -> bool:
+        return self.has(Permission(key))
 
-    def may_has(self, key: str) -> bool:
-        prems = self.data.permission_list()
-        if key == "root":
-            return "root" in prems
-        return key in prems or "admin" in prems or "root" in prems
+    def has(self, key: Permission) -> bool:
+        perms = self.data.permission_list()
+        if key.name in perms or Permission.root.name in perms:
+            return True
+        if key is not Permission.root:
+            return Permission.admin.name in perms
+        return False
 
 
 app = server.app
@@ -109,13 +109,13 @@ def create_account(email: str, user_id: str, password: str | None) -> None:
     datas.add(obj)
 
 
-def check_user(require: str | None = None, users: list[str] | None = None) -> User:
+def check_user(require: Permission | None = None, users: list[str] | None = None) -> User:
     obj = request.args if request.method == "GET" else request.form
     username = obj.get('user', current_user.id)
     user = get_user(username)
     if user is None:
         abort(404)
-    if not user.has("admin"):
+    if not user.has(Permission.admin):
         if require is not None and not user.has(require):
             abort(403)
         if users is not None and user.id not in users:

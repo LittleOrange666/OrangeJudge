@@ -5,6 +5,7 @@ from flask import abort, render_template, request, jsonify
 from flask_login import login_required, current_user
 from sqlalchemy.orm.attributes import flag_modified
 
+from constants import Permission
 from .general import render_problem
 from .. import server, login, contests, datas, tools, executing
 
@@ -22,7 +23,7 @@ def contests_list():
 @app.route("/create_contest", methods=["POST"])
 @login_required
 def create_contest():
-    login.check_user("make_problems")
+    login.check_user(Permission.make_problems)
     name = request.form.get("contest_name")
     if not name or len(name) > 120:
         abort(400)
@@ -85,7 +86,7 @@ def contest_status(cid, page_str):
                 problem = k
                 problem_name = v["name"]
         result = obj.simple_result or "unknown"
-        can_see = current_user.has("admin") or current_user.id == obj.user.username
+        can_see = current_user.has(Permission.admin) or current_user.id == obj.user.username
         out.append({"idx": str(obj.id),
                     "time": obj.time.timestamp(),
                     "user_id": obj.user.username,

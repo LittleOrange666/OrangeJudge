@@ -8,6 +8,7 @@ from pygments import highlight, lexers
 from pygments.formatters import HtmlFormatter
 from werkzeug.utils import secure_filename
 
+from constants import Permission
 from .. import tools, server, constants, executing, tasks, datas, contests, login, config
 
 app = server.app
@@ -112,7 +113,7 @@ def submission(idx):
     ce_msg = dat.ce_msg
     pdat: datas.Problem = dat.problem
     if pdat.pid == "test":
-        if not current_user.has("admin") and dat.user_id != current_user.data.id:
+        if not current_user.has(Permission.admin) and dat.user_id != current_user.data.id:
             abort(403)
         inp = tools.read_default(path, dat.data["infile"])
         out = tools.read_default(path, dat.data["outfile"])
@@ -125,11 +126,11 @@ def submission(idx):
         group_results = {}
         protected = True
         problem_info = pdat.data
-        if not current_user.has("admin") and dat.user_id != current_user.data.id and current_user.id not in \
+        if not current_user.has(Permission.admin) and dat.user_id != current_user.data.id and current_user.id not in \
                 problem_info[
                     "users"]:
             abort(403)
-        super_access = current_user.has("admin") or current_user.id in problem_info["users"]
+        super_access = current_user.has(Permission.admin) or current_user.id in problem_info["users"]
         result = {}
         if completed and not dat.data.get("JE", False):
             result_data = dat.result
@@ -137,7 +138,7 @@ def submission(idx):
             results = result_data["results"]
             result["protected"] = protected = ((not problem_info.get('public_testcase', False) or bool(dat.period_id))
                                                and current_user.id not in problem_info["users"]
-                                               and not current_user.has("admin"))
+                                               and not current_user.has(Permission.admin))
             for i in range(len(results)):
                 if results[i]["result"] != "SKIP" and (not protected or super_access or results[i]["sample"]):
                     results[i]["in"] = tools.read(f"{path}/testcases/{i}.in")
@@ -185,7 +186,7 @@ def problem_page(idx):
     if not pdat.is_public:
         if not current_user.is_authenticated:
             abort(403)
-        if not current_user.has("admin") and current_user.id not in dat.get("users", []):
+        if not current_user.has(Permission.admin) and current_user.id not in dat.get("users", []):
             abort(403)
     langs = [lang for lang in executing.langs.keys() if pdat.lang_allowed(lang)]
     return render_problem(dat, idx, path, langs, is_contest=False)
@@ -221,7 +222,7 @@ def problem_file(idx, filename):
         if not pdat.is_public:
             if not current_user.is_authenticated:
                 abort(403)
-            if not current_user.has("admin") and current_user.id not in dat["users"]:
+            if not current_user.has(Permission.admin) and current_user.id not in dat["users"]:
                 abort(403)
     target = f"problems/{idx}/public_file/{filename}"
     if not os.path.isfile(target):
@@ -277,7 +278,7 @@ def all_status_data():
         problem = datas.Problem.query.filter_by(pid=pid)
         problem_name = problem.first().name if problem.count() else "unknown"
         result = obj.simple_result or "unknown"
-        can_see = current_user.has("admin") or current_user.id == obj.user.username or \
+        can_see = current_user.has(Permission.admin) or current_user.id == obj.user.username or \
                   (obj.problem.user and obj.problem.user.username == current_user.id)
         out.append({"idx": str(obj.id),
                     "time": obj.time.timestamp(),
@@ -295,7 +296,7 @@ def all_status_data():
 @app.route('/admin', methods=['GET', 'POST'])
 @login_required
 def admin():
-    if not current_user.has("admin"):
+    if not current_user.has(Permission.admin):
         abort(403)
     if request.method == 'GET':
         users = datas.User.query.all()

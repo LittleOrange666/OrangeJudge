@@ -1,4 +1,5 @@
 import re
+from enum import Enum
 from re import Pattern
 
 result_class: dict[str, str] = {
@@ -70,7 +71,20 @@ latex_begin = """\\documentclass[]{article}
 """
 latex_end = "\n\\end{document}"
 
-permissions: dict[str, str] = {"admin": "管理者", "make_problems": "出題者", "root": "最高管理者"}
+
+class Permission(Enum):
+    """
+    This enumeration represents different levels of permissions in the OrangeJudge system.
+
+    Attributes:
+        root (str): Represents the highest level of permission. It is used for the root user.
+        admin (str): Represents the permission level of an administrator.
+        make_problems (str): Represents the permission level of a problem maker.
+    """
+    root = "最高管理者"
+    admin = "管理者"
+    make_problems = "出題者"
+
 
 default_contest_info: dict = {"name": "unknown", "users": [], "problems": {}, "start": 0, "elapsed": 0, "type": "icpc",
                               "can_register": False, "standing": {"public": True, "start_freeze": 0, "end_freeze": 0},

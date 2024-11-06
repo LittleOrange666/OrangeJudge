@@ -4,6 +4,7 @@ from flask import abort, render_template, request
 from flask_login import login_required
 from werkzeug.utils import secure_filename
 
+from constants import Permission
 from .. import tools, server, login, constants, executing, problemsetting, datas
 
 app = server.app
@@ -12,7 +13,7 @@ app = server.app
 @app.route("/problemsetting", methods=['GET'])
 @login_required
 def my_problems():
-    user = login.check_user("make_problems")
+    user = login.check_user(Permission.make_problems)
     problem_obj = user.data.problems
     got_data, page_cnt, page_idx, show_pages = tools.pagination(problem_obj)
     problems_dat = []
@@ -25,7 +26,7 @@ def my_problems():
 @app.route("/problemsetting_all", methods=['GET'])
 @login_required
 def all_problems():
-    login.check_user("admin")
+    login.check_user(Permission.admin)
     problem_obj = datas.Problem.query.filter(datas.Problem.pid != "test")
     got_data, page_cnt, page_idx, show_pages = tools.pagination(problem_obj)
     problems_dat = []
@@ -38,7 +39,7 @@ def all_problems():
 @app.route("/problemsetting_new", methods=['GET', 'POST'])
 @login_required
 def create_problem():
-    user = login.check_user("make_problems")
+    user = login.check_user(Permission.make_problems)
     if request.method == "GET":
         return render_template("create_problem.html")
     else:
@@ -56,7 +57,7 @@ def my_problem_page(idx):
     if o is not None:
         return render_template("pleasewaitlog.html", action=o[1], log=o[0])
     dat = pdat.new_data
-    user = login.check_user("make_problems", dat["users"])
+    user = login.check_user(Permission.make_problems, dat["users"])
     public_files = os.listdir(f"preparing_problems/{idx}/public_file")
     try:
         public_files.remove(".gitkeep")
@@ -93,7 +94,7 @@ def problem_action():
     if problemsetting.check_background_action(idx) is not None:
         abort(503)
     dat = pdat.data
-    login.check_user("make_problems", dat["users"])
+    login.check_user(Permission.make_problems, dat["users"])
     return problemsetting.action(request.form)
 
 
@@ -106,5 +107,5 @@ def problem_preview():
     if os.path.isfile("preparing_problems/" + idx + "/waiting"):
         return render_template("pleasewait.html", action=tools.read("preparing_problems", idx, "waiting"))
     dat = pdat.new_data
-    login.check_user("make_problems", dat["users"])
+    login.check_user(Permission.make_problems, dat["users"])
     return problemsetting.preview(request.args, pdat)

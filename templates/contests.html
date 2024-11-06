@@ -4,7 +4,7 @@
 
 {% block main %}
     <h1>競賽列表</h1>
-    {% if current_user.is_authenticated and current_user.may_has("make_problems") %}
+    {% if current_user.is_authenticated and current_user.has("make_problems") %}
         <form method="post" action="/create_contest">
             <div class="row">
                 <div class="col-auto">

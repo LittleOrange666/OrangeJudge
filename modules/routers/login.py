@@ -6,6 +6,7 @@ from flask_login import login_required, current_user, login_user, logout_user
 from werkzeug.utils import secure_filename
 from yarl import URL
 
+from constants import Permission
 from .. import tools, server, login, constants, datas, locks, config
 
 app = server.app
@@ -14,7 +15,7 @@ app = server.app
 @app.route("/log/<uid>", methods=["GET"])
 @login_required
 def log(uid):
-    if not current_user.has("admin"):
+    if not current_user.has(Permission.admin):
         abort(403)
     uid = secure_filename(uid)
     if not tools.exists("logs", uid + ".log"):
@@ -134,8 +135,8 @@ def user_page(name):
 def settings():
     data: datas.User = current_user.data
     if request.method == "GET":
-        perms = [(k, v) for k, v in constants.permissions.items() if current_user.has(k) and k != "admin"
-                 and k != "root"]
+        perms = [(perm.name, perm.value) for perm in Permission if current_user.has(perm) and
+                 perm not in (Permission.admin, Permission.root)]
         return render_template("settings.html", data=data, perms=perms)
     if request.form["action"] == "general_info":
         display_name = request.form["DisplayName"]

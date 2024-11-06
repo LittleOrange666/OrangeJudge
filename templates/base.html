@@ -56,16 +56,16 @@
                                 <li><a class="dropdown-item" href="/my_submissions">解題列表</a></li>
                                 <li><a class="dropdown-item" href="/settings">帳號設定</a></li>
                                 <li><a class="dropdown-item" href="/preferences">偏好設定</a></li>
-                                {% if current_user.has("make_problems") %}
+                                {% if current_user.has_str("make_problems") %}
                                     <li>
                                         <hr class="dropdown-divider">
                                     </li>
                                     <li><a class="dropdown-item" href="/problemsetting">我的題目</a></li>
                                 {% endif %}
-                                {% if current_user.has("admin") %}
+                                {% if current_user.has_str("admin") %}
                                     <li><a class="dropdown-item" href="/problemsetting_all">所有題目</a></li>
                                 {% endif %}
-                                {% if current_user.has("root") %}
+                                {% if current_user.has_str("root") %}
                                     <li>
                                         <hr class="dropdown-divider">
                                     </li>
