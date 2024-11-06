@@ -59,7 +59,7 @@ def contest_problem(cid, pid):
     path = "problems/" + idx
     dat = pdat.data
     langs = [lang for lang in executing.langs.keys() if pdat.lang_allowed(lang)]
-    return render_problem(dat, idx, path, langs, s_contest=True, cid=cid, cname=cdat.name, pidx=pid)
+    return render_problem(dat, idx, path, langs, is_contest=True, cid=cid, cname=cdat.name, pidx=pid)
 
 
 @app.route("/contest/<cid>/status/<page_str>", methods=["POST"])
