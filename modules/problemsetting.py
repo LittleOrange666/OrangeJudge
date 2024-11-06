@@ -17,7 +17,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from werkzeug.datastructures import ImmutableMultiDict, MultiDict
 from werkzeug.utils import secure_filename
 
-from modules import executing, tools, constants, createhtml, datas
+from . import executing, tools, constants, createhtml, datas
 
 worker_queue = Queue()
 

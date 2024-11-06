@@ -72,9 +72,16 @@
         });
     {% endif %}
     {% if is_contest %}
+        function add_cid(s){
+        let link = new URL(s,location.origin);
+        link.searchParams.set("cid",{{ cid }});
+        return link.href;
+        }
         $("*[inner_embed]").each(function(){
-        let link = $(this).attr("src") + "?cid={{ cid }}";
-        $(this).attr("src",link);
+        $(this).attr("src",add_cid($(this).attr("src")));
+        });
+        $("*[download][href^='/problem_file']").each(function(){
+        $(this).attr("href",add_cid($(this).attr("href")));
         });
     {% endif %}
 {% endblock %}

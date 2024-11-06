@@ -2,7 +2,7 @@ import os
 import traceback
 from multiprocessing import Queue, Process
 
-from modules import executing, constants, tools, locks, datas, config
+from . import executing, constants, tools, locks, datas, config
 
 submissions_queue = Queue()
 

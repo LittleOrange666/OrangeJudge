@@ -3,7 +3,7 @@ from datetime import datetime
 
 from flask_sqlalchemy import SQLAlchemy
 
-from modules import server, locks
+from . import server, locks
 
 datafile = os.path.abspath(os.path.join(os.getcwd(), "data", "data.sqlite"))
 app = server.app

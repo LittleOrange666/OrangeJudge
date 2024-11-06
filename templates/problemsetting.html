@@ -381,18 +381,19 @@
             <div class="container-fluid">
                 <h4>輔助檔案</h4>
                 {% for file in dat.get("library",[]) %}
-                <form the_action="remove_library">
-                    <input type="hidden" name="name" value="{{ file }}">
-                    <div class="row">
-                        <div class="col-auto">
-                            <p>{{ file }}</p>
+                    <form the_action="remove_library">
+                        <input type="hidden" name="name" value="{{ file }}">
+                        <div class="row">
+                            <div class="col-auto">
+                                <p>{{ file }}</p>
+                            </div>
+                            <div class="col-auto">
+                                <button class="btn btn-danger submitter"
+                                        data-msg-409="該檔案不在列表中">刪除
+                                </button>
+                            </div>
                         </div>
-                        <div class="col-auto">
-                            <button class="btn btn-danger submitter"
-                            data-msg-409="該檔案不在列表中">刪除</button>
-                        </div>
-                    </div>
-                </form>
+                    </form>
                 {% endfor %}
                 <form the_action="add_library">
                     <div class="row">
@@ -406,7 +407,8 @@
                         </div>
                         <div class="col-auto">
                             <button class="btn btn-primary submitter"
-                            data-msg-404="未知的檔案" data-msg-409="該檔案已加入">加入</button>
+                                    data-msg-404="未知的檔案" data-msg-409="該檔案已加入">加入
+                            </button>
                         </div>
                     </div>
                 </form>

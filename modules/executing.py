@@ -3,7 +3,7 @@ import os.path
 import subprocess
 from typing import Callable
 
-from modules import constants, tools, datas
+from . import constants, tools, datas
 
 
 def call(cmd: list[str], stdin: str = "", timeout: float | None = None) -> tuple[str, str, int]:

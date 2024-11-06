@@ -6,6 +6,8 @@
 + 登入狀態丟失?
 + create version 未檢查checker是否能正確check測資
 + interactive problem 的時間&空間計算不知道對不對
++ 驗題會在解題動態洩漏題目名稱
++ 賽後可以提出詢問
 
 ## 潛在威脅
 + lxc中nobody可以執行真內建的system call
