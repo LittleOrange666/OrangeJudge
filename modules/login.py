@@ -5,7 +5,7 @@ from flask import request, abort
 from flask_login import LoginManager, UserMixin, current_user
 from werkzeug.utils import secure_filename
 
-from constants import Permission
+from .constants import Permission
 from . import server, datas, config
 
 smtp = smtplib.SMTP(config.smtp.host.value, config.smtp.port.value)
@@ -24,7 +24,7 @@ class User(UserMixin):
         return f"accounts/{self.id}/"
 
     def has_str(self, key: str) -> bool:
-        return self.has(Permission(key))
+        return self.has(Permission[key])
 
     def has(self, key: Permission) -> bool:
         perms = self.data.permission_list()

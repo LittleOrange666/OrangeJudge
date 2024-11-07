@@ -4,7 +4,7 @@ from flask import abort, render_template, request
 from flask_login import login_required
 from werkzeug.utils import secure_filename
 
-from constants import Permission
+from ..constants import Permission
 from .. import tools, server, login, constants, executing, problemsetting, datas
 
 app = server.app

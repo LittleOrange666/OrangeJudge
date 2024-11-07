@@ -5,7 +5,7 @@ from flask import abort, render_template, request, jsonify
 from flask_login import login_required, current_user
 from sqlalchemy.orm.attributes import flag_modified
 
-from constants import Permission
+from ..constants import Permission
 from .general import render_problem
 from .. import server, login, contests, datas, tools, executing
 

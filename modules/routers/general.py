@@ -8,7 +8,7 @@ from pygments import highlight, lexers
 from pygments.formatters import HtmlFormatter
 from werkzeug.utils import secure_filename
 
-from constants import Permission
+from ..constants import Permission
 from .. import tools, server, constants, executing, tasks, datas, contests, login, config
 
 app = server.app

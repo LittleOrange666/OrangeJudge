@@ -1,24 +1,63 @@
+import atexit
 import os
+import time
 import traceback
-from multiprocessing import Queue, Process
+from multiprocessing import Pool
 
 from . import executing, constants, tools, locks, datas, config
 
-submissions_queue = Queue()
+judger_pool: Pool = Pool(config.judge.workers.value)
 
 last_judged = locks.Counter()
 
 queue_position = locks.Counter()
 
 
+def run(lang: executing.Language, file: str, env: executing.Environment, stdin: str, stdout: str, dat: datas.Submission) -> str:
+    filename = env.send_file(file)
+    filename, ce_msg = lang.compile(filename, env)
+    if ce_msg:
+        dat.ce_msg = ce_msg
+        return "CE"
+    exec_cmd = lang.get_execmd(filename)
+    tools.create(stdout)
+    outf = env.send_file(stdout)
+    out = env.runwithshell(exec_cmd, env.send_file(stdin), outf, 10, 1000, lang.base_exec_cmd)
+    if executing.is_tle(out):
+        return "TLE: Testing is limited by 10 seconds"
+    result = {o[0]: o[1] for o in (s.split("=") for s in out[0].split("\n")) if len(o) == 2}
+    tools.log(out)
+    tools.write(out[1], os.path.dirname(file), "stderr.txt")
+    if "1" == result.get("WIFSIGNALED", None):
+        return "RE: " + "您的程式無法正常執行"
+    exit_code = result.get("WEXITSTATUS", "0")
+    if "153" == exit_code:
+        return "OLE"
+    if "0" != exit_code:
+        if exit_code in constants.exit_codes:
+            return "RE: " + constants.exit_codes[exit_code]
+        else:
+            return "RE: code=" + exit_code
+    timeusage = 0
+    if "time" in result and float(result["time"]) >= 0:
+        timeusage = int(float(result["time"]) * 1000)
+    memusage = 0
+    if "mem" in result and float(result["mem"]) >= 0:
+        memusage = (int(result["mem"]) - int(result["basemem"])) * int(result["pagesize"]) // 1000
+    env.get_file(stdout)
+    env.rm_file(stdin)
+    return f"OK: {timeusage}ms, {memusage}KB"
+
+
 def run_test(dat: datas.Submission) -> None:
     lang = executing.langs[dat.language]
     env = executing.Environment()
     idx = str(dat.id)
+    print("run test", idx)
     source = f"submissions/{idx}/" + dat.source
     in_file = os.path.abspath(f"submissions/{idx}/" + dat.data["infile"])
     out_file = os.path.abspath(f"submissions/{idx}/" + dat.data["outfile"])
-    result = lang.run(source, env, [(in_file, out_file)], dat)
+    result = run(lang, source, env, in_file, out_file, dat)
     dat.result = {}
     dat.simple_result = result
     dat.completed = True
@@ -207,34 +246,46 @@ def get_queue_position(dat: datas.Submission) -> int:
     return max((dat.queue_position or 0) - queue_position.value, 0)
 
 
+def runner(idx: int):
+    print("get", idx)
+    try:
+        for _ in range(5):
+            print("try", idx)
+            dat: datas.Submission = datas.Submission.query.get(idx)
+            print(f"dat = {dat = }")
+            if dat is not None:
+                try:
+                    last_judged.inc()
+                    pdat: datas.Problem = dat.problem
+                    if pdat.pid == "test":
+                        run_test(dat)
+                    else:
+                        run_problem(pdat, dat)
+                except Exception as e:
+                    traceback.print_exception(e)
+                    dat.data["JE"] = True
+                    log_uuid = tools.random_string()
+                    dat.data["log_uuid"] = log_uuid
+                    tools.write("".join(traceback.format_exception(e)), "logs", log_uuid + ".log")
+                    dat.completed = True
+                    datas.add(dat)
+                return
+            time.sleep(1)
+    except Exception as e:
+        traceback.print_exception(e)
+
+
 def enqueue(idx: int) -> int:
-    submissions_queue.put(str(idx))
+    print("enqueue", idx)
+    runner(idx)
+    # judger_pool.apply_async(runner, (idx,))
     return queue_position.inc()
 
 
-def runner():
-    while True:
-        idx: int = int(submissions_queue.get())
-        dat: datas.Submission = datas.Submission.query.get(idx)
-        if dat is None:
-            continue
-        try:
-            last_judged.inc()
-            pdat: datas.Problem = dat.problem
-            if pdat.pid == "test":
-                run_test(dat)
-            else:
-                run_problem(pdat, dat)
-        except Exception as e:
-            traceback.print_exception(e)
-            dat.data["JE"] = True
-            log_uuid = tools.random_string()
-            dat.data["log_uuid"] = log_uuid
-            tools.write("".join(traceback.format_exception(e)), "logs", log_uuid + ".log")
-            dat.completed = True
-            datas.add(dat)
-
-
 def init():
-    for _ in range(config.judge.workers.value):
-        Process(target=runner).start()
+    def resolve_pool():
+        judger_pool.close()
+        judger_pool.terminate()
+    atexit.register(resolve_pool)
+    for submission in datas.Submission.query.filter_by(completed=False):
+        enqueue(submission.id)

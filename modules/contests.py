@@ -10,7 +10,7 @@ from flask_login import current_user
 from sqlalchemy.orm.attributes import flag_modified
 from werkzeug.datastructures import ImmutableMultiDict
 
-from constants import Permission
+from .constants import Permission
 from . import tools, constants, datas, tasks
 
 actions = tools.Switcher()

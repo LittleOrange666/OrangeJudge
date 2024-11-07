@@ -221,42 +221,6 @@ class Language:
                                              folder=os.path.dirname(filename), **self.kwargs)
         return exec_cmd
 
-    def run(self, file: str, env: Environment, tasks: list[tuple[str, str]], dat: datas.Submission) -> str:
-        filename = env.send_file(file)
-        filename, ce_msg = self.compile(filename, env)
-        if ce_msg:
-            dat.ce_msg = ce_msg
-            return "CE"
-        exec_cmd = self.get_execmd(filename)
-        for stdin, stdout in tasks:
-            tools.create(stdout)
-            outf = env.send_file(stdout)
-            out = env.runwithshell(exec_cmd, env.send_file(stdin), outf, 10, 1000, self.base_exec_cmd)
-            if is_tle(out):
-                return "TLE: Testing is limited by 10 seconds"
-            result = {o[0]: o[1] for o in (s.split("=") for s in out[0].split("\n")) if len(o) == 2}
-            tools.log(out)
-            tools.write(out[1], os.path.dirname(file), "stderr.txt")
-            if "1" == result.get("WIFSIGNALED", None):
-                return "RE: " + "您的程式無法正常執行"
-            exit_code = result.get("WEXITSTATUS", "0")
-            if "153" == exit_code:
-                return "OLE"
-            if "0" != exit_code:
-                if exit_code in constants.exit_codes:
-                    return "RE: " + constants.exit_codes[exit_code]
-                else:
-                    return "RE: code=" + exit_code
-            timeusage = 0
-            if "time" in result and float(result["time"]) >= 0:
-                timeusage = int(float(result["time"]) * 1000)
-            memusage = 0
-            if "mem" in result and float(result["mem"]) >= 0:
-                memusage = (int(result["mem"]) - int(result["basemem"])) * int(result["pagesize"]) // 1000
-            env.get_file(stdout)
-            env.rm_file(stdin)
-            return f"OK: {timeusage}ms, {memusage}KB"
-
     def supports_runner(self):
         return "compile_runner_cmd" in self.data
 
