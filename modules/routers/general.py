@@ -8,7 +8,8 @@ from pygments import highlight, lexers
 from pygments.formatters import HtmlFormatter
 from werkzeug.utils import secure_filename
 
-from ..constants import Permission
+from server import sending_file
+from ..constants import Permission, problem_path
 from .. import tools, server, constants, executing, tasks, datas, contests, login, config
 
 app = server.app
@@ -48,18 +49,13 @@ def test_submit():
         abort(404)
     ext = executing.langs[lang].data["source_ext"]
     fn = constants.source_file_name + ext
-    """
-    if tools.elapsed(current_user.folder, "submissions") < 5:
-        abort(429)
-    tools.append(idx + "\n", current_user.folder, "submissions")
-    """
     dat = datas.Submission(source=fn, time=datetime.datetime.now(), user=current_user.data,
                            problem=datas.Problem.query.filter_by(pid="test").first(), language=lang,
                            data={"infile": "in.txt", "outfile": "out.txt"}, pid="test", simple_result="waiting")
     datas.add(dat)
     idx = str(dat.id)
-    tools.write(code, f"submissions/{idx}/{fn}")
-    tools.write(inp, f"submissions/{idx}/in.txt")
+    tools.write(code, dat.path / fn)
+    tools.write(inp, dat.path / "in.txt")
     dat.queue_position = tasks.enqueue(dat.id)
     datas.add(dat)
     return redirect("/submission/" + idx)
@@ -95,7 +91,7 @@ def submit():
                 dat.just_pretest = True
     datas.add(dat)
     idx = str(dat.id)
-    tools.write(code, f"submissions/{idx}/{fn}")
+    tools.write(code, dat.path / fn)
     dat.queue_position = tasks.enqueue(dat.id)
     datas.add(dat)
     return redirect("/submission/" + idx)
@@ -224,10 +220,8 @@ def problem_file(idx, filename):
                 abort(403)
             if not current_user.has(Permission.admin) and current_user.id not in dat["users"]:
                 abort(403)
-    target = f"problems/{idx}/public_file/{filename}"
-    if not os.path.isfile(target):
-        abort(404)
-    return send_file(os.path.abspath(target))
+    target = problem_path / idx / "public_file" / filename
+    return sending_file(target)
 
 
 @app.route("/my_submissions", methods=['GET'])

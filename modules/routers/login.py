@@ -1,5 +1,6 @@
 import random
 import time
+from pathlib import Path
 
 from flask import abort, render_template, redirect, request, Response
 from flask_login import login_required, current_user, login_user, logout_user
@@ -18,9 +19,10 @@ def log(uid):
     if not current_user.has(Permission.admin):
         abort(403)
     uid = secure_filename(uid)
-    if not tools.exists("logs", uid + ".log"):
+    path = Path("logs") / f"{uid}.log"
+    if not path.exists():
         abort(404)
-    return render_template("log.html", content=tools.read("logs", uid + ".log"))
+    return render_template("log.html", content=tools.read(path))
 
 
 @app.route('/login', methods=['GET', 'POST'])

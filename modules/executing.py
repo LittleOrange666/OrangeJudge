@@ -1,8 +1,10 @@
 import math
 import os.path
 import subprocess
+from pathlib import Path
 from typing import Callable
 
+from constants import lang_path
 from . import constants, tools, datas
 
 
@@ -20,6 +22,67 @@ def is_tle(result: tuple[str, str, int]) -> bool:
 
 
 class Environment:
+    """
+    A class representing an environment for executing code in a Linux container.
+
+    Attributes
+    ----------
+    lxc_name : str
+        The name of the Linux container.
+    dirname : str
+        The name of the directory created within the Linux container.
+    prefix : list[str]
+        The prefix for executing commands within the Linux container.
+    safe : list[str]
+        The command prefix for running commands as the nobody user.
+    judge : list[str]
+        The command prefix for running commands as the judge user.
+
+    Methods
+    -------
+    get_lxc_root()
+        Returns the root path of the Linux container.
+    send_file(filepath: str, nxt: Callable[[str], None] | None = None) -> str
+        Sends a file to the Linux container and returns the filepath.
+    rename(filename: str, nwname: str) -> str
+        Renames a file in the Linux container and returns the new filepath.
+    get_file(filepath: str, source: str | None = None)
+        Retrieves a file from the Linux container.
+    simple_path(filepath: str) -> str
+        Simplifies the filepath within the Linux container.
+    rm_file(filepath: str)
+        Removes a file from the Linux container.
+    filepath(filename: str) -> str
+        Returns the filepath within the Linux container.
+    fullfilepath(filename: str) -> str
+        Returns the full filepath within the Linux container.
+    simple_run(cmd: list[str]) -> tuple[str, str, int]
+        Runs a command within the Linux container and returns the output.
+    safe_run(cmd: list[str]) -> tuple[str, str, int]
+        Runs a command as a safe user within the Linux container and returns the output.
+    judge_run(cmd: list[str]) -> tuple[str, str, int]
+        Runs a command as the judge user within the Linux container and returns the output.
+    exist(filename: str) -> bool
+        Checks if a file exists within the Linux container.
+    judge_writeable(*filenames: str)
+        Makes files within the Linux container writeable by the judge user.
+    writeable(*filenames: str)
+        Makes files within the Linux container writeable.
+    judge_executable(*filenames: str)
+        Makes files within the Linux container executable by the judge user.
+    executable(*filenames: str)
+        Makes files within the Linux container executable.
+    readable(*filenames: str)
+        Makes files within the Linux container readable.
+    judge_readable(*filenames: str)
+        Makes files within the Linux container readable by the judge user.
+    protected(*filenames: str)
+        Makes files within the Linux container protected.
+    runwithshell(cmd: list[str], in_file: str, out_file: str, tl: float, ml: int, base_cmd: list[str]) -> tuple[str, str, int]
+        Runs a command within the Linux container using a shell and returns the output.
+    runwithinteractshell(cmd: list[str], interact_cmd: list[str], in_file: str, out_file: str, tl: float, ml: int, base_cmd: list[str]) -> tuple[str, str, int]
+        Runs a command within the Linux container using an interactive shell and returns the output.
+    """
     __slots__ = ("lxc_name", "dirname", "prefix", "safe", "judge")
 
     def __init__(self, lxc_name: str = constants.lxc_name):
@@ -31,10 +94,20 @@ class Environment:
         self.safe: list[str] = ["sudo", "-u", "nobody"]
         self.judge: list[str] = ["sudo", "-u", "judge"]
 
-    def get_lxc_root(self):
+    def get_lxc_root(self) -> str:
+        """
+        Returns the root path of the Linux container.
+        :return: root path of the Linux container
+        """
         return f"/var/lib/lxc/{self.lxc_name}/rootfs"
 
     def send_file(self, filepath: str, nxt: Callable[[str], None] | None = None) -> str:
+        """
+        Sends a file to the Linux container.
+        :param filepath: file that will be sent
+        :param nxt: action that will be performed after sending the file
+        :return: filepath within the Linux container.
+        """
         tools.log("send", filepath)
         file_abspath = os.path.abspath(filepath)
         cmd = ["sudo", "cp", file_abspath, f"{self.get_lxc_root()}/{self.dirname}"]
@@ -95,7 +168,7 @@ class Environment:
     def judge_writeable(self, *filenames: str) -> None:
         for filename in filenames:
             if not self.exist(filename):
-                tools.create(self.fullfilepath(filename))
+                Path(self.fullfilepath(filename)).touch()
             filepath = self.filepath(filename)
             call(self.prefix + ["chgrp", "judge", filepath])
             call(self.prefix + ["chmod", "760", filepath])
@@ -103,7 +176,7 @@ class Environment:
     def writeable(self, *filenames: str) -> None:
         for filename in filenames:
             if not self.exist(filename):
-                tools.create(self.fullfilepath(filename))
+                Path(self.fullfilepath(filename)).touch()
             filepath = self.filepath(filename)
             call(self.prefix + ["chmod", "766", filepath])
 
@@ -164,7 +237,7 @@ class Environment:
 class Language:
     def __init__(self, name: str, branch: str | None = None):
         self.name = name
-        self.data = tools.read_json(f"langs/{name}.json")
+        self.data = tools.read_json(lang_path / f"{name}.json")
         self.branch = self.data["default_branch"] if branch is None else branch
         self.kwargs = self.data["branches"][self.branch]
         base_name = "base_" + self.name
@@ -234,7 +307,7 @@ def init():
     call(["sudo", "lxc-attach", "-n", constants.lxc_name, "--"] + ["chmod", "755", f"/judge/__pycache__"])
     for lang in os.listdir("langs"):
         lang_name = os.path.splitext(lang)[0]
-        dat = tools.read_json(f"langs/{lang_name}.json")
+        dat = tools.read_json(lang_path / f"{lang_name}.json")
         keys = dat["branches"].keys()
         for key in keys:
             langs[key] = Language(lang_name, key)

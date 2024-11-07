@@ -5,6 +5,7 @@ import time
 import uuid
 from datetime import datetime
 from functools import partial
+from pathlib import Path
 from typing import Callable, Any
 
 from flask import abort, request
@@ -12,7 +13,7 @@ from flask import abort, request
 from . import locks, config, constants
 
 
-def system(s: str, cwd: str = "") -> None:
+def system(s: str, cwd: str | os.PathLike = "") -> None:
     """
     Execute a system command in a specified directory.
 
@@ -35,7 +36,7 @@ def system(s: str, cwd: str = "") -> None:
     subprocess.call(s, cwd=cwd, shell=True)
 
 
-def create_truncated(source: str, target: str) -> str:
+def create_truncated(source: Path, target: Path) -> str:
     """
     Create a truncated version of the source file and save it to the target file.
 
@@ -44,8 +45,8 @@ def create_truncated(source: str, target: str) -> str:
     an empty target file is created.
 
     Args:
-        source (str): The path to the source file to be read.
-        target (str): The path to the target file where the truncated content will be written.
+        source (Path): The path to the source file to be read.
+        target (Path): The path to the target file where the truncated content will be written.
 
     Returns:
         str: The content that was written to the target file. This will be:
@@ -58,10 +59,10 @@ def create_truncated(source: str, target: str) -> str:
         This function relies on external functions such as 'exists', 'create',
         'read', and 'write', which are assumed to be defined elsewhere in the code.
     """
-    if not exists(source):
-        create(target)
+    if not source.exists():
+        target.touch()
         return ""
-    file_stats = os.stat(source)
+    file_stats = source.stat()
     if file_stats.st_size <= 500:
         content = read(source)
         write(content, target)
@@ -97,88 +98,60 @@ def get_content(filename: str) -> str:
     """
     target = filename + "_partial"
     if os.path.isfile(target):
-        return read(target)
+        return read(Path(target))
     file_stats = os.stat(filename)
     if file_stats.st_size <= 500:
-        return read(filename)
+        return read(Path(filename))
     content = create_truncated(filename, target)
     return content
 
 
-def create(*filename: str) -> None:
-    with open(os.path.join(*filename), "w"):
-        pass
-
-
-def remove(*filename: str) -> None:
-    try:
-        os.remove(os.path.join(*filename))
-    except FileNotFoundError:
-        pass
-
-
-def read(*filename: str, n: int = -1) -> str:
-    with locks.Locker(os.path.join(*filename)):
-        with open(os.path.join(*filename)) as f:
+def read(filepath: Path, n: int = -1) -> str:
+    with locks.Locker(filepath):
+        with filepath.open() as f:
             return f.read(n)
 
 
-def read_default(*filename: str, default: str = "") -> str:
-    if not exists(*filename):
+def read_default(filepath: Path, *, default: str = "") -> str:
+    if not filepath.is_file():
         return default
-    with locks.Locker(os.path.join(*filename)):
-        with open(os.path.join(*filename)) as f:
-            return f.read()
+    with locks.Locker(filepath):
+        return filepath.read_text()
 
 
-def write(content: str, *filename: str) -> str:
-    fn = os.path.join(*filename)
-    if not os.path.isdir(os.path.dirname(fn)):
-        os.makedirs(os.path.dirname(fn), exist_ok=True)
-    with locks.Locker(fn):
-        with open(fn, "w") as f:
+def write(content: str, filename: Path) -> str:
+    if not filename.parent.is_dir():
+        filename.parent.mkdir(parents=True, exist_ok=True)
+    with locks.Locker(filename):
+        filename.write_text(content)
+    return content
+
+
+def write_binary(content: bytes, filename: Path) -> bytes:
+    if not filename.parent.is_dir():
+        filename.parent.mkdir(parents=True, exist_ok=True)
+    with locks.Locker(filename):
+        filename.write_bytes(content)
+    return content
+
+
+def append(content: str, filename: Path) -> str:
+    with locks.Locker(filename):
+        with filename.open("a") as f:
             f.write(content)
     return content
 
 
-def write_binary(content: bytes, *filename: str) -> bytes:
-    fn = os.path.join(*filename)
-    if not os.path.isdir(os.path.dirname(fn)):
-        os.makedirs(os.path.dirname(fn), exist_ok=True)
-    with locks.Locker(fn):
-        with open(fn, "wb") as f:
-            f.write(content)
-    return content
-
-
-def append(content: str, *filename: str) -> str:
-    with locks.Locker(os.path.join(*filename)):
-        with open(os.path.join(*filename), "a") as f:
-            f.write(content)
-    return content
-
-
-def read_json(*filename: str) -> dict:
-    with locks.Locker(os.path.join(*filename)):
-        with open(os.path.join(*filename)) as f:
+def read_json(filename: Path) -> dict:
+    with locks.Locker(filename):
+        with filename.open() as f:
             return json.load(f)
 
 
-def write_json(obj, *filename: str) -> None:
-    with locks.Locker(os.path.join(*filename)):
-        with open(os.path.join(*filename), "w") as f:
+def write_json(obj, filename: Path) -> None:
+    with locks.Locker(filename):
+        with filename.open("w") as f:
             json.dump(obj, f, indent=2)
-
-
-def exists(*filename: str) -> bool:
-    return os.path.exists(os.path.join(*filename))
-
-
-def elapsed(*filename: str) -> float:
-    ret = time.time() - os.path.getmtime(os.path.join(*filename))
-    if ret < 0:
-        return 100
-    return ret
 
 
 def get_timestring() -> str:

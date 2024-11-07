@@ -1,5 +1,6 @@
 import re
 from enum import Enum
+from pathlib import Path
 from re import Pattern
 
 result_class: dict[str, str] = {
@@ -99,3 +100,15 @@ danger_html_tags = ("script", "style")
 source_file_name = "Main"
 
 runner_source_file_name = "Runner"
+
+problem_path = Path("problems").absolute()
+
+preparing_problem_path = Path("preparing_problems").absolute()
+
+tmp_path = Path("tmp").absolute()
+
+contest_path = Path("contests").absolute()
+
+lang_path = Path("langs").absolute()
+
+submission_path = Path("submissions").absolute()

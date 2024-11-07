@@ -3,6 +3,7 @@ import os
 import time
 import traceback
 from multiprocessing import Pool
+from pathlib import Path
 
 from . import executing, constants, tools, locks, datas, config
 
@@ -20,14 +21,14 @@ def run(lang: executing.Language, file: str, env: executing.Environment, stdin: 
         dat.ce_msg = ce_msg
         return "CE"
     exec_cmd = lang.get_execmd(filename)
-    tools.create(stdout)
+    Path(stdout).touch()
     outf = env.send_file(stdout)
     out = env.runwithshell(exec_cmd, env.send_file(stdin), outf, 10, 1000, lang.base_exec_cmd)
     if executing.is_tle(out):
         return "TLE: Testing is limited by 10 seconds"
     result = {o[0]: o[1] for o in (s.split("=") for s in out[0].split("\n")) if len(o) == 2}
     tools.log(out)
-    tools.write(out[1], os.path.dirname(file), "stderr.txt")
+    tools.write(out[1], Path(file).parent / "stderr.txt")
     if "1" == result.get("WIFSIGNALED", None):
         return "RE: " + "您的程式無法正常執行"
     exit_code = result.get("WEXITSTATUS", "0")
@@ -138,9 +139,10 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
             tt = "testcases_gen/" if testcase.get("gen", False) else "testcases/"
             in_file = os.path.abspath(problem_path + tt + testcase["in"])
             ans_file = os.path.abspath(problem_path + tt + testcase["out"])
+            testcase_path = dat.path / "testcases"
             out_file = os.path.abspath(f"submissions/{idx}/testcases/{i}.out")
-            tools.create_truncated(in_file, f"submissions/{idx}/testcases/{i}.in")
-            tools.create_truncated(ans_file, f"submissions/{idx}/testcases/{i}.ans")
+            tools.create_truncated(Path(in_file), testcase_path / f"{i}.in")
+            tools.create_truncated(Path(ans_file), testcase_path / f"{i}.ans")
             if just_pretest and not testcase.get("pretest", False):
                 ret = ["OK", "Skip by pretest policy"]
                 score = top_score
@@ -189,7 +191,7 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
                             checker_out = env.judge_run(full_checker_cmd)
                             env.protected(ans_file, in_file, out_file)
                             env.get_file(out_file)
-                            tools.create_truncated(out_file, out_file)
+                            tools.create_truncated(Path(out_file), Path(out_file))
                             if checker_out[1].startswith("partially correct"):
                                 score = checker_out[2]
                                 name = "OK" if score >= top_score else "PARTIAL"
@@ -247,12 +249,9 @@ def get_queue_position(dat: datas.Submission) -> int:
 
 
 def runner(idx: int):
-    print("get", idx)
     try:
         for _ in range(5):
-            print("try", idx)
             dat: datas.Submission = datas.Submission.query.get(idx)
-            print(f"dat = {dat = }")
             if dat is not None:
                 try:
                     last_judged.inc()
@@ -266,7 +265,7 @@ def runner(idx: int):
                     dat.data["JE"] = True
                     log_uuid = tools.random_string()
                     dat.data["log_uuid"] = log_uuid
-                    tools.write("".join(traceback.format_exception(e)), "logs", log_uuid + ".log")
+                    tools.write("".join(traceback.format_exception(e)), Path("logs") / (log_uuid + ".log"))
                     dat.completed = True
                     datas.add(dat)
                 return
@@ -276,7 +275,6 @@ def runner(idx: int):
 
 
 def enqueue(idx: int) -> int:
-    print("enqueue", idx)
     runner(idx)
     # judger_pool.apply_async(runner, (idx,))
     return queue_position.inc()

@@ -1,8 +1,10 @@
+import os
 import secrets
 import socket
 import traceback
+from pathlib import Path
 
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, Response, abort, send_file
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_session import Session
@@ -111,3 +113,9 @@ def check_port(ip, port):
         print(f"Error: {str(e)}")
     finally:
         sock.close()
+
+
+def sending_file(file: Path) -> Response:
+    if not file.is_file():
+        abort(404)
+    return send_file(file.absolute())

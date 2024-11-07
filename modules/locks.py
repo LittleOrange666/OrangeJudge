@@ -11,7 +11,7 @@ T = TypeVar('T')
 
 
 class Locker:
-    def __init__(self, name):
+    def __init__(self, name: str | os.PathLike):
         """
         Initializes a new Locker instance.
 

@@ -9,6 +9,7 @@ import mdx_math
 from pygments import highlight, lexers
 from pygments.formatters import HtmlFormatter
 
+from constants import tmp_path
 from . import tools, constants
 
 prepares = {"language-" + k: lexers.get_lexer_by_name(k) for lexer in lexers.get_all_lexers() for k in lexer[1]}
@@ -158,8 +159,8 @@ def run_markdown_file(source: str, target: str) -> None:
 
 def run_latex(pid: str, strings: list[str]):
     files = f"preparing_problems/{pid}/public_file"
-    folder = "tmp/" + tools.random_string()
-    os.makedirs(folder)
+    folder = tmp_path / tools.random_string()
+    folder.mkdir(parents=True, exist_ok=True)
     for f in os.listdir(files):
         shutil.copy(os.path.join(files, f), folder)
     outs = []
@@ -171,9 +172,9 @@ def run_latex(pid: str, strings: list[str]):
         s = "".join(ch if ord(ch) < 128 else f"\\&\\#x{hex(ord(ch))[2:]};" for ch in s)
         s = s.replace("\n", "<br>")
         s = constants.latex_begin + s + constants.latex_end
-        tools.write(s, os.path.join(folder, "tmp.tex"))
+        tools.write(s, folder / "tmp.tex")
         tools.system("htxelatex tmp.tex", folder)
-        out = tools.read_default(folder, "tmp.html")
+        out = tools.read_default(folder / "tmp.html")
         if out:
             out = out.replace("&amp;#", "&#").replace("\n", "")
             out = out[out.find(">", out.find("<body")) + 1:out.find("</body")] + "\n"

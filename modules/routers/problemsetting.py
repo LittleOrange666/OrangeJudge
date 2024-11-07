@@ -103,9 +103,9 @@ def problem_action():
 @login_required
 def problem_preview():
     idx = request.args["pid"]
-    pdat = datas.Problem.query.filter_by(pid=idx).first_or_404()
+    pdat: datas.Problem = datas.Problem.query.filter_by(pid=idx).first_or_404()
     if os.path.isfile("preparing_problems/" + idx + "/waiting"):
-        return render_template("pleasewait.html", action=tools.read("preparing_problems", idx, "waiting"))
+        return render_template("pleasewait.html", action=tools.read(pdat.path / "waiting"))
     dat = pdat.new_data
     login.check_user(Permission.make_problems, dat["users"])
     return problemsetting.preview(request.args, pdat)

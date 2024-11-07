@@ -6,17 +6,20 @@ import time
 import traceback
 from graphlib import TopologicalSorter, CycleError
 from multiprocessing import Queue, Process
+from pathlib import Path
 from typing import Callable
 from xml.etree import ElementTree
 from xml.etree.ElementTree import Element
 
-from flask import Response, abort, render_template, request, redirect, send_file
+from flask import Response, abort, render_template, request, redirect
 from pyzipper import AESZipFile
 from pyzipper.zipfile_aes import AESZipInfo
 from sqlalchemy.orm.attributes import flag_modified
 from werkzeug.datastructures import ImmutableMultiDict, MultiDict
 from werkzeug.utils import secure_filename
 
+from constants import tmp_path, preparing_problem_path
+from server import sending_file
 from . import executing, tools, constants, createhtml, datas
 
 worker_queue = Queue()
@@ -122,6 +125,10 @@ class Problem:
         lang = executing.langs["C++17"] if filedat[0] == "default" else self.lang(filedat[1])
         return just_compile(path, name, lang, env)
 
+    @property
+    def path(self) -> Path:
+        return preparing_problem_path / self.pid
+
 
 problem: Problem | None = None
 
@@ -147,36 +154,28 @@ def create_problem(name: str, pid: str, user: datas.User) -> str:
             pidx += 1
         pid = str(pidx)
     dat = datas.Problem(id=pcnt + 1, pid=pid, name=name, data={}, user=user)
-    path = "preparing_problems/" + pid
-    os.mkdir(path)
-    try:
-        making_dir(path + "/testcases")
-        making_dir(path + "/file")
-        making_dir(path + "/public_file")
-    except FileExistsError:
-        pass
+    path = preparing_problem_path / pid
+    path.mkdir()
+    (path / "testcases").mkdir()
+    (path / "file").mkdir()
+    (path / "public_file").mkdir()
     info = constants.default_problem_info | {"name": name, "users": [user.username]}
     dat.data = dat.new_data = info
     datas.add(dat)
     return pid
 
 
-def making_dir(path: str):
-    os.makedirs(path, exist_ok=True)
-    tools.create(path, ".gitkeep")
-
-
 def log(s: str, success: bool | None = None):
     tools.log(s)
     if not s.endswith("\n"):
         s += "\n"
-    tools.append(s, f"preparing_problems/{current_pid}/actions/{current_idx}.log")
+    tools.append(s, preparing_problem_path / current_pid / "actions" / f"{current_idx}.log")
     if type(success) is bool:
         end(success)
 
 
 def end(success: bool):
-    with tools.Json(f"preparing_problems/{current_pid}/actions/{current_idx}.json") as dat:
+    with tools.Json(preparing_problem_path / current_pid / "actions" / f"{current_idx}.json") as dat:
         dat["success"] = success
         dat["completed"] = True
     raise StopActionException()
@@ -222,7 +221,7 @@ def generate_testcase(pid: str):
                     gen_group['status'] = "生成失敗：生成器RE"
                     log(gen_out[1])
                     break
-                tools.write(gen_out[0], in_file)
+                tools.write(gen_out[0], Path(in_file))
                 if gen_group['type'] == "sol":
                     env.send_file(in_file)
                     if problem["is_interact"]:
@@ -262,7 +261,7 @@ def generate_testcase(pid: str):
                         gen_group['status'] = "生成失敗：答案生成器RE"
                         log(gen_out[1])
                         break
-                    tools.write(gen_out[0], in_file)
+                    tools.write(gen_out[0], Path(in_file))
                 cur.append({"in": name + ".in", "out": name + ".out", "sample": False, "pretest": False,
                             "group": gen_group['group']})
             else:
@@ -313,8 +312,8 @@ def do_import_polygon(pid: str, filename: str):
     if "problem.xml" not in files:
         abort(400)
     root: Element = ElementTree.fromstring(zip_file.read(files["problem.xml"]).decode())
-    path = f"preparing_problems/{pid}"
     dat = problem
+    path: Path = problem.path
     dat["name"] = root.find("names").find("name").get("value")
     testset = root.find("judging").find("testset")
     tl = testset.find("time-limit").text
@@ -337,7 +336,7 @@ def do_import_polygon(pid: str, filename: str):
             if test.get("method") == "manual":
                 f = next(manual_tests)
                 fn = os.path.basename(f.filename)
-                tools.write_binary(zip_file.read(f), path, "testcases", fn)
+                tools.write_binary(zip_file.read(f), path / "testcases" / fn)
                 dat["testcases"].append({"in": fn, "out": fn + ".out", "group": group, "uncomplete": True})
             else:
                 gen_cmds.append([test.get("cmd"), group])
@@ -345,14 +344,14 @@ def do_import_polygon(pid: str, filename: str):
     assets = root.find("assets")
     checker = assets.find("checker").find("source")
     fn = "checker_" + os.path.basename(checker.get("path"))
-    tools.write_binary(zip_file.read(files[checker.get("path")]), path, "file", fn)
+    tools.write_binary(zip_file.read(files[checker.get("path")]), path / "file" / fn)
     dat["checker_source"] = ["my", fn]
     nw_files = [{"name": fn, "type": constants.polygon_type.get(checker.get("type"), "C++17")}]
     interactor = assets.find("interactor")
     if interactor:
         source = interactor.find("source")
         fn = "interactor_" + os.path.basename(source.get("path"))
-        tools.write_binary(zip_file.read(files[source.get("path")]), path, "file", fn)
+        tools.write_binary(zip_file.read(files[source.get("path")]), path / "file" / fn)
         dat["interactor_source"] = fn
         nw_files.append({"name": fn, "type": constants.polygon_type.get(source.get("type"), "C++17")})
         dat["is_interact"] = True
@@ -360,7 +359,7 @@ def do_import_polygon(pid: str, filename: str):
     for solution in assets.find("solutions").iter("solution"):
         source = solution.find("source")
         fn = "solution_" + os.path.basename(source.get("path"))
-        tools.write_binary(zip_file.read(files[source.get("path")]), path, "file", fn)
+        tools.write_binary(zip_file.read(files[source.get("path")]), path / "file" / fn)
         nw_files.append({"name": fn, "type": constants.polygon_type.get(source.get("type"), "C++17")})
         if solution.get("tag") == "main":
             main_sol = fn
@@ -368,7 +367,7 @@ def do_import_polygon(pid: str, filename: str):
     for executable in root.iter("executable"):
         source = executable.find("source")
         fn = os.path.basename(source.get("path"))
-        tools.write_binary(zip_file.read(files[source.get("path")]), path, "file", fn)
+        tools.write_binary(zip_file.read(files[source.get("path")]), path / "file" / fn)
         nw_files.append({"name": fn, "type": constants.polygon_type.get(source.get("type"), "C++17")})
     for o in nw_files:
         for old in dat["files"]:
@@ -440,26 +439,29 @@ def runner():
 
 
 def add_background_action(obj: dict):
-    folder = f"preparing_problems/{obj['pid']}/actions"
-    if not os.path.isdir(folder):
-        os.makedirs(folder, exist_ok=True)
-    cnt = int(tools.read_default(f"preparing_problems/{obj['pid']}/background_action_cnt", default="0"))
+    folder = preparing_problem_path / obj['pid'] / "actions"
+    if not folder.is_dir():
+        folder.mkdir(parents=True, exist=True)
+    cntfile = preparing_problem_path / obj['pid'] / "background_action_cnt"
+    cnt = int(tools.read_default(cntfile, default="0"))
     idx = cnt + 1
-    tools.write(str(idx), f"preparing_problems/{obj['pid']}/background_action_cnt")
+    tools.write(str(idx), cntfile)
     obj["idx"] = idx
     worker_queue.put(obj)
     cur = obj | {"completed": False}
-    tools.write_json(cur, f"preparing_problems/{obj['pid']}/actions/{idx}.json")
+    tools.write_json(cur, folder / f"{idx}.json")
 
 
 def check_background_action(pid: str):
-    idx = tools.read_default(f"preparing_problems/{pid}/background_action_cnt", default="0")
+    cntfile = preparing_problem_path / pid / "background_action_cnt"
+    idx = tools.read_default(cntfile, default="0")
     if idx == "0":
         return None
-    dat = tools.read_json(f"preparing_problems/{pid}/actions/{idx}.json")
+    path = preparing_problem_path / pid / "actions"
+    dat = tools.read_json(path / f"{idx}.json")
     if dat["completed"]:
         return None
-    return tools.read(f"preparing_problems/{pid}/actions/{idx}.log"), dat["action"]
+    return tools.read(path / f"{idx}.log"), dat["action"]
 
 
 @actions.default
@@ -520,9 +522,9 @@ def render_statement(pid: str, dat: Problem):
         full += "\n## 互動說明\n" + obj["interaction"]
     if obj["scoring"]:
         full += "\n## 配分\n" + obj["scoring"]
-    tools.write(full, f"preparing_problems/{pid}/statement.md")
+    tools.write(full, dat.path / "statement.md")
     createhtml.parse.dirname = pid
-    tools.write(createhtml.run_markdown(full), f"preparing_problems/{pid}/statement.html")
+    tools.write(createhtml.run_markdown(full),  dat.path / "statement.html")
 
 
 @make_important
@@ -547,14 +549,12 @@ def upload_zip(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Pro
     if len(ps) == 0:
         abort(400)
     fps = [(o["in"], o["out"]) for o in dat["testcases"]]
-    if os.path.isdir(path + "/testcases/"):
-        shutil.rmtree(path + "/testcases/")
-        os.makedirs(path + "/testcases/", exist_ok=True)
+    testcases = Path(path) / "testcases"
     for o in ps:
         f0 = secure_filename(o[0].filename)
         f1 = secure_filename(o[1].filename)
-        tools.write_binary(zip_file.read(o[0]), f"{path}/testcases/{f0}")
-        tools.write_binary(zip_file.read(o[1]), f"{path}/testcases/{f1}")
+        tools.write_binary(zip_file.read(o[0]), testcases / f0)
+        tools.write_binary(zip_file.read(o[1]), testcases / f1)
         if (f0, f1) not in fps:
             dat["testcases"].append({"in": f0, "out": f1, "sample": "sample" in f0, "pretest": "pretest" in f0})
     os.remove(filename)
@@ -601,7 +601,7 @@ def upload_public_file(form: ImmutableMultiDict[str, str], pid: str, path: str, 
             abort(400)
         if len(fn) > 100:
             abort(400)
-        if tools.exists(path, "public_file", fn):
+        if (dat.path / "public_file" / fn).exists():
             abort(409)
     for file in get_files:
         fn = secure_filename(file.filename)
@@ -629,7 +629,7 @@ def upload_file(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Pr
             abort(400)
         if len(fn) > 100:
             abort(400)
-        if tools.exists(path, "file/", fn):
+        if (dat.path / "file" / fn).exists():
             abort(409)
         file.save(path + "/file/" + fn)
         dat["files"].append({"name": fn, "type": "C++17"})
@@ -641,9 +641,10 @@ def create_file(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Pr
     filename = secure_filename(form["filename"])
     if len(filename) == 0 or len(filename) > 100:
         abort(400)
-    if tools.exists(path, "file", filename):
+    filepath = dat.path / "file" / filename
+    if filepath.exists():
         abort(409)
-    tools.create(path, "file", filename)
+    filepath.touch()
     dat["files"].append({"name": filename, "type": "C++17"})
     return "files"
 
@@ -966,7 +967,7 @@ def import_problem(form: ImmutableMultiDict[str, str], pid: str, path: str, dat:
 
 @actions.bind
 def export_problem(form: ImmutableMultiDict[str, str], pid: str, path: str, dat: Problem) -> str | Response:
-    filename = f"tmp/{tools.random_string()}.zip"
+    filename = tmp_path / f"{tools.random_string()}.zip"
     dirs = ("file", "public_file", "testcases")
     files = ("statement.html", "statement.md")
     with AESZipFile(filename, "w") as zf:
@@ -993,37 +994,31 @@ def action(form: ImmutableMultiDict[str, str]) -> Response:
                 return tp
 
 
-def sending_file(file: str) -> Response:
-    file = os.path.abspath(file)
-    if not os.path.exists(file):
-        abort(404)
-    return send_file(file)
-
-
 def preview(args: MultiDict[str, str], pdat: datas.Problem) -> Response:
     pid = args["pid"]
-    path = f"preparing_problems/{pid}"
+    path = preparing_problem_path / pid
+    filename = secure_filename(args["name"])
     match args["type"]:
         case "statement":
-            if not tools.exists(path + "/statement.html"):
+            if not (path / "statement.html").exists():
                 abort(404)
             dat = pdat.new_data
-            statement = tools.read(path + "/statement.html")
+            statement = tools.read(path / "statement.html")
             lang_exts = json.dumps({k: v.data["source_ext"] for k, v in executing.langs.items()})
-            samples = [[tools.read(path, k, o["in"]), tools.read(path, k, o["out"])]
+            samples = [[tools.read(path / k / o["in"]), tools.read(path / k / o["out"])]
                        for k in ("testcases", "testcases_gen") for o in dat.get(k, []) if o.get("sample", False)]
             ret = render_template("problem.html", dat=dat, statement=statement,
                                   langs=executing.langs.keys(), lang_exts=lang_exts, pid=pid,
                                   preview=True, samples=enumerate(samples))
             return Response(ret)
         case "public_file":
-            return sending_file(path + "/public_file/" + secure_filename(args["name"]))
+            return sending_file(path / "public_file" / filename)
         case "file":
-            return sending_file(path + "/file/" + secure_filename(args["name"]))
+            return sending_file(path / "file" / filename)
         case "testcases":
-            return sending_file(path + "/testcases/" + secure_filename(args["name"]))
+            return sending_file(path / "testcases" / filename)
         case "testcases_gen":
-            return sending_file(path + "/testcases_gen/" + secure_filename(args["name"]))
+            return sending_file(path / "testcases_gen" / filename)
     abort(404)
 
 

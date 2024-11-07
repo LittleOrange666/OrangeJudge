@@ -1,8 +1,11 @@
 import os
 from datetime import datetime
+from os import PathLike
+from pathlib import Path
 
 from flask_sqlalchemy import SQLAlchemy
 
+from constants import problem_path, contest_path, submission_path
 from . import server, locks
 
 datafile = os.path.abspath(os.path.join(os.getcwd(), "data", "data.sqlite"))
@@ -55,6 +58,14 @@ class Submission(db.Model):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
+    @property
+    def path(self) -> Path:
+        """
+        returns the path to the submission
+        :return: submission_path / str(self.id)
+        """
+        return submission_path / str(self.id)
+
 
 class Problem(db.Model):
     __tablename__ = 'problems'
@@ -76,6 +87,14 @@ class Problem(db.Model):
         return (self.data["languages"].get(lang, True) and
                 (not self.data.get("runner_enabled", False) or lang in self.data.get("runner_source", {})))
 
+    @property
+    def path(self) -> Path:
+        """
+        returns the path to the problem
+        :return: problem_path / self.pid
+        """
+        return problem_path / self.pid
+
 
 class Contest(db.Model):
     __tablename__ = 'contests'
@@ -94,6 +113,14 @@ class Contest(db.Model):
             return False
         per: Period = Period.query.get(self.main_period_id)
         return (self.data["practice"] == "public") and per and per.is_over()
+
+    @property
+    def path(self) -> Path:
+        """
+        returns the path to the contest
+        :return: contest_path / self.cid
+        """
+        return contest_path / self.cid
 
 
 class Period(db.Model):

@@ -38,8 +38,8 @@ def create_contest(name: str, user: datas.User) -> str:
     datas.add(dat, per)
     dat.main_period_id = per.id
     datas.add(dat)
-    os.mkdir("contests/" + cid)
-    tools.write_json({}, f"contests/{cid}/standings.json")
+    dat.path.mkdir(parents=True,exist_ok=True)
+    tools.write_json({}, dat.path / "standings.json")
     return cid
 
 

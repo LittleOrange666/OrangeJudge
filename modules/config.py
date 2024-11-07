@@ -12,7 +12,8 @@ class ConfigError(Exception):
 with open("config.yaml", "r") as f:
     config = yaml.load(f, yaml.loader.SafeLoader)
 
-print("config=", config)
+
+# print("config=", config)
 
 
 def save_config():
@@ -69,9 +70,6 @@ class SmtpConfig(ConfigCategory):
         self.enabled = ConfigProperty[bool](self, "enabled", "SMTP是否啟用", bool, False)
 
 
-smtp = SmtpConfig(config)
-
-
 class ServerConfig(ConfigCategory):
     def __init__(self, data: dict):
         super().__init__(data, "server", "伺服器設定")
@@ -82,18 +80,12 @@ class ServerConfig(ConfigCategory):
                                                 ["30 per 30 second", "3 per 1 second"])
 
 
-server = ServerConfig(config)
-
-
 class JudgeConfig(ConfigCategory):
     def __init__(self, data: dict):
         super().__init__(data, "judge", "評測系統設定")
         self.workers = ConfigProperty[int](self, "workers", "評測系統並行數量", int, 1)
         self.limit = ConfigProperty[str](self, "limit", "提交頻率限制", str, "1 per 10 second")
         self.file_size = ConfigProperty[int](self, "file_size", "檔案大小限制(KB)", int, 100)
-
-
-judge = JudgeConfig(config)
 
 
 class DebugConfig(ConfigCategory):
@@ -103,15 +95,16 @@ class DebugConfig(ConfigCategory):
         self.single_secret = ConfigProperty[bool](self, "single_secret", "使用固定的SECRET_KEY", bool, False)
 
 
-debug = DebugConfig(config)
-
-
 class AccountConfig(ConfigCategory):
     def __init__(self, data: dict):
         super().__init__(data, "account", "帳號系統設定")
         self.signup = ConfigProperty[bool](self, "signup", "是否開放註冊", bool, True)
 
 
+smtp = SmtpConfig(config)
+server = ServerConfig(config)
+judge = JudgeConfig(config)
+debug = DebugConfig(config)
 account = AccountConfig(config)
 
 
