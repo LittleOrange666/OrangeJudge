@@ -392,15 +392,15 @@ def pagination(sql_obj, rev: bool = True, page: int | str | None = None, page_si
 
 
 def move(src: Path, dst: Path):
-    log(f"Moving {src!r} to {dst!r}")
+    log(f"Moving {str(src)!r} to {str(dst)!r}")
     shutil.move(src, dst)
 
 
 def copy(src: Path, dst: Path):
-    log(f"Copying {src!r} to {dst!r}")
+    log(f"Copying {str(src)!r} to {str(dst)!r}")
     shutil.copy(src, dst)
 
 
 def delete(target: Path):
-    log(f"Deleting {target!r}")
+    log(f"Deleting {str(target)!r}")
     target.unlink()
