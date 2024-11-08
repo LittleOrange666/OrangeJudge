@@ -5,8 +5,7 @@ import threading
 import time
 from pathlib import Path
 from typing import Callable, Any
-
-from . import constants, tools, datas
+from . import constants, tools, datas, server
 from .constants import lang_path
 
 
@@ -321,10 +320,11 @@ class Language:
 def scheduled_restart_sandbox():
     while True:
         time.sleep(1800)
-        while datas.Submission.query.filter_by(completed=False).count() > 0:
-            time.sleep(60)
-        call(["sudo", "lxc-stop", "-n", constants.lxc_name])
-        call(["sudo", "lxc-start", "-n", constants.lxc_name])
+        with server.app.app_context():
+            while datas.Submission.query.filter_by(completed=False).count() > 0:
+                time.sleep(60)
+            call(["sudo", "lxc-stop", "-n", constants.lxc_name])
+            call(["sudo", "lxc-start", "-n", constants.lxc_name])
 
 
 langs: dict[str, Language] = {}

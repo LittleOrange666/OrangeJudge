@@ -206,7 +206,8 @@ def generate_testcase(pid: str):
     ml = int(problem["memorylimit"])
     log("clear folder")
     testcase_path = problem.path / "testcases_gen"
-    shutil.rmtree(testcase_path)
+    if testcase_path.is_dir():
+        shutil.rmtree(testcase_path)
     testcase_path.mkdir(parents=True, exist_ok=True)
     log("complete clear folder")
     if "gen_groups" in problem:
@@ -284,14 +285,14 @@ def creating_version(pid: str, description: str):
         end(False)
     file = problem.compile_dat(problem["checker_source"], "checker", env)
     env.get_file(problem.path / file.inner, file)
-    problem["checker"] = [file.inner, problem.lang_of(*problem["checker_source"]).branch]
+    problem["checker"] = [str(file.inner), problem.lang_of(*problem["checker_source"]).branch]
     if problem["is_interact"]:
         if "interactor_source" not in problem:
             log("interactor missing")
             end(False)
         file = problem.compile_dat(("my", problem["interactor_source"]), "interactor", env)
         env.get_file(problem.path / file.inner, file)
-        problem["interactor"] = [file.inner, problem.lang(problem["interactor_source"]).branch]
+        problem["interactor"] = [str(file.inner), problem.lang(problem["interactor_source"]).branch]
     if "gen_msg" in problem or "ex_gen_msg" in problem:
         generate_testcase(pid)
     if "versions" not in problem:
@@ -444,7 +445,7 @@ def runner():
 def add_background_action(obj: dict):
     folder = preparing_problem_path / obj['pid'] / "actions"
     if not folder.is_dir():
-        folder.mkdir(parents=True, exist=True)
+        folder.mkdir(parents=True, exist_ok=True)
     cntfile = preparing_problem_path / obj['pid'] / "background_action_cnt"
     cnt = int(tools.read_default(cntfile, default="0"))
     idx = cnt + 1
