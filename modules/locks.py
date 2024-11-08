@@ -1,6 +1,7 @@
 import os
 from multiprocessing import Lock, Manager, Value
 from multiprocessing.managers import SyncManager
+from pathlib import Path
 from time import sleep
 from typing import TypeVar
 
@@ -11,14 +12,14 @@ T = TypeVar('T')
 
 
 class Locker:
-    def __init__(self, name: str | os.PathLike):
+    def __init__(self, name: Path):
         """
         Initializes a new Locker instance.
 
         Args:
             name (str): The name of the resource to be locked, typically a file path.
         """
-        self.name = os.path.abspath(name)
+        self.name = str(name.absolute())
         self.locked = False
 
     def __enter__(self):

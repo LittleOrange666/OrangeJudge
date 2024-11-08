@@ -1,7 +1,6 @@
 import json
-import os
+import shutil
 import subprocess
-import time
 import uuid
 from datetime import datetime
 from functools import partial
@@ -10,10 +9,11 @@ from typing import Callable, Any
 
 from flask import abort, request
 
+from .constants import tmp_path
 from . import locks, config, constants
 
 
-def system(s: str, cwd: str | os.PathLike = "") -> None:
+def system(s: str, cwd: Path = Path.cwd()) -> None:
     """
     Execute a system command in a specified directory.
 
@@ -31,9 +31,8 @@ def system(s: str, cwd: str | os.PathLike = "") -> None:
     Note:
         The function logs the command and its execution directory before running it.
     """
-    cwd = os.path.abspath(cwd)
-    log(f"system command in {cwd!r}:", s)
-    subprocess.call(s, cwd=cwd, shell=True)
+    log(f"system command in {cwd.absolute()!r}:", s)
+    subprocess.call(s, cwd=cwd.absolute(), shell=True)
 
 
 def create_truncated(source: Path, target: Path) -> str:
@@ -96,12 +95,13 @@ def get_content(filename: str) -> str:
         This function relies on external functions 'read' and 'create_truncated',
         which are assumed to be defined elsewhere in the code.
     """
-    target = filename + "_partial"
-    if os.path.isfile(target):
-        return read(Path(target))
-    file_stats = os.stat(filename)
+    target = Path(filename + "_partial")
+    filename = Path(filename)
+    if target.is_file():
+        return read(target)
+    file_stats = filename.stat()
     if file_stats.st_size <= 500:
-        return read(Path(filename))
+        return read(filename)
     content = create_truncated(filename, target)
     return content
 
@@ -255,14 +255,14 @@ class Switcher:
 
 
 class Json:
-    def __init__(self, *filename: str):
-        self.name = os.path.abspath(os.path.join(*filename))
-        self.lock = locks.Locker(self.name)
+    def __init__(self, filename: Path):
+        self.path = filename.absolute()
+        self.lock = locks.Locker(self.path)
         self.dat = None
 
     def __enter__(self):
         self.lock.__enter__()
-        with open(self.name) as f:
+        with self.path.open() as f:
             self.dat = json.load(f)
         return self.dat
 
@@ -271,14 +271,14 @@ class Json:
         self.lock.__exit__(exc_type, exc_val, exc_tb)
 
     def save(self) -> None:
-        with open(self.name, "w") as f:
+        with self.path.open("w") as f:
             json.dump(self.dat, f, indent=2)
 
 
 class File:
-    def __init__(self, *filename: str):
-        self.name = os.path.abspath(os.path.join(*filename))
-        self.lock = locks.Locker(self.name)
+    def __init__(self, filename: Path):
+        self.path = filename.absolute()
+        self.lock = locks.Locker(self.path)
 
     def __enter__(self):
         self.lock.__enter__()
@@ -288,27 +288,28 @@ class File:
         self.lock.__exit__(exc_type, exc_val, exc_tb)
 
     def read(self) -> str:
-        with open(self.name) as f:
+        with self.path.open() as f:
             return f.read()
 
     def write(self, content: str) -> str:
-        with open(self.name, "w") as f:
+        with self.path.open("w") as f:
             f.write(content)
             return content
 
     def append(self, content: str) -> str:
-        with open(self.name, "a") as f:
+        with self.path.open("a") as f:
             f.write(content)
             return content
 
 
 class TempFile(File):
     def __init__(self, end=""):
-        super().__init__("tmp", random_string() + end)
+        super().__init__(tmp_path / (random_string() + end))
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         super().__exit__(exc_type, exc_val, exc_tb)
-        os.remove(self.name)
+        if self.path.is_file():
+            self.path.unlink()
 
 
 def random_string() -> str:
@@ -388,3 +389,18 @@ def pagination(sql_obj, rev: bool = True, page: int | str | None = None, page_si
     displays = [1, page_cnt]
     displays.extend(range(max(2, page - 2), min(page_cnt, page + 2) + 1))
     return got_data, page_cnt, page, sorted(set(displays))
+
+
+def move(src: Path, dst: Path):
+    log(f"Moving {src!r} to {dst!r}")
+    shutil.move(src, dst)
+
+
+def copy(src: Path, dst: Path):
+    log(f"Copying {src!r} to {dst!r}")
+    shutil.copy(src, dst)
+
+
+def delete(target: Path):
+    log(f"Deleting {target!r}")
+    target.unlink()

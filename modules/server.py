@@ -1,4 +1,3 @@
-import os
 import secrets
 import socket
 import traceback
@@ -92,7 +91,7 @@ def error_503(error):
 @app.errorhandler(Exception)
 def error_500(error: Exception):
     target = tools.random_string()
-    with open(f"logs/{target}.log", "w", encoding="utf-8") as f:
+    with (Path("log") / "{target}.log").open("w") as f:
         traceback.print_exception(error, file=f)
     if request.method == "POST":
         return target, 500

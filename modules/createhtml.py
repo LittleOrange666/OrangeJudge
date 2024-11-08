@@ -2,6 +2,7 @@ import os
 import re
 import shutil
 from html.parser import HTMLParser
+from pathlib import Path
 from typing import Callable
 
 import markdown
@@ -9,8 +10,9 @@ import mdx_math
 from pygments import highlight, lexers
 from pygments.formatters import HtmlFormatter
 
-from constants import tmp_path
+from .constants import preparing_problem_path
 from . import tools, constants
+from .constants import tmp_path
 
 prepares = {"language-" + k: lexers.get_lexer_by_name(k) for lexer in lexers.get_all_lexers() for k in lexer[1]}
 the_headers = ("h1", "h2", "h3")
@@ -150,19 +152,18 @@ def run_markdown(source: str) -> str:
 
 def run_markdown_file(source: str, target: str) -> None:
     dat = run_markdown(open(source, encoding="utf8").read())
-    try:
-        open(target, "w", encoding="utf8").write(dat)
-    except FileNotFoundError:
-        os.makedirs(os.path.dirname(target), exist_ok=True)
-        open(target, "w", encoding="utf8").write(dat)
+    target = Path(target)
+    if not target.parent.is_dir():
+        target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(dat, encoding="utf8")
 
 
 def run_latex(pid: str, strings: list[str]):
-    files = f"preparing_problems/{pid}/public_file"
+    files = preparing_problem_path / pid / "public_file"
     folder = tmp_path / tools.random_string()
     folder.mkdir(parents=True, exist_ok=True)
-    for f in os.listdir(files):
-        shutil.copy(os.path.join(files, f), folder)
+    for f in files.iterdir():
+        shutil.copy(f, folder)
     outs = []
     for s in strings:
         s = s.strip()

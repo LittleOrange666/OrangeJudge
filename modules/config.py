@@ -9,7 +9,7 @@ class ConfigError(Exception):
     pass
 
 
-with open("config.yaml", "r") as f:
+with open("config.yaml") as f:
     config = yaml.load(f, yaml.loader.SafeLoader)
 
 

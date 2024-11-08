@@ -1,17 +1,15 @@
-import os
 from datetime import datetime
-from os import PathLike
 from pathlib import Path
 
 from flask_sqlalchemy import SQLAlchemy
 
-from constants import problem_path, contest_path, submission_path
 from . import server, locks
+from .constants import problem_path, contest_path, submission_path
 
-datafile = os.path.abspath(os.path.join(os.getcwd(), "data", "data.sqlite"))
+datafile = Path.cwd() / "data" / "data.sqlite"
 app = server.app
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + datafile
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + str(datafile)
 db = SQLAlchemy(app)
 
 

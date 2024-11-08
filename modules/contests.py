@@ -1,5 +1,4 @@
 import multiprocessing
-import os
 from datetime import datetime, timedelta
 from multiprocessing import Process
 from time import sleep
@@ -10,8 +9,8 @@ from flask_login import current_user
 from sqlalchemy.orm.attributes import flag_modified
 from werkzeug.datastructures import ImmutableMultiDict
 
-from .constants import Permission
 from . import tools, constants, datas, tasks
+from .constants import Permission
 
 actions = tools.Switcher()
 
@@ -38,7 +37,7 @@ def create_contest(name: str, user: datas.User) -> str:
     datas.add(dat, per)
     dat.main_period_id = per.id
     datas.add(dat)
-    dat.path.mkdir(parents=True,exist_ok=True)
+    dat.path.mkdir(parents=True, exist_ok=True)
     tools.write_json({}, dat.path / "standings.json")
     return cid
 
@@ -224,7 +223,8 @@ def action(form: ImmutableMultiDict[str, str], cdat: datas.Contest):
 
 
 def check_super_access(dat: datas.Contest) -> bool:
-    return current_user.is_authenticated and (current_user.has(Permission.admin) or current_user.id in dat.data["users"])
+    return current_user.is_authenticated and (
+            current_user.has(Permission.admin) or current_user.id in dat.data["users"])
 
 
 def check_access(dat: datas.Contest):

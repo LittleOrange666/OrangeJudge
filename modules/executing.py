@@ -1,14 +1,17 @@
 import math
-import os.path
+import os
 import subprocess
+import threading
+import time
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Any
 
-from constants import lang_path
 from . import constants, tools, datas
+from .constants import lang_path
 
 
-def call(cmd: list[str], stdin: str = "", timeout: float | None = None) -> tuple[str, str, int]:
+def call(cmd: list[Any], stdin: str = "", timeout: float | None = None) -> tuple[str, str, int]:
+    cmd = list(map(str, cmd))
     tools.log(*cmd)
     if timeout is None:
         timeout = 30
@@ -21,14 +24,56 @@ def is_tle(result: tuple[str, str, int]) -> bool:
     return result == ("TLE", "TLE", 777777)
 
 
+class SandboxPath:
+    def __init__(self, dirname: str, path: str):
+        self._dirname = dirname
+        self._path = path
+
+    @property
+    def full(self):
+        """
+        Returns the file's full path outside the sandbox.
+        :return: full path
+        """
+        return constants.lxc_root_path / self._dirname / self._path
+
+    @property
+    def sandbox(self):
+        """
+        Returns the file's full path within the sandbox.
+        :return: sandbox path
+        """
+        return Path("/") / self._dirname / self._path
+
+    @property
+    def inner(self):
+        """
+        Returns the file's path within the Environment.
+        :return: inner path
+        """
+        return Path(self._path)
+
+    @property
+    def stem(self):
+        """
+        The final path component, minus its last suffix.
+        :return: stem
+        """
+        return Path(self._path).stem
+
+    def __str__(self):
+        return str(self.sandbox)
+
+    def __repr__(self):
+        return repr(self.sandbox)
+
+
 class Environment:
     """
     A class representing an environment for executing code in a Linux container.
 
     Attributes
     ----------
-    lxc_name : str
-        The name of the Linux container.
     dirname : str
         The name of the directory created within the Linux container.
     prefix : list[str]
@@ -83,25 +128,20 @@ class Environment:
     runwithinteractshell(cmd: list[str], interact_cmd: list[str], in_file: str, out_file: str, tl: float, ml: int, base_cmd: list[str]) -> tuple[str, str, int]
         Runs a command within the Linux container using an interactive shell and returns the output.
     """
-    __slots__ = ("lxc_name", "dirname", "prefix", "safe", "judge")
+    __slots__ = ("dirname", "prefix", "safe", "judge")
 
-    def __init__(self, lxc_name: str = constants.lxc_name):
-        self.lxc_name: str = lxc_name
+    def __init__(self):
         self.dirname: str = tools.random_string()
-        mkdir = ["sudo", "lxc-attach", "-n", self.lxc_name, "--", "mkdir", "/" + self.dirname]
+        mkdir = ["sudo", "lxc-attach", "-n", constants.lxc_name, "--", "mkdir", "/" + self.dirname]
         call(mkdir)
-        self.prefix: list[str] = ["sudo", "lxc-attach", "-n", self.lxc_name, "--"]
+        self.prefix: list[str] = ["sudo", "lxc-attach", "-n", constants.lxc_name, "--"]
         self.safe: list[str] = ["sudo", "-u", "nobody"]
         self.judge: list[str] = ["sudo", "-u", "judge"]
 
-    def get_lxc_root(self) -> str:
-        """
-        Returns the root path of the Linux container.
-        :return: root path of the Linux container
-        """
-        return f"/var/lib/lxc/{self.lxc_name}/rootfs"
+    def path(self, path: str) -> SandboxPath:
+        return SandboxPath(self.dirname, path)
 
-    def send_file(self, filepath: str, nxt: Callable[[str], None] | None = None) -> str:
+    def send_file(self, filepath: Path, nxt: Callable[[SandboxPath], None] | None = None) -> SandboxPath:
         """
         Sends a file to the Linux container.
         :param filepath: file that will be sent
@@ -109,49 +149,32 @@ class Environment:
         :return: filepath within the Linux container.
         """
         tools.log("send", filepath)
-        file_abspath = os.path.abspath(filepath)
-        cmd = ["sudo", "cp", file_abspath, f"{self.get_lxc_root()}/{self.dirname}"]
-        call(cmd)
+        tools.copy(filepath, constants.lxc_root_path / self.dirname)
+        out = self.path(filepath.name)
         if nxt is None:
-            self.protected(filepath)
+            self.protected(out)
         else:
-            nxt(filepath)
-        return self.filepath(file_abspath)
+            nxt(out)
+        return out
 
-    def rename(self, filename: str, nwname: str) -> str:
-        folder = f"{self.get_lxc_root()}/{self.dirname}"
-        cmd = ["sudo", "mv", f"{self.get_lxc_root()}{filename}", f"{folder}/{nwname}"]
-        call(cmd)
-        return self.filepath(nwname)
+    def rename(self, filename: SandboxPath, nwname: str) -> SandboxPath:
+        ret = self.path(nwname)
+        tools.move(filename.full, ret.full)
+        return ret
 
-    def get_file(self, filepath: str, source: None | str = None) -> None:
-        file_abspath = os.path.abspath(filepath)
+    def get_file(self, filepath: Path, source: None | SandboxPath = None) -> None:
         if source is None:
-            source = os.path.basename(filepath)
-        if self.dirname not in source:
-            source = os.path.join("/" + self.dirname, source)
-        cmd = ["sudo", "mv", self.get_lxc_root() + source,
-               os.path.dirname(file_abspath)]
-        call(cmd)
+            source = self.path(filepath.name)
+        tools.move(source.full, filepath.absolute())
 
-    def simple_path(self, filepath: str) -> str:
-        target = os.path.basename(filepath)
-        cmd = ["sudo", "mv", os.path.join(f"/{self.dirname}", filepath), f"/{self.dirname}/{target}"]
-        if os.path.join(f"/{self.dirname}", filepath) != f"/{self.dirname}/{target}":
-            self.simple_run(cmd)
+    def simple_path(self, filepath: SandboxPath) -> SandboxPath:
+        target = self.path(filepath.inner.name)
+        if target.inner != filepath.inner:
+            tools.move(filepath.full, target.full)
         return target
 
-    def rm_file(self, filepath: str) -> None:
-        call(self.prefix + ["rm", self.filepath(filepath)])
-
-    def filepath(self, filename: str) -> str:
-        if filename.startswith("/" + self.dirname):
-            return filename
-        return "/" + self.dirname + "/" + (
-            filename if filename.count("/") <= 2 and "__pycache__" in filename else os.path.basename(filename))
-
-    def fullfilepath(self, filename: str) -> str:
-        return self.get_lxc_root() + self.filepath(filename)
+    def rm_file(self, filepath: Path) -> None:
+        tools.delete(self.path(filepath.name).full)
 
     def simple_run(self, cmd: list[str]) -> tuple[str, str, int]:
         return call(self.prefix + cmd)
@@ -162,75 +185,77 @@ class Environment:
     def judge_run(self, cmd: list[str]) -> tuple[str, str, int]:
         return call(self.prefix + self.judge + cmd)
 
-    def exist(self, filename: str) -> bool:
-        return os.path.exists(self.fullfilepath(filename))
+    def exist(self, filename: SandboxPath) -> bool:
+        return filename.full.exists()
 
-    def judge_writeable(self, *filenames: str) -> None:
+    def judge_writeable(self, *filenames: SandboxPath) -> None:
         for filename in filenames:
             if not self.exist(filename):
-                Path(self.fullfilepath(filename)).touch()
-            filepath = self.filepath(filename)
+                filename.full.touch()
+            filepath = filename.sandbox
             call(self.prefix + ["chgrp", "judge", filepath])
             call(self.prefix + ["chmod", "760", filepath])
 
-    def writeable(self, *filenames: str) -> None:
+    def writeable(self, *filenames: SandboxPath) -> None:
         for filename in filenames:
             if not self.exist(filename):
-                Path(self.fullfilepath(filename)).touch()
-            filepath = self.filepath(filename)
+                filename.full.touch()
+            filepath = filename.sandbox
             call(self.prefix + ["chmod", "766", filepath])
 
-    def judge_executable(self, *filenames: str) -> None:
+    def judge_executable(self, *filenames: SandboxPath) -> None:
         for filename in filenames:
-            filepath = self.filepath(filename)
+            filepath = filename.sandbox
             call(self.prefix + ["chgrp", "judge", filepath])
             call(self.prefix + ["chmod", "750", filepath])
 
-    def executable(self, *filenames: str) -> None:
+    def executable(self, *filenames: SandboxPath) -> None:
         for filename in filenames:
-            filepath = self.filepath(filename)
+            filepath = filename.sandbox
             call(self.prefix + ["chmod", "755", filepath])
 
-    def readable(self, *filenames: str) -> None:
+    def readable(self, *filenames: SandboxPath) -> None:
         for filename in filenames:
-            filepath = self.filepath(filename)
+            filepath = filename.sandbox
             call(self.prefix + ["chmod", "744", filepath])
 
-    def judge_readable(self, *filenames: str) -> None:
+    def judge_readable(self, *filenames: SandboxPath) -> None:
         for filename in filenames:
-            filepath = self.filepath(filename)
+            filepath = filename.sandbox
             call(self.prefix + ["chgrp", "judge", filepath])
             call(self.prefix + ["chmod", "740", filepath])
 
-    def protected(self, *filenames: str) -> None:
+    def protected(self, *filenames: SandboxPath) -> None:
         for filename in filenames:
-            filepath = self.filepath(filename)
+            filepath = filename.sandbox
             call(self.prefix + ["chmod", "700", filepath])
 
-    def runwithshell(self, cmd: list[str], in_file: str, out_file: str, tl: float, ml: int, base_cmd: list[str]) \
+    def runwithshell(self, cmd: list[str], in_file: SandboxPath, out_file: SandboxPath, tl: float, ml: int,
+                     base_cmd: list[str]) \
             -> tuple[str, str, int]:
         try:
-            main = ["sudo", os.path.abspath("/judge/shell"), str(math.ceil(tl)), str(ml * 1024 * 1024),
+            main = ["sudo", "/judge/shell", str(math.ceil(tl)), str(ml * 1024 * 1024),
                     str(100 * 1024 * 1024), repr(" ".join(base_cmd)),
-                    repr(" ".join(cmd)), in_file, out_file]
+                    repr(" ".join(cmd)), in_file.sandbox, out_file.sandbox]
             return call(self.prefix + main, timeout=tl + 1)
         except subprocess.TimeoutExpired:
             return "TLE", "TLE", 777777
 
-    def runwithinteractshell(self, cmd: list[str], interact_cmd: list[str], in_file: str, out_file: str, tl: float,
+    def runwithinteractshell(self, cmd: list[str], interact_cmd: list[str], in_file: SandboxPath, out_file: SandboxPath,
+                             tl: float,
                              ml: int, base_cmd: list[str]) \
             -> tuple[str, str, int]:
         try:
-            main = ["sudo", os.path.abspath("/judge/interact_shell"), str(math.ceil(tl)), str(ml * 1024 * 1024),
+            main = ["sudo", "/judge/interact_shell", str(math.ceil(tl)), str(ml * 1024 * 1024),
                     str(100 * 1024 * 1024), repr(" ".join(base_cmd)),
-                    repr(" ".join(cmd)), repr(" ".join(interact_cmd)), in_file, out_file,
-                    self.filepath(tools.random_string())]
+                    repr(" ".join(cmd)), repr(" ".join(interact_cmd)), in_file.sandbox, out_file.sandbox,
+                    self.path(tools.random_string())]
             return call(self.prefix + main, timeout=tl + 1)
         except subprocess.TimeoutExpired:
             return "TLE", "TLE", 777777
 
     def __del__(self):
-        cmd = ["sudo", "lxc-attach", "-n", self.lxc_name, "--", "sudo", "rm", "-rf", "/" + self.dirname]
+        cmd = ["sudo", "lxc-attach", "-n", constants.lxc_name, "--", "sudo", "rm", "-rf", "/" + self.dirname]
         call(cmd)
 
 
@@ -247,22 +272,20 @@ class Language:
         self.base_exec_cmd = self.get_execmd(exec_name)
         call(["sudo", "lxc-attach", "-n", constants.lxc_name, "--"] + ["chmod", "755", exec_name])
 
-    def compile(self, filename: str, env: Environment, runner_filename: str | None = None) -> tuple[str, str]:
+    def compile(self, filename: SandboxPath, env: Environment, runner_filename: SandboxPath | None = None) -> tuple[
+        SandboxPath, str]:
         if self.data["require_compile"]:
             if runner_filename is not None:
                 if not self.supports_runner():
                     return filename, "Runner not supported"
-            dirname = os.path.dirname(filename)
-            new_filename = os.path.splitext(filename)[0]
-            new_filename = env.filepath(self.data["exec_name"].format(os.path.basename(new_filename), **self.kwargs))
+            dirname = filename.sandbox.parent
+            new_filename = env.path(self.data["exec_name"].format(filename.stem, **self.kwargs))
             other_file = None
             if runner_filename is not None:
                 compile_cmd = self.data["compile_runner_cmd"][:]
                 if not self.supports_runner():
                     return filename, "Runner not supported"
-                new_runner_filename = os.path.splitext(runner_filename)[0]
-                new_runner_filename = env.filepath(self.data["exec_name"].format(os.path.basename(new_runner_filename),
-                                                                                 **self.kwargs))
+                new_runner_filename = env.path(self.data["exec_name"].format(runner_filename.stem, **self.kwargs))
                 for i in range(len(compile_cmd)):
                     compile_cmd[i] = compile_cmd[i].format(filename, new_filename, runner_filename, new_runner_filename,
                                                            **self.kwargs)
@@ -278,7 +301,6 @@ class Language:
                 env.executable(other_file)
             new_filename = env.simple_path(new_filename)
             env.executable(new_filename)
-            new_filename = os.path.join(dirname, new_filename)
             if out[1] and out[2] != 0:
                 tools.log(out[1])
                 return new_filename, out[1]
@@ -286,16 +308,23 @@ class Language:
         env.executable(filename)
         return filename, ""
 
-    def get_execmd(self, filename: str) -> list[str]:
+    def get_execmd(self, filename: SandboxPath) -> list[str]:
         exec_cmd = self.data["exec_cmd"][:]
         for i in range(len(exec_cmd)):
-            exec_cmd[i] = exec_cmd[i].format(filename,
-                                             os.path.basename(os.path.splitext(filename)[0]),
-                                             folder=os.path.dirname(filename), **self.kwargs)
+            exec_cmd[i] = exec_cmd[i].format(filename, filename.stem, folder=filename.sandbox.parent, **self.kwargs)
         return exec_cmd
 
     def supports_runner(self):
         return "compile_runner_cmd" in self.data
+
+
+def scheduled_restart_sandbox():
+    while True:
+        time.sleep(1800)
+        while datas.Submission.query.filter_by(completed=False).count() > 0:
+            time.sleep(60)
+        call(["sudo", "lxc-stop", "-n", constants.lxc_name])
+        call(["sudo", "lxc-start", "-n", constants.lxc_name])
 
 
 langs: dict[str, Language] = {}
@@ -305,11 +334,16 @@ def init():
     for name in os.listdir("judge"):
         call(["sudo", "lxc-attach", "-n", constants.lxc_name, "--"] + ["chmod", "700", f"/judge/{name}"])
     call(["sudo", "lxc-attach", "-n", constants.lxc_name, "--"] + ["chmod", "755", f"/judge/__pycache__"])
-    for lang in os.listdir("langs"):
-        lang_name = os.path.splitext(lang)[0]
-        dat = tools.read_json(lang_path / f"{lang_name}.json")
+    for lang_file in lang_path.iterdir():
+        if lang_file.suffix != ".json":
+            continue
+        lang_name = lang_file.stem
+        dat = tools.read_json(lang_file)
         keys = dat["branches"].keys()
         for key in keys:
             langs[key] = Language(lang_name, key)
         for s in dat.get("executables", []):
             call(["sudo", "lxc-attach", "-n", constants.lxc_name, "--"] + ["chmod", "755", s])
+    restarter = threading.Thread(target=scheduled_restart_sandbox)
+    restarter.daemon = True
+    restarter.start()

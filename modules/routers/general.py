@@ -1,16 +1,16 @@
 import datetime
 import json
-import os
 
-from flask import abort, render_template, redirect, request, send_file, jsonify
+from flask import abort, render_template, redirect, request, jsonify
 from flask_login import login_required, current_user
 from pygments import highlight, lexers
 from pygments.formatters import HtmlFormatter
 from werkzeug.utils import secure_filename
 
-from server import sending_file
-from ..constants import Permission, problem_path
+from ..constants import submission_path
+from ..server import sending_file
 from .. import tools, server, constants, executing, tasks, datas, contests, login, config
+from ..constants import Permission, problem_path
 
 app = server.app
 
@@ -99,11 +99,10 @@ def submit():
 
 @app.route("/submission/<idx>", methods=['GET'])
 @login_required
-def submission(idx):
+def submission(idx: str):
     dat: datas.Submission = datas.Submission.query.get_or_404(idx)
-    path = "submissions/" + idx
     lang = dat.language
-    source = tools.read(path, dat.source)
+    source = tools.read(submission_path / idx, dat.source)
     source = highlight(source, prepares[executing.langs.get(lang, executing.langs["PlainText"]).name], HtmlFormatter())
     completed = dat.completed
     ce_msg = dat.ce_msg
@@ -111,10 +110,10 @@ def submission(idx):
     if pdat.pid == "test":
         if not current_user.has(Permission.admin) and dat.user_id != current_user.data.id:
             abort(403)
-        inp = tools.read_default(path, dat.data["infile"])
-        out = tools.read_default(path, dat.data["outfile"])
+        inp = tools.read_default(dat.path / dat.data["infile"])
+        out = tools.read_default(dat.path / dat.data["outfile"])
         result = dat.simple_result or "unknown"
-        err = tools.read_default(path, "stderr.txt")
+        err = tools.read_default(dat.path / "stderr.txt")
         ret = render_template("submission/test.html", lang=lang, source=source, inp=inp,
                               out=out, completed=completed, result=result, pos=tasks.get_queue_position(dat),
                               ce_msg=ce_msg, je=dat.data.get("JE", False), logid=dat.data.get("log_uuid", ""), err=err)
@@ -135,14 +134,15 @@ def submission(idx):
             result["protected"] = protected = ((not problem_info.get('public_testcase', False) or bool(dat.period_id))
                                                and current_user.id not in problem_info["users"]
                                                and not current_user.has(Permission.admin))
+            testcase_path = dat.path / "testcases"
             for i in range(len(results)):
                 if results[i]["result"] != "SKIP" and (not protected or super_access or results[i]["sample"]):
-                    results[i]["in"] = tools.read(f"{path}/testcases/{i}.in")
-                    results[i]["out"] = tools.read(f"{path}/testcases/{i}.ans")
+                    results[i]["in"] = tools.read(testcase_path / f"{i}.in")
+                    results[i]["out"] = tools.read(testcase_path / f"{i}.ans")
                 else:
                     results[i]["in"] = results[i]["out"] = ""
                 if results[i].get("has_output", False):
-                    results[i]["user_out"] = tools.read(f"{path}/testcases/{i}.out")
+                    results[i]["user_out"] = tools.read(testcase_path / f"{i}.out")
             result["results"] = results
             if "group_results" in result_data:
                 gpr = result_data["group_results"]
@@ -177,7 +177,6 @@ def problem_page(idx):
         return redirect("/test")
     pdat: datas.Problem = datas.Problem.query.filter_by(pid=idx).first_or_404()
     idx = secure_filename(idx)
-    path = "problems/" + idx
     dat = pdat.data
     if not pdat.is_public:
         if not current_user.is_authenticated:
@@ -185,13 +184,14 @@ def problem_page(idx):
         if not current_user.has(Permission.admin) and current_user.id not in dat.get("users", []):
             abort(403)
     langs = [lang for lang in executing.langs.keys() if pdat.lang_allowed(lang)]
-    return render_problem(dat, idx, path, langs, is_contest=False)
+    return render_problem(dat, idx, langs, is_contest=False)
 
 
-def render_problem(dat, idx, path, langs, **kwargs):
-    statement = tools.read(path, "statement.html")
+def render_problem(dat, idx: str, langs: list[str], **kwargs):
+    path = problem_path / idx
+    statement = tools.read(path / "statement.html")
     lang_exts = json.dumps({k: v.data["source_ext"] for k, v in executing.langs.items()})
-    samples = dat.get("manual_samples", []) + [[tools.read(path, k, o["in"]), tools.read(path, k, o["out"])]
+    samples = dat.get("manual_samples", []) + [[tools.read(path / k / o["in"]), tools.read(path / k / o["out"])]
                                                for k in ("testcases", "testcases_gen") for o in dat.get(k, []) if
                                                o.get("sample", False)]
     return render_template("problem.html", dat=dat, statement=statement,

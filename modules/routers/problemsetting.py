@@ -1,11 +1,14 @@
 import os
+from pathlib import Path
+from typing import Iterable
 
 from flask import abort, render_template, request
 from flask_login import login_required
 from werkzeug.utils import secure_filename
 
-from ..constants import Permission
+from constants import preparing_problem_path, problem_path
 from .. import tools, server, login, constants, executing, problemsetting, datas
+from ..constants import Permission
 
 app = server.app
 
@@ -58,11 +61,8 @@ def my_problem_page(idx):
         return render_template("pleasewaitlog.html", action=o[1], log=o[0])
     dat = pdat.new_data
     user = login.check_user(Permission.make_problems, dat["users"])
-    public_files = os.listdir(f"preparing_problems/{idx}/public_file")
-    try:
-        public_files.remove(".gitkeep")
-    except ValueError:
-        pass
+    p_path = preparing_problem_path / idx
+    public_files: list[str] = [f.name for f in (p_path / "public_file").iterdir() if f.name != ".gitkeep"]
     default_checkers = [s for s in os.listdir("testlib/checkers") if s.endswith(".cpp")]
     default_interactors = [s for s in os.listdir("testlib/interactors") if s.endswith(".cpp")]
     if "groups" not in dat or "default" not in dat["groups"]:
@@ -70,12 +70,12 @@ def my_problem_page(idx):
             dat["groups"] = {}
         if "default" not in dat["groups"]:
             dat["groups"]["default"] = {}
-    action_files = os.listdir(f"preparing_problems/{idx}/actions") if \
-        os.path.isdir(f"preparing_problems/{idx}/actions") else []
+    action_path = p_path / "actions"
+    action_files: Iterable[Path] = action_path.iterdir() if action_path.is_dir() else []
     actions = []
     for f in action_files:
-        if os.path.splitext(f)[1] == ".json":
-            actions.append(os.path.splitext(f)[0])
+        if f.suffix == ".json":
+            actions.append(f.stem)
     return render_template("problemsetting.html", dat=constants.default_problem_info | dat, pid=idx,
                            versions=problemsetting.query_versions(pdat), enumerate=enumerate,
                            public_files=public_files, default_checkers=default_checkers,
@@ -89,7 +89,7 @@ def problem_action():
     idx = request.form["pid"]
     idx = secure_filename(idx)
     pdat = datas.Problem.query.filter_by(pid=idx).first_or_404()
-    if os.path.isfile("preparing_problems/" + idx + "/waiting"):
+    if (problem_path / idx / "waiting").is_file():
         abort(503)
     if problemsetting.check_background_action(idx) is not None:
         abort(503)
@@ -104,7 +104,7 @@ def problem_action():
 def problem_preview():
     idx = request.args["pid"]
     pdat: datas.Problem = datas.Problem.query.filter_by(pid=idx).first_or_404()
-    if os.path.isfile("preparing_problems/" + idx + "/waiting"):
+    if (problem_path / idx / "waiting").is_file():
         return render_template("pleasewait.html", action=tools.read(pdat.path / "waiting"))
     dat = pdat.new_data
     login.check_user(Permission.make_problems, dat["users"])

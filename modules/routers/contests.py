@@ -5,9 +5,9 @@ from flask import abort, render_template, request, jsonify
 from flask_login import login_required, current_user
 from sqlalchemy.orm.attributes import flag_modified
 
-from ..constants import Permission
 from .general import render_problem
 from .. import server, login, contests, datas, tools, executing
+from ..constants import Permission
 
 app = server.app
 
@@ -57,10 +57,9 @@ def contest_problem(cid, pid):
         abort(404)
     idx = info["problems"][pid]["pid"]
     pdat: datas.Problem = datas.Problem.query.filter_by(pid=idx).first_or_404()
-    path = "problems/" + idx
     dat = pdat.data
     langs = [lang for lang in executing.langs.keys() if pdat.lang_allowed(lang)]
-    return render_problem(dat, idx, path, langs, is_contest=True, cid=cid, cname=cdat.name, pidx=pid)
+    return render_problem(dat, idx, langs, is_contest=True, cid=cid, cname=cdat.name, pidx=pid)
 
 
 @app.route("/contest/<cid>/status/<page_str>", methods=["POST"])
