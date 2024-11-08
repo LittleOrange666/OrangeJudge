@@ -6,9 +6,8 @@ from flask import abort, render_template, request
 from flask_login import login_required
 from werkzeug.utils import secure_filename
 
-from constants import preparing_problem_path, problem_path
 from .. import tools, server, login, constants, executing, problemsetting, datas
-from ..constants import Permission
+from ..constants import Permission, preparing_problem_path, problem_path
 
 app = server.app
 

@@ -102,7 +102,7 @@ def submit():
 def submission(idx: str):
     dat: datas.Submission = datas.Submission.query.get_or_404(idx)
     lang = dat.language
-    source = tools.read(submission_path / idx, dat.source)
+    source = tools.read(submission_path / idx / dat.source)
     source = highlight(source, prepares[executing.langs.get(lang, executing.langs["PlainText"]).name], HtmlFormatter())
     completed = dat.completed
     ce_msg = dat.ce_msg

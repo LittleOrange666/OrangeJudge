@@ -268,7 +268,7 @@ class Language:
         base_name = "base_" + self.name
         if "base_name" in self.data:
             base_name = self.data["base_name"].format(**self.kwargs)
-        exec_name = "/judge/" + self.data["exec_name"].format(base_name, **self.kwargs)
+        exec_name = SandboxPath("judge",self.data["exec_name"].format(base_name, **self.kwargs))
         self.base_exec_cmd = self.get_execmd(exec_name)
         call(["sudo", "lxc-attach", "-n", constants.lxc_name, "--"] + ["chmod", "755", exec_name])
 

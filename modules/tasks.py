@@ -4,6 +4,7 @@ import traceback
 from multiprocessing import Pool
 from pathlib import Path
 
+from .constants import log_path
 from . import executing, constants, tools, locks, datas, config
 
 judger_pool: Pool = Pool(config.judge.workers.value)
@@ -68,7 +69,7 @@ def run_test(dat: datas.Submission) -> None:
 def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
     lang = executing.langs[dat.language]
     env = executing.Environment()
-    source = pdat.path / dat.source
+    source = dat.path / dat.source
     p_path = pdat.path
     problem_info = constants.default_problem_info | pdat.data
     for fn in problem_info.get("library", []):
@@ -261,7 +262,7 @@ def runner(idx: int):
                     dat.data["JE"] = True
                     log_uuid = tools.random_string()
                     dat.data["log_uuid"] = log_uuid
-                    tools.write("".join(traceback.format_exception(e)), Path("logs") / (log_uuid + ".log"))
+                    tools.write("".join(traceback.format_exception(e)), log_path / (log_uuid + ".log"))
                     dat.completed = True
                     datas.add(dat)
                 return

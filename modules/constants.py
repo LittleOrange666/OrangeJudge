@@ -113,6 +113,8 @@ lang_path = Path("langs").absolute()
 
 submission_path = Path("submissions").absolute()
 
+log_path = Path("logs").absolute()
+
 lxc_root = "/var/lib/lxc/" + lxc_name + "/rootfs"
 
 lxc_root_path = Path(lxc_root).absolute()

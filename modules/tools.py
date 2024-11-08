@@ -31,7 +31,7 @@ def system(s: str, cwd: Path = Path.cwd()) -> None:
     Note:
         The function logs the command and its execution directory before running it.
     """
-    log(f"system command in {cwd.absolute()!r}:", s)
+    log(f"system command in {str(cwd.absolute())!r}:", s)
     subprocess.call(s, cwd=cwd.absolute(), shell=True)
 
 

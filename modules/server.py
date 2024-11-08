@@ -9,6 +9,7 @@ from flask_limiter.util import get_remote_address
 from flask_session import Session
 from flask_wtf import CSRFProtect
 
+from .constants import log_path
 from . import tools, config
 
 app = Flask(__name__, static_url_path='/static', static_folder="../static/", template_folder="../templates/")
@@ -91,7 +92,7 @@ def error_503(error):
 @app.errorhandler(Exception)
 def error_500(error: Exception):
     target = tools.random_string()
-    with (Path("log") / "{target}.log").open("w") as f:
+    with (log_path / f"{target}.log").open("w") as f:
         traceback.print_exception(error, file=f)
     if request.method == "POST":
         return target, 500
