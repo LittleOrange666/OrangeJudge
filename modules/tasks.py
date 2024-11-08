@@ -7,7 +7,7 @@ from pathlib import Path
 from .constants import log_path
 from . import executing, constants, tools, locks, datas, config
 
-judger_pool: Pool = Pool(config.judge.workers.value)
+judger_pool = None
 
 last_judged = locks.Counter()
 
@@ -246,6 +246,7 @@ def get_queue_position(dat: datas.Submission) -> int:
 
 
 def runner(idx: int):
+    print("get", idx)
     try:
         for _ in range(5):
             dat: datas.Submission = datas.Submission.query.get(idx)
@@ -272,12 +273,15 @@ def runner(idx: int):
 
 
 def enqueue(idx: int) -> int:
-    runner(idx)
-    # judger_pool.apply_async(runner, (idx,))
+    # runner(idx)
+    judger_pool.apply_async(runner, (idx,))
     return queue_position.inc()
 
 
 def init():
+    global judger_pool
+    judger_pool = Pool(config.judge.workers.value)
+
     def resolve_pool():
         judger_pool.close()
         judger_pool.terminate()
