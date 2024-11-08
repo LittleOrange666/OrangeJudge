@@ -5,8 +5,8 @@ import traceback
 from multiprocessing import Pool, Queue
 from pathlib import Path
 
-from .constants import log_path
 from . import executing, constants, tools, locks, datas, config
+from .constants import log_path
 
 last_judged = locks.Counter()
 
@@ -17,6 +17,29 @@ queue_position = locks.Counter()
 
 def run(lang: executing.Language, file: Path, env: executing.Environment, stdin: Path, stdout: Path,
         dat: datas.Submission) -> str:
+    """
+    Execute and evaluate a submitted program.
+
+    This function compiles the submitted code, runs it with the provided input,
+    and evaluates the output. It handles various execution scenarios including
+    compilation errors, runtime errors, time limit exceeded, and successful runs.
+
+    Parameters:
+    lang (executing.Language): The programming language of the submission.
+    file (Path): Path to the submitted source code file.
+    env (executing.Environment): The execution environment.
+    stdin (Path): Path to the input file.
+    stdout (Path): Path to the output file.
+    dat (datas.Submission): The submission data object.
+
+    Returns:
+    str: A string indicating the result of the execution. Possible values include:
+         "CE" for Compilation Error,
+         "TLE" for Time Limit Exceeded,
+         "OLE" for Output Limit Exceeded,
+         "RE" for Runtime Error (with additional details),
+         "OK" for successful execution (with time and memory usage).
+    """
     filename = env.send_file(file)
     filename, ce_msg = lang.compile(filename, env)
     if ce_msg:
@@ -291,6 +314,7 @@ def init():
         while True:
             idx = submission_queue.get()
             judger_pool.apply_async(runner, (idx,))
+
     threading.Thread(target=queue_receiver, daemon=True).start()
     for submission in datas.Submission.query.filter_by(completed=False):
         enqueue(submission.id)

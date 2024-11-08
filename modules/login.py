@@ -12,21 +12,61 @@ smtp = smtplib.SMTP(config.smtp.host.value, config.smtp.port.value)
 
 
 class User(UserMixin):
+    """
+    Represents a user in the website.
+
+    This class extends UserMixin and provides methods for user management,
+    including permission checking and data persistence.
+    """
+
     def __init__(self, name: str):
+        """
+        Initialize a User object.
+
+        Args:
+            name (str): The username of the user.
+        """
         self.id = secure_filename(name.lower())
         self.data: datas.User = datas.User.query.filter_by(username=name).first()
 
     def save(self):
+        """
+        Save the user data to the database.
+        """
         datas.add(self.data)
 
     @property
     def folder(self) -> str:
+        """
+        Get the user's account folder path.
+
+        Returns:
+            str: The path to the user's account folder.
+        """
         return f"accounts/{self.id}/"
 
     def has_str(self, key: str) -> bool:
+        """
+        Check if the user has a specific permission using a string key.
+
+        Args:
+            key (str): The permission key to check.
+
+        Returns:
+            bool: True if the user has the permission, False otherwise.
+        """
         return self.has(Permission[key])
 
     def has(self, key: Permission) -> bool:
+        """
+        Check if the user has a specific permission.
+
+        Args:
+            key (Permission): The permission to check.
+
+        Returns:
+            bool: True if the user has the permission, False otherwise.
+        """
         perms = self.data.permission_list()
         if key.name in perms or Permission.root.name in perms:
             return True

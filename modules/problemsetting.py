@@ -18,11 +18,11 @@ from sqlalchemy.orm.attributes import flag_modified
 from werkzeug.datastructures import ImmutableMultiDict, MultiDict
 from werkzeug.utils import secure_filename
 
-from .tools import TempFile
 from . import executing, tools, constants, createhtml, datas
 from .constants import tmp_path, preparing_problem_path, testlib, problem_path
 from .executing import SandboxPath
 from .server import sending_file
+from .tools import TempFile
 
 worker_queue = Queue()
 
@@ -58,7 +58,20 @@ def do_compile(path: Path, name: str, lang: executing.Language, env: executing.E
 
 
 class Problem:
+    """
+    A class representing a problem in the OrangeJudge system.
+
+    This class encapsulates problem data, provides methods for manipulating the problem,
+    and handles database interactions.
+    """
+
     def __init__(self, pid: str, is_important_editing_now: bool = True):
+        """
+        Initialize a Problem instance.
+
+        :param pid: The problem identifier.
+        :param is_important_editing_now: Flag indicating if this is an important edit session.
+        """
         self.pid = pid
         self.is_important_editing_now = is_important_editing_now
         self.sql_data: datas.Problem = datas.Problem.query.filter_by(pid=pid).first()
@@ -68,9 +81,23 @@ class Problem:
         self.dat = self.sql_data.new_data
 
     def __enter__(self):
+        """
+        Enter the runtime context for the problem.
+
+        :return: The Problem instance.
+        """
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        """
+        Exit the runtime context for the problem.
+
+        This method updates the problem data in the database when exiting the context.
+
+        :param exc_type: The exception type if an exception was raised.
+        :param exc_val: The exception value if an exception was raised.
+        :param exc_tb: The traceback if an exception was raised.
+        """
         self.sql_data.new_data = self.dat
         self.sql_data.name = self.dat["name"]
         flag_modified(self.sql_data, "new_data")
@@ -80,25 +107,60 @@ class Problem:
         datas.add(self.sql_data)
 
     def save(self):
+        """
+        Save the current problem data to the database.
+        """
         self.sql_data.data = self.sql_data.new_data
         flag_modified(self.sql_data, "data")
         datas.add(self.sql_data)
 
     def __getitem__(self, item):
+        """
+        Get an item from the problem data.
+
+        :param item: The key of the item to retrieve.
+        :return: The value associated with the key, or the default value if not found.
+        """
         if item not in self.dat and item in constants.default_problem_info:
             return constants.default_problem_info[item]
         return self.dat[item]
 
     def __setitem__(self, key, value):
+        """
+        Set an item in the problem data.
+
+        :param key: The key of the item to set.
+        :param value: The value to set.
+        """
         self.dat[key] = value
 
     def __contains__(self, item):
+        """
+        Check if an item exists in the problem data.
+
+        :param item: The key to check for.
+        :return: True if the key exists, False otherwise.
+        """
         return item in self.dat
 
     def get(self, item, value):
+        """
+        Get an item from the problem data with a default value.
+
+        :param item: The key of the item to retrieve.
+        :param value: The default value to return if the key is not found.
+        :return: The value associated with the key, or the default value if not found.
+        """
         return self.dat.get(item, value)
 
     def lang(self, name) -> executing.Language:
+        """
+        Get the language for a given file name.
+
+        :param name: The name of the file.
+        :return: The Language instance for the file.
+        :raises: StopActionException if the file is not found.
+        """
         fs = [o["type"] for o in self.dat["files"] if o["name"] == name]
         if len(fs):
             return executing.langs[fs[0]]
@@ -107,6 +169,14 @@ class Problem:
             end(False)
 
     def lang_of(self, tp, name) -> executing.Language:
+        """
+        Get the language for a given file type and name.
+
+        :param tp: The type of the file.
+        :param name: The name of the file.
+        :return: The Language instance for the file.
+        :raises: StopActionException if the file is not found.
+        """
         if tp == "default":
             return executing.langs["C++17"]
         fs = [o["type"] for o in self.dat["files"] if o["name"] == name]
@@ -117,11 +187,27 @@ class Problem:
             end(False)
 
     def compile_inner(self, filename: str, name: str, env: executing.Environment) -> list[str]:
+        """
+        Compile a file within the problem's context.
+
+        :param filename: The name of the file to compile.
+        :param name: The name to use for logging and identification.
+        :param env: The execution environment.
+        :return: A list of strings representing the compilation command.
+        """
         lang = self.lang(filename)
         path = self.path / "file" / filename
         return do_compile(path, name, lang, env)
 
     def compile_dat(self, filedat: tuple[str, str], name: str, env: executing.Environment) -> SandboxPath:
+        """
+        Compile a file based on file data.
+
+        :param filedat: A tuple containing the file type and name.
+        :param name: The name to use for logging and identification.
+        :param env: The execution environment.
+        :return: A SandboxPath representing the compiled file.
+        """
         path = (Path(f"testlib/{name}s") if filedat[0] == "default" else self.path / "file") / filedat[1]
         lang = executing.langs["C++17"] if filedat[0] == "default" else self.lang(filedat[1])
         return just_compile(path, name, lang, env)
@@ -130,7 +216,8 @@ class Problem:
     def path(self) -> Path:
         """
         Returns the path of the preparing problem.
-        :return: preparing_problem_path / self.pid
+        
+        :return: A Path object representing the problem's directory.
         """
         return preparing_problem_path / self.pid
 

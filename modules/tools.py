@@ -9,8 +9,8 @@ from typing import Callable, Any
 
 from flask import abort, request
 
-from .constants import tmp_path
 from . import locks, config, constants
+from .constants import tmp_path
 
 
 def system(s: str, cwd: Path = Path.cwd()) -> None:

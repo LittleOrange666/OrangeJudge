@@ -9,8 +9,8 @@ from flask_limiter.util import get_remote_address
 from flask_session import Session
 from flask_wtf import CSRFProtect
 
-from .constants import log_path
 from . import tools, config
+from .constants import log_path
 
 app = Flask(__name__, static_url_path='/static', static_folder="../static/", template_folder="../templates/")
 if config.debug.single_secret:

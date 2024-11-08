@@ -10,8 +10,8 @@ import mdx_math
 from pygments import highlight, lexers
 from pygments.formatters import HtmlFormatter
 
-from .constants import preparing_problem_path
 from . import tools, constants
+from .constants import preparing_problem_path
 from .constants import tmp_path
 
 prepares = {"language-" + k: lexers.get_lexer_by_name(k) for lexer in lexers.get_all_lexers() for k in lexer[1]}
