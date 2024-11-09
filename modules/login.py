@@ -110,20 +110,41 @@ def try_hash(content: str | None) -> str:
     return m.hexdigest()
 
 
-def try_login(user_id: str, password: str) -> None | User:
+def try_login(user_id: str, password: str) -> tuple[None | User, str]:
+    """
+    Attempt to log in a user with the provided credentials.
+
+    This function tries to authenticate a user using either their username or email,
+    and the provided password. It performs various checks and returns appropriate
+    messages based on the authentication result.
+
+    Args:
+        user_id (str): The user's identifier, which can be either a username or an email address.
+        password (str): The user's password for authentication.
+
+    Returns:
+        tuple[None | User, str]: A tuple containing two elements:
+            - The first element is either a User object if login is successful, or None if it fails.
+            - The second element is a string message describing the result of the login attempt.
+
+    Note:
+        The function converts the user_id to lowercase before processing.
+    """
     user_id = user_id.lower()
     if password is None:
-        return None
+        return None, "密碼不能為空"
     usr = datas.User.query.filter_by(username=user_id)
     if usr.count() == 0:
         usr = datas.User.query.filter_by(email=user_id)
         if usr.count() == 0:
-            return None
+            return None, "帳號或密碼錯誤"
         user_id = usr.first().username
+    if usr.count() > 1:
+        return None, "帳號資料異常"
     pwd = usr.first().password_sha256_hex
     if pwd != try_hash(password):
-        return None
-    return User(user_id)
+        return None, "帳號或密碼錯誤"
+    return User(user_id), "登入成功"
 
 
 def get_user(user_id: str) -> User | None:

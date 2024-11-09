@@ -17,6 +17,6 @@ lang_opt.on("change", function () {
     $("#uploadfile").prop("accept", lang_exts[lang_opt.val()]);
     localStorage.lang = lang_opt.val();
 });
-if (localStorage.lang&&lang_opt.find("option[value='"+localStorage.lang+"']").length) {
+if (localStorage.lang && lang_opt.find("option[value='" + localStorage.lang + "']").length) {
     lang_opt.val(localStorage.lang).trigger("change");
 }

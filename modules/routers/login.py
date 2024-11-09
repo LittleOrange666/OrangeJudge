@@ -28,18 +28,15 @@ def log(uid):
 def do_login():
     if request.method == 'GET':
         if current_user.is_authenticated:
-            return redirect('/')
+            return redirect(request.args.get("next", "/"))
         return render_template("login.html")
-    nxt = request.form.get('next')
-    name = request.form['user_id']
-    user = login.try_login(name, request.form['password'])
+    nxt = request.form.get('next', "/")
+    name = request.form.get('user_id')
+    user, msg = login.try_login(name, request.form.get('password'))
     if user is not None:
         login_user(user)
-        return redirect(nxt or '/')
-    if nxt:
-        return redirect(f'/login?next={nxt}#fail')
-    else:
-        return redirect('/login#fail')
+        return nxt, 200
+    return msg, 403
 
 
 @app.route('/signup', methods=['GET', 'POST'])
@@ -120,7 +117,7 @@ def use_code(email: str, verify: str) -> bool:
 @login_required
 def logout():
     logout_user()
-    return redirect("/")
+    return redirect(request.referrer)
 
 
 @app.route("/user/<name>", methods=["GET"])

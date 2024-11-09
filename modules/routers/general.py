@@ -58,7 +58,7 @@ def test_submit():
     tools.write(inp, dat.path / "in.txt")
     dat.queue_position = tasks.enqueue(dat.id)
     datas.add(dat)
-    return redirect("/submission/" + idx)
+    return "/submission/" + idx, 200
 
 
 @app.route("/submit", methods=['POST'])
@@ -94,7 +94,7 @@ def submit():
     tools.write(code, dat.path / fn)
     dat.queue_position = tasks.enqueue(dat.id)
     datas.add(dat)
-    return redirect("/submission/" + idx)
+    return "/submission/" + idx
 
 
 @app.route("/submission/<idx>", methods=['GET'])

@@ -114,7 +114,7 @@ def contest_action():
 def contest_register(cid):
     dat: datas.Contest = datas.Contest.query.filter_by(cid=cid).first_or_404()
     per: datas.Period = datas.Period.query.get_or_404(dat.main_period_id)
-    if not dat.data["can_register"] or per.is_started():
+    if not dat.data["can_register"] or per.is_over():
         abort(403)
     if current_user.id in dat.data["participants"]:
         abort(409)

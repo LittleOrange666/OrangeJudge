@@ -1,8 +1,7 @@
-import atexit
-import threading
+import multiprocessing
 import time
 import traceback
-from multiprocessing import Pool, Queue
+from multiprocessing import Queue
 from pathlib import Path
 
 from . import executing, constants, tools, locks, datas, config
@@ -302,19 +301,11 @@ def enqueue(idx: int) -> int:
 
 
 def init():
-    judger_pool = Pool(config.judge.workers.value)
-
-    def resolve_pool():
-        judger_pool.close()
-        judger_pool.terminate()
-
-    atexit.register(resolve_pool)
-
     def queue_receiver():
         while True:
             idx = submission_queue.get()
-            judger_pool.apply_async(runner, (idx,))
-
-    threading.Thread(target=queue_receiver, daemon=True).start()
+            runner(idx)
+    for _ in range(config.judge.workers.value):
+        multiprocessing.Process(target=queue_receiver, daemon=True).start()
     for submission in datas.Submission.query.filter_by(completed=False):
         enqueue(submission.id)

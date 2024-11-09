@@ -3,6 +3,7 @@ const main = $("#main_area");
 const copyer = document.createElement("textarea");
 document.body.appendChild(copyer);
 $(copyer).hide();
+
 function add_copy() {
     let p = $(this);
     let text = p.text();
@@ -16,6 +17,7 @@ function add_copy() {
         navigator.clipboard.writeText(copyer.value);
     });
 }
+
 $("div.highlight").addClass("codehilite").removeClass("highlight").each(add_copy);
 $("pre.can-copy").each(add_copy);
 $("pdf-file").each(function () {
@@ -39,64 +41,64 @@ $("textarea").on("input", function () {
     if (e.key === 'Tab') {
         e.preventDefault();
         let nw = old;
-        if (start===end) {
-            if (e.shiftKey){
-                if (start>=4 && old.substring(start-indent, start)===indents){
-                    this.value = old.substring(0, start-indent) + old.substring(start);
+        if (start === end) {
+            if (e.shiftKey) {
+                if (start >= 4 && old.substring(start - indent, start) === indents) {
+                    this.value = old.substring(0, start - indent) + old.substring(start);
                     this.selectionStart = this.selectionEnd = start - indent;
                 }
-            }else{
+            } else {
                 this.value = old.substring(0, start) + indents + old.substring(end);
                 this.selectionStart = this.selectionEnd = start + indent;
             }
-        }else{
+        } else {
             let pln = old.substring(0, start).lastIndexOf("\n");
             let de = 0;
-            if (pln!==-1) de = start - pln - 1;
+            if (pln !== -1) de = start - pln - 1;
             if (e.shiftKey) {
                 let cur = start;
-                cur = nw.indexOf("\n",cur)+1;
+                cur = nw.indexOf("\n", cur) + 1;
                 let cnt = 0;
-                while (cur!==0&&cur<=end - indent*cnt) {
-                    if (nw.substring(cur, cur+indent)===indents){
+                while (cur !== 0 && cur <= end - indent * cnt) {
+                    if (nw.substring(cur, cur + indent) === indents) {
                         cnt++;
-                        nw = nw.substring(0, cur) + nw.substring(cur+indent);
+                        nw = nw.substring(0, cur) + nw.substring(cur + indent);
                     }
-                    cur = nw.indexOf("\n",cur)+1;
+                    cur = nw.indexOf("\n", cur) + 1;
                 }
-                this.selectionEnd = end - indent*cnt;
-                if (nw.substring(start-de,start-de+indent)===indents){
+                this.selectionEnd = end - indent * cnt;
+                if (nw.substring(start - de, start - de + indent) === indents) {
                     cnt++;
-                    this.value = nw.substring(0, start-de) + nw.substring(start-de+indent);
+                    this.value = nw.substring(0, start - de) + nw.substring(start - de + indent);
                     this.selectionStart = start - indent;
                 }
-            }else{
+            } else {
                 let cur = start;
-                cur = nw.indexOf("\n",cur)+1;
+                cur = nw.indexOf("\n", cur) + 1;
                 let cnt = 1;
-                while (cur!==0&&cur<=end + indent*cnt) {
+                while (cur !== 0 && cur <= end + indent * cnt) {
                     cnt++;
                     nw = nw.substring(0, cur) + indents + nw.substring(cur);
-                    cur = nw.indexOf("\n",cur+indent)+1;
+                    cur = nw.indexOf("\n", cur + indent) + 1;
                 }
-                this.value = nw.substring(0, start-de) + indents + nw.substring(start-de);
-                this.selectionEnd = end + indent*cnt;
+                this.value = nw.substring(0, start - de) + indents + nw.substring(start - de);
+                this.selectionEnd = end + indent * cnt;
                 this.selectionStart = start + indent;
             }
         }
-    }else if (e.key === "Backspace"){
-        if (start===end){
-            if (old.substring(start-indent, start)===indents){
+    } else if (e.key === "Backspace") {
+        if (start === end) {
+            if (old.substring(start - indent, start) === indents) {
                 e.preventDefault();
-                this.value = old.substring(0, start-indent) + old.substring(start);
+                this.value = old.substring(0, start - indent) + old.substring(start);
                 this.selectionStart = this.selectionEnd = start - indent;
             }
         }
-    }else if (e.key === "Delete"){
-        if (start===end){
-            if (old.substring(start, start+indent)===indents){
+    } else if (e.key === "Delete") {
+        if (start === end) {
+            if (old.substring(start, start + indent) === indents) {
                 e.preventDefault();
-                this.value = old.substring(0, start) + old.substring(start+indent);
+                this.value = old.substring(0, start) + old.substring(start + indent);
             }
         }
     }
@@ -153,23 +155,39 @@ $(".time-string").each(function () {
     $(this).text((d > 0 ? d + ':' : '') + (h < 10 ? "0" : "") + h + ":" + (m < 10 ? "0" : "") + m);
 });
 const myModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('myModal'));
+let current_modal_session = "";
 
 function show_modal(title, text, refresh, next_page) {
     document.getElementById('myModal').focus();
     $("#myModalTitle").text(title);
     $("#myModalText").text(text);
+    let session_id = +new Date()+""+Math.random();
+    current_modal_session = session_id;
     if (next_page) {
-        console.log("branch 1");
         $("#myModal").on("hidden.bs.modal", function () {
-            location.href = next_page;
+            if (session_id === current_modal_session) {
+                location.href = next_page;
+            }
         });
     } else if (refresh) {
-        console.log("branch 2");
         $("#myModal").on("hidden.bs.modal", function () {
-            location.reload();
+            if (session_id === current_modal_session) {
+                location.reload();
+            }
         });
     }
     myModal.show();
+    if(title==="成功"){
+        let timeout_id = window.setTimeout(function () {
+            myModal.hide();
+        },3000);
+        $("#myModal").on("hidden.bs.modal", function () {
+            if(timeout_id !== -1){
+                window.clearTimeout(timeout_id);
+                timeout_id = -1;
+            }
+        });
+    }
 }
 
 $("input[data-checked]").each(function () {
@@ -280,30 +298,29 @@ $(".submitter").each(function () {
         console.log(response);
         if (modal) modal.hide();
         $this.find("span").addClass("visually-hidden");
-        if (response.ok) {
-            if (!!$this.data("redirect")) {
-                response.text().then(function (text) {
+        response.text().then(function (text) {
+            if (response.ok) {
+                if (!!$this.data("redirect")) {
                     show_modal("成功", "成功" + action_name, !$this.data("no-refresh"), text);
-                });
-            } else if ($this.data("filename")) {
-                response.blob().then(function (blob) {
-                    let url = window.URL.createObjectURL(blob);
-                    let a = $("<a/>").attr("href", url).attr("download", $this.data("filename"));
-                    a[0].click();
-                    window.URL.revokeObjectURL(url);
-                });
-            } else {
-                show_modal("成功", "成功" + action_name, !$this.data("no-refresh"), $this.data("next"));
-            }
-        } else if (response.status === 500) {
-            response.text().then(function (text) {
+                } else if ($this.data("filename")) {
+                    response.blob().then(function (blob) {
+                        let url = window.URL.createObjectURL(blob);
+                        let a = $("<a/>").attr("href", url).attr("download", $this.data("filename"));
+                        a[0].click();
+                        window.URL.revokeObjectURL(url);
+                    });
+                } else {
+                    show_modal("成功", "成功" + action_name, !$this.data("no-refresh"), $this.data("next"));
+                }
+            } else if (response.status === 500) {
                 show_modal("失敗", "伺服器內部錯誤，log uid=" + text);
-            });
-        } else {
-            let msg = $this.data("msg-" + response.status);
-            if (!msg && response.status === 400) msg = "輸入格式不正確"
-            if (!msg && response.status === 403) msg = "您似乎沒有權限執行此操作"
-            show_modal("失敗", msg ? msg : "Error Code: " + response.status);
-        }
+            } else {
+                let msg = $this.data("msg-" + response.status);
+                if($this.data("msg-type-" + response.status)==="return") msg = text;
+                if (!msg && response.status === 400) msg = "輸入格式不正確"
+                if (!msg && response.status === 403) msg = "您似乎沒有權限執行此操作"
+                show_modal("失敗", msg ? msg : "Error Code: " + response.status);
+            }
+        });
     });
 });
