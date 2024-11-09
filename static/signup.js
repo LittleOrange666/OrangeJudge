@@ -1,9 +1,3 @@
-next.value = new URL(document.location).searchParams.get("next");
-let msg = new URL(document.location).searchParams.get("msg");
-if (msg) {
-    show_modal("失敗", msg);
-    history.replaceState(null, "", location.origin + location.pathname);
-}
 $("#get-code").click(function () {
     let email = $("#email").val();
     if (!email.match(/^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/g)) show_modal("錯誤", "email格式不合法");
@@ -35,3 +29,5 @@ function validateForm() {
     }
     return true;
 }
+let nxt = new URL(document.referrer).origin === location.origin? document.referrer : "/";
+$("#do_signup_btn").data("next", nxt);

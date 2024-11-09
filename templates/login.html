@@ -13,7 +13,7 @@
             <input type="password" class="form-control" id="password" name="password" placeholder="Password" required>
         </div>
         <div class="mb-3 col-5 offset-2">
-            <button class="btn btn-primary submitter" data-msg-type-403="return" id="login_btn">登入</button>
+            <button class="btn btn-primary submitter" data-msg-type-403="return" id="do_login_btn">登入</button>
             <a href="/signup" class="btn btn-secondary">註冊</a>
             <a href="/forget_password" class="btn btn-warning">忘記密碼</a>
         </div>
@@ -21,5 +21,6 @@
 {% endblock %}
 
 {% block script %}
-    $("#login_btn").data("next", new URL(document.location).searchParams.get("next"));
+    let nxt = new URL(document.referrer).origin === location.origin? document.referrer : "/";
+    $("#do_login_btn").data("next", nxt);
 {% endblock %}

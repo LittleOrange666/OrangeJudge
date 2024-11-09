@@ -30,12 +30,11 @@ def do_login():
         if current_user.is_authenticated:
             return redirect(request.args.get("next", "/"))
         return render_template("login.html")
-    nxt = request.form.get('next', "/")
     name = request.form.get('user_id')
     user, msg = login.try_login(name, request.form.get('password'))
     if user is not None:
         login_user(user)
-        return nxt, 200
+        return msg, 200
     return msg, 403
 
 
@@ -46,38 +45,31 @@ def signup():
     need_verify = config.smtp.enabled.value
     if request.method == 'GET':
         if current_user.is_authenticated:
-            return redirect('/')
+            return redirect(request.referrer)
         return render_template("signup.html", need_verify=need_verify)
     email = request.form["email"]
     verify = request.form["verify"] if need_verify else ""
     user_id = request.form["user_id"]
     password = request.form["password"]
-    nxt = request.form.get('next')
-    url = URL(request.referrer)
-    err = ""
+    password_again = request.form["password_again"]
     if constants.user_id_reg.match(user_id) is None:
-        err = "ID不合法"
-    elif login.exist(user_id):
-        err = "ID已被使用"
-    elif datas.User.query.filter_by(email=email).count() > 0:
-        err = "email已被使用"
-    elif len(password) < 6:
-        err = "密碼應至少6個字元"
-    elif need_verify and not use_code(email, verify):
-        err = "驗證碼錯誤"
-    if err:
-        q = {"msg": err}
-        q.update(url.query)
-        return redirect(str(url.with_query(q)))
+        return "ID不合法", 400
+    if login.exist(user_id):
+        return "ID已被使用", 400
+    if datas.User.query.filter_by(email=email).count() > 0:
+        return "email已被使用", 400
+    if len(password) < 6:
+        return "密碼應至少6個字元", 400
+    if password != password_again:
+        return "重複密碼不一致", 400
+    if need_verify and not use_code(email, verify):
+        return "驗證碼錯誤", 400
     login.create_account(email, user_id, password)
-    user = login.try_login(user_id, password)
+    user, msg = login.try_login(user_id, password)
     if user is None:
-        err = "註冊失敗"
-        q = {"msg": err}
-        q.update(url.query)
-        return redirect(str(url.with_query(q)))
+        return "註冊失敗: " + msg, 400
     login_user(user)
-    return redirect(nxt or '/')
+    return "OK", 200
 
 
 verify_codes = locks.manager.dict()
