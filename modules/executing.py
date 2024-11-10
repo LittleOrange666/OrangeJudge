@@ -127,8 +127,8 @@ class Environment:
             SandboxPath: A SandboxPath object representing the file sent in the sandbox.
         """
         tools.log("send", filepath)
-        tools.copy(filepath, constants.lxc_root_path / self.dirname)
         out = self.path(filepath.name)
+        tools.copy(filepath, out.full)
         if nxt is None:
             self.protected(out)
         else:
