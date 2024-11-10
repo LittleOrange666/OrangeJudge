@@ -6,7 +6,7 @@ from flask import abort, render_template, request
 from flask_login import login_required
 from werkzeug.utils import secure_filename
 
-from .. import tools, server, login, constants, executing, problemsetting, datas
+from .. import tools, server, login, constants, executing, problemsetting, datas, config
 from ..constants import Permission, preparing_problem_path, problem_path
 
 app = server.app
@@ -98,7 +98,7 @@ def problem_action():
 
 
 @app.route("/problemsetting_preview", methods=["GET"])
-@server.limiter.limit("30 per 5 second")
+@server.limiter.limit(config.server.file_limit)
 @login_required
 def problem_preview():
     idx = request.args["pid"]

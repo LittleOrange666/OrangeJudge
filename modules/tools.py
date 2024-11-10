@@ -339,7 +339,7 @@ def to_datetime(text: str, **replace_kwargs) -> datetime:
         abort(400)
 
 
-has_log: bool = config.debug.log.value
+has_log: bool = config.debug.log
 
 
 def log(*args):

@@ -37,7 +37,7 @@ def test():
 
 
 @app.route('/test_submit', methods=['POST'])
-@server.limiter.limit(config.judge.limit.value)
+@server.limiter.limit(config.judge.limit)
 @login_required
 def test_submit():
     lang = request.form["lang"]
@@ -62,12 +62,12 @@ def test_submit():
 
 
 @app.route("/submit", methods=['POST'])
-@server.limiter.limit(config.judge.limit.value)
+@server.limiter.limit(config.judge.limit)
 @login_required
 def submit():
     lang = request.form["lang"]
     code = request.form["code"].replace("\n\n", "\n")
-    if len(code) > config.judge.file_size.value * 1024:
+    if len(code) > config.judge.file_size * 1024:
         abort(400)
     pid = request.form["pid"]
     pdat: datas.Problem = datas.Problem.query.filter_by(pid=pid).first_or_404()
@@ -200,7 +200,7 @@ def render_problem(dat, idx: str, langs: list[str], **kwargs):
 
 
 @app.route("/problem_file/<idx>/<filename>", methods=['GET'])
-@server.limiter.limit("30 per 5 second")
+@server.limiter.limit(config.server.file_limit)
 def problem_file(idx, filename):
     idx = secure_filename(idx)
     filename = secure_filename(filename)

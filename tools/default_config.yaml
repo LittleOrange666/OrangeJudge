@@ -1,25 +1,24 @@
+account:
+  signup: true
+debug:
+  log: false
+  single_secret: false
+judge:
+  file_size: 100
+  limit: 1 per 10 second
+  workers: 1
+server:
+  file_limit: 30 per 5 second
+  limits:
+  - 20 per 30 second
+  - 2 per 1 second
+  port: 8080
+  timeout: 120
+  workers: 4
 smtp:
   enabled: false
   host: smtp.gmail.com
+  limit: 1 per 20 second
+  password: password
   port: 587
   user: user@gmail.com
-  password: password
-
-server:
-  port: 8080
-  workers: 4
-  timeout: 120
-  limits:
-    - 20 per 30 second
-    - 2 per 1 second
-
-judge:
-  workers: 1
-  limit: 1 per 10 second
-  file_size: 10
-
-debug:
-  log: false
-
-account:
-  signup: true

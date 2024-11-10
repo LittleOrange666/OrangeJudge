@@ -306,7 +306,7 @@ def init():
             idx = submission_queue.get()
             runner(idx)
 
-    for _ in range(config.judge.workers.value):
+    for _ in range(config.judge.workers):
         multiprocessing.Process(target=queue_receiver, daemon=True).start()
     for submission in datas.Submission.query.filter_by(completed=False):
         enqueue(submission.id)

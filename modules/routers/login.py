@@ -39,9 +39,9 @@ def do_login():
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
-    if not config.account.signup.value:
+    if not config.account.signup:
         abort(503)
-    need_verify = config.smtp.enabled.value
+    need_verify = config.smtp.enabled
     if request.method == 'GET':
         if current_user.is_authenticated:
             return redirect(request.referrer)
@@ -75,7 +75,7 @@ verify_codes = locks.manager.dict()
 
 
 @app.route('/get_code', methods=['POST'])
-@server.limiter.limit("1/20second", override_defaults=False)
+@server.limiter.limit(config.smtp.limit, override_defaults=False)
 def get_code():
     email = request.form["email"]
     if constants.email_reg.match(email) is None:
@@ -84,7 +84,7 @@ def get_code():
         abort(409)
     idx = "".join(str(random.randint(0, 9)) for _ in range(6))
     verify_codes[email] = (idx, time.time())
-    if not config.smtp.enabled.value:
+    if not config.smtp.enabled:
         abort(503)
     if not login.send_email(email, constants.email_content.format(idx)):
         abort(503)
@@ -147,7 +147,7 @@ def settings():
 
 @app.route("/forget_password", methods=["GET", "POST"])
 def forget_password():
-    if not config.smtp.enabled.value:
+    if not config.smtp.enabled:
         abort(503)
     if current_user.is_authenticated:
         abort(409)

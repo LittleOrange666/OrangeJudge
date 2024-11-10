@@ -8,7 +8,7 @@ from werkzeug.utils import secure_filename
 from . import server, datas, config
 from .constants import Permission
 
-smtp = smtplib.SMTP(config.smtp.host.value, config.smtp.port.value)
+smtp = smtplib.SMTP(config.smtp.host, config.smtp.port)
 
 
 class User(UserMixin):
@@ -79,7 +79,7 @@ app = server.app
 login_manager = LoginManager(app)
 login_manager.session_protection = None
 login_manager.login_view = 'do_login'
-email_sender = config.smtp.user.value
+email_sender = config.smtp.user
 
 
 @login_manager.user_loader
@@ -91,10 +91,10 @@ def send_email(target: str, content: str) -> bool:
     try:
         smtp.sendmail(email_sender, target, content)
     except smtplib.SMTPException:
-        smtp.connect(config.smtp.host.value, config.smtp.port.value)
+        smtp.connect(config.smtp.host, config.smtp.port)
         smtp.ehlo()
         smtp.starttls()
-        smtp.login(config.smtp.user.value, config.smtp.password.value)
+        smtp.login(config.smtp.user, config.smtp.password)
         try:
             smtp.sendmail(email_sender, target, content)
         except smtplib.SMTPException:
@@ -185,10 +185,10 @@ def check_user(require: Permission | None = None, users: list[str] | None = None
 
 
 def init():
-    if config.smtp.enabled.value:
+    if config.smtp.enabled:
         smtp.ehlo()
         smtp.starttls()
-        smtp.login(config.smtp.user.value, config.smtp.password.value)
+        smtp.login(config.smtp.user, config.smtp.password)
     if not exist("root"):
         create_account("", "root", "root")
         root: datas.User = datas.User.query.filter_by(username="root").first()
