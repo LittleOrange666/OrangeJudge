@@ -60,7 +60,7 @@ class Submission(db.Model):
     def path(self) -> Path:
         """
         returns the path to the submission
-        :return: submission_path / str(self.id)
+        :return: submission_path / submission_id
         """
         return submission_path / str(self.id)
 
@@ -89,7 +89,7 @@ class Problem(db.Model):
     def path(self) -> Path:
         """
         returns the path to the problem
-        :return: problem_path / self.pid
+        :return: problem_path / pid
         """
         return problem_path / self.pid
 
@@ -116,7 +116,7 @@ class Contest(db.Model):
     def path(self) -> Path:
         """
         returns the path to the contest
-        :return: contest_path / self.cid
+        :return: contest_path / cid
         """
         return contest_path / self.cid
 

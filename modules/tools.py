@@ -17,7 +17,7 @@ def system(s: str, cwd: Path = Path.cwd()) -> None:
     """
     Execute a system command in a specified directory.
 
-    This function runs a system command using subprocess.call with shell=True.
+    This function runs a system command using subprocess with shell=True.
     Caution: Using shell=True can be a security hazard if not used carefully.
 
     Args:

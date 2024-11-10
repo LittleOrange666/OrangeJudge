@@ -4,7 +4,6 @@ import time
 from flask import abort, render_template, redirect, request, Response
 from flask_login import login_required, current_user, login_user, logout_user
 from werkzeug.utils import secure_filename
-from yarl import URL
 
 from .. import tools, server, login, constants, datas, locks, config
 from ..constants import Permission, log_path
@@ -28,7 +27,7 @@ def log(uid):
 def do_login():
     if request.method == 'GET':
         if current_user.is_authenticated:
-            return redirect(request.args.get("next", "/"))
+            return redirect(request.referrer)
         return render_template("login.html")
     name = request.form.get('user_id')
     user, msg = login.try_login(name, request.form.get('password'))

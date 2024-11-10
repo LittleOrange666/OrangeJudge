@@ -199,17 +199,17 @@ class Problem:
         path = self.path / "file" / filename
         return do_compile(path, name, lang, env)
 
-    def compile_dat(self, filedat: tuple[str, str], name: str, env: executing.Environment) -> SandboxPath:
+    def compile_dat(self, fileinfo: tuple[str, str], name: str, env: executing.Environment) -> SandboxPath:
         """
         Compile a file based on file data.
 
-        :param filedat: A tuple containing the file type and name.
+        :param fileinfo: A tuple containing the file type and name.
         :param name: The name to use for logging and identification.
         :param env: The execution environment.
         :return: A SandboxPath representing the compiled file.
         """
-        path = (Path(f"testlib/{name}s") if filedat[0] == "default" else self.path / "file") / filedat[1]
-        lang = executing.langs["C++17"] if filedat[0] == "default" else self.lang(filedat[1])
+        path = (Path(f"testlib/{name}s") if fileinfo[0] == "default" else self.path / "file") / fileinfo[1]
+        lang = executing.langs["C++17"] if fileinfo[0] == "default" else self.lang(fileinfo[1])
         return just_compile(path, name, lang, env)
 
     @property
@@ -232,7 +232,7 @@ def init() -> None:
 
 
 def create_problem(name: str, pid: str, user: datas.User) -> str:
-    pcnt = datas.Problem.query.count()
+    problem_count = datas.Problem.query.count()
     if len(name) == 0 or len(name) > 120:
         abort(400)
     if pid:
@@ -241,11 +241,11 @@ def create_problem(name: str, pid: str, user: datas.User) -> str:
         if datas.Problem.query.filter_by(pid=pid).count():
             abort(409)
     else:
-        pidx = pcnt + 1000
+        pidx = problem_count + 1000
         while datas.Problem.query.filter_by(pid=str(pidx)).count():
             pidx += 1
         pid = str(pidx)
-    dat = datas.Problem(id=pcnt + 1, pid=pid, name=name, data={}, user=user)
+    dat = datas.Problem(id=problem_count + 1, pid=pid, name=name, data={}, user=user)
     path = preparing_problem_path / pid
     path.mkdir()
     (path / "testcases").mkdir()
@@ -298,13 +298,13 @@ def generate_testcase(pid: str):
     testcase_path.mkdir(parents=True, exist_ok=True)
     log("complete clear folder")
     if "gen_groups" in problem:
-        for gpidx, gen_group in enumerate(problem["gen_groups"]):
+        for group_id, gen_group in enumerate(problem["gen_groups"]):
             file1_cmd = get_cmd(gen_group["file1"], "generator")
             file2_cmd = get_cmd(gen_group["file2"], "solution" if gen_group['type'] == "sol" else "ans_generator")
             lang = problem.lang(gen_group["file2"])
             cur = []
             for tcidx, cmd in enumerate(gen_group['cmds']):
-                name = f"{gpidx}_{tcidx}"
+                name = f"{group_id}_{tcidx}"
                 in_file = testcase_path / f"{name}.in"
                 out_file = testcase_path / f"{name}.out"
                 log(f"generating testcase {name!r}")

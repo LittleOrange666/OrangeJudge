@@ -19,8 +19,6 @@ else:
     app.config['SECRET_KEY'] = secrets.token_urlsafe(33)
 app.config['SESSION_TYPE'] = "filesystem"
 app.config["SESSION_FILE_DIR"] = "sessions"
-# app.config['SESSION_USE_SIGNER'] = True
-# app.config['SECRET_KEY'] = os.urandom(24)
 app.config["SESSION_COOKIE_NAME"] = "OrangeJudgeSession"
 app.config['SESSION_PERMANENT'] = True
 app.config["PERMANENT_SESSION_LIFETIME"] = 200000

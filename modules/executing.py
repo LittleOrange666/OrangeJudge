@@ -135,18 +135,18 @@ class Environment:
             nxt(out)
         return out
 
-    def rename(self, filename: SandboxPath, nwname: str) -> SandboxPath:
+    def rename(self, filename: SandboxPath, newname: str) -> SandboxPath:
         """
         Rename a file in the sandbox environment.
 
         Args:
             filename (SandboxPath): The current SandboxPath of the file.
-            nwname (str): The new name for the file.
+            newname (str): The new name for the file.
 
         Returns:
             SandboxPath: A new SandboxPath object representing the renamed file.
         """
-        ret = self.path(nwname)
+        ret = self.path(newname)
         tools.move(filename.full, ret.full)
         return ret
 
@@ -404,7 +404,7 @@ class Language:
         call(["sudo", "lxc-attach", "-n", constants.lxc_name, "--"] + ["chmod", "755", exec_name])
 
     def compile(self, filename: SandboxPath, env: Environment, runner_filename: SandboxPath | None = None) -> \
-                tuple[SandboxPath, str]:
+            tuple[SandboxPath, str]:
         if self.data["require_compile"]:
             if runner_filename is not None:
                 if not self.supports_runner():

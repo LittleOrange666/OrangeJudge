@@ -51,7 +51,7 @@ def calidx(idx: int) -> str:
 
 
 @actions.bind
-def add_problem(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Contest, dat: dict) -> str:
+def add_problem(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: dict) -> str:
     pid = form["pid"]
     pdat: datas.Problem = datas.Problem.query.filter_by(pid=pid).first_or_404()
     for idx, obj in dat["problems"].items():
@@ -65,7 +65,7 @@ def add_problem(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Contes
 
 
 @actions.bind
-def remove_problem(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Contest, dat: dict) -> str:
+def remove_problem(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: dict) -> str:
     idx = form["idx"]
     if idx not in dat["problems"]:
         abort(409)
@@ -74,7 +74,7 @@ def remove_problem(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Con
 
 
 @actions.bind
-def add_participant(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Contest, dat: dict) -> str:
+def add_participant(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: dict) -> str:
     user: datas.User = datas.User.query.filter_by(username=form["username"].lower()).first_or_404()
     if user.username in dat["participants"]:
         abort(409)
@@ -83,7 +83,7 @@ def add_participant(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Co
 
 
 @actions.bind
-def remove_participant(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Contest, dat: dict) -> str:
+def remove_participant(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: dict) -> str:
     user: datas.User = datas.User.query.filter_by(username=form["username"].lower()).first_or_404()
     if user.username not in dat["participants"]:
         abort(409)
@@ -92,7 +92,7 @@ def remove_participant(form: ImmutableMultiDict[str, str], cid: str, cdat: datas
 
 
 @actions.bind
-def change_settings(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Contest, dat: dict) -> str:
+def change_settings(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: dict) -> str:
     contest_title = form["contest_title"]
     if len(contest_title) < 1 or len(contest_title) > 120:
         abort(400)
@@ -146,7 +146,7 @@ def change_settings(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Co
 
 
 @actions.bind
-def save_order(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Contest, dat: dict) -> str:
+def save_order(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: dict) -> str:
     order = form["order"].split(",")
     if set(order) != set(dat["problems"]):
         abort(400)
@@ -159,7 +159,7 @@ def save_order(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Contest
 
 
 @actions.bind
-def send_announcement(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Contest, dat: dict) -> str:
+def send_announcement(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: dict) -> str:
     if len(form["title"]) > 80:
         abort(400)
     if len(form["content"]) > 1000:
@@ -176,7 +176,7 @@ def send_announcement(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.
 
 
 @actions.bind
-def remove_announcement(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Contest, dat: dict) -> str:
+def remove_announcement(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: dict) -> str:
     idx = tools.to_int(form["id"])
     obj: datas.Announcement = datas.Announcement.query.get_or_404(idx)
     if obj.contest != cdat:
@@ -186,7 +186,7 @@ def remove_announcement(form: ImmutableMultiDict[str, str], cid: str, cdat: data
 
 
 @actions.bind
-def save_question(form: ImmutableMultiDict[str, str], cid: str, cdat: datas.Contest, dat: dict) -> str:
+def save_question(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: dict) -> str:
     idx = tools.to_int(form["id"])
     obj: datas.Announcement = datas.Announcement.query.get_or_404(idx)
     if obj.contest != cdat:
@@ -211,7 +211,7 @@ def action(form: ImmutableMultiDict[str, str], cdat: datas.Contest):
     with datas.DelayCommit():
         dat = cdat.data
         cid = cdat.cid
-        tp = actions.call(form["action"], form, cid, cdat, dat)
+        tp = actions.call(form["action"], form, cdat, dat)
         flag_modified(cdat, "data")
         datas.add(cdat)
         if form["action"] == "change_settings":

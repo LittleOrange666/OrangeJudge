@@ -46,8 +46,8 @@ def run(lang: executing.Language, file: Path, env: executing.Environment, stdin:
         return "CE"
     exec_cmd = lang.get_execmd(filename)
     Path(stdout).touch()
-    outf = env.send_file(stdout)
-    out = env.runwithshell(exec_cmd, env.send_file(stdin), outf, 10, 1000, lang.base_exec_cmd)
+    out_file = env.send_file(stdout)
+    out = env.runwithshell(exec_cmd, env.send_file(stdin), out_file, 10, 1000, lang.base_exec_cmd)
     if executing.is_tle(out):
         return "TLE: Testing is limited by 10 seconds"
     result = {o[0]: o[1] for o in (s.split("=") for s in out[0].split("\n")) if len(o) == 2}
@@ -63,15 +63,15 @@ def run(lang: executing.Language, file: Path, env: executing.Environment, stdin:
             return "RE: " + constants.exit_codes[exit_code]
         else:
             return "RE: code=" + exit_code
-    timeusage = 0
+    time_usage = 0
     if "time" in result and float(result["time"]) >= 0:
-        timeusage = int(float(result["time"]) * 1000)
+        time_usage = int(float(result["time"]) * 1000)
     memusage = 0
     if "mem" in result and float(result["mem"]) >= 0:
         memusage = (int(result["mem"]) - int(result["basemem"])) * int(result["pagesize"]) // 1000
     env.get_file(stdout)
     env.rm_file(stdin)
-    return f"OK: {timeusage}ms, {memusage}KB"
+    return f"OK: {time_usage}ms, {memusage}KB"
 
 
 def run_test(dat: datas.Submission) -> None:
@@ -305,6 +305,7 @@ def init():
         while True:
             idx = submission_queue.get()
             runner(idx)
+
     for _ in range(config.judge.workers.value):
         multiprocessing.Process(target=queue_receiver, daemon=True).start()
     for submission in datas.Submission.query.filter_by(completed=False):
