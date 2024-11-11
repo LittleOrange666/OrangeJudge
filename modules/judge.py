@@ -2,8 +2,8 @@ from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 
-from loguru import logger
 import requests
+from loguru import logger
 
 from . import constants
 

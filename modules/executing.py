@@ -1,12 +1,11 @@
 import shutil
 import subprocess
-import time
 from pathlib import Path
 from typing import Callable, Any
 
 from loguru import logger
 
-from . import constants, tools, datas, server, judge
+from . import constants, tools, judge
 from .constants import lang_path
 from .judge import SandboxPath
 
@@ -133,20 +132,6 @@ class Environment:
         tools.delete(self.path(filepath.name).full)
 
     @staticmethod
-    def safe_run(cmd: list[str]) -> tuple[str, str, int]:
-        """
-        Run a command in the sandbox environment as a non-privileged user.
-
-        Args:
-            cmd (list[str]): The command to run.
-
-        Returns:
-            tuple[str, str, int]: A tuple containing (stdout, stderr, return_code).
-        """
-        res = judge.call(cmd, user=judge.SandboxUser.nobody)
-        return res.stdout, res.stderr, res.return_code
-
-    @staticmethod
     def judge_writeable(*filenames: SandboxPath) -> None:
         """
         Make files writable by the judge user in the sandbox environment.
@@ -248,13 +233,12 @@ class Environment:
 
 class Language:
     """
-    A class representing a programming language with its compilation and execution capabilities.
+    A class representing a programming language with compile and execution capabilities.
 
     Attributes:
     name (str): The name of the programming language.
-    data (dict): The configuration data for the programming language.
     branch (str): The branch of the programming language.
-    kwargs (dict): The keyword arguments for the programming language.
+    kwargs (dict): Keyword arguments for the programming language.
     base_exec_cmd (list[str]): The base execution command for the programming language.
 
     Methods:
@@ -262,13 +246,14 @@ class Language:
         Initializes the Language object with the given name and branch.
 
     compile(self, filename: SandboxPath, env: Environment, runner_filename: SandboxPath | None = None) -> tuple[SandboxPath, str]:
-        Compiles the given source code file using the programming language.
+        Compiles the given source file using the programming language's compiler.
+        Returns the compiled file's path and any compilation errors.
 
     get_execmd(self, filename: SandboxPath) -> list[str]:
-        Returns the execution command for the given source code file.
+        Returns the execution command for the given source file.
 
     supports_runner(self) -> bool:
-        Checks if the programming language supports running a runner file.
+        Returns True if the programming language supports running a runner file, False otherwise.
     """
 
     def __init__(self, name: str, branch: str | None = None):

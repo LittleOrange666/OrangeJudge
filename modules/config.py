@@ -14,7 +14,6 @@ class ConfigError(Exception):
 with open("config.yaml") as f:
     config = yaml.load(f, yaml.loader.SafeLoader)
 
-
 logger.info("config=" + str(config))
 
 
