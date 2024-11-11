@@ -1,8 +1,5 @@
-import math
-import os
 import shutil
 import subprocess
-import threading
 import time
 from pathlib import Path
 from typing import Callable, Any
@@ -40,7 +37,7 @@ def is_tle(result: tuple[str, str, int]) -> bool:
 
 
 class Environment:
-    __slots__ = ("dirname", "prefix", "safe", "judge")
+    __slots__ = ("dirname",)
 
     def __init__(self):
         """
@@ -51,9 +48,6 @@ class Environment:
         """
         self.dirname: str = tools.random_string()
         (constants.sandbox_path / self.dirname).mkdir(parents=True, exist_ok=True)
-        self.prefix: list[str] = ["sudo", "lxc-attach", "-n", constants.lxc_name, "--"]
-        self.safe: list[str] = ["sudo", "-u", "nobody"]
-        self.judge: list[str] = ["sudo", "-u", "judge"]
 
     def path(self, path: str) -> SandboxPath:
         """
@@ -243,56 +237,6 @@ class Environment:
             filepath = filename.sandbox
             judge.call(["chmod", "700", filepath])
 
-    def runwithshell(self, cmd: list[str], in_file: SandboxPath, out_file: SandboxPath, tl: float, ml: int,
-                     base_cmd: list[str]) -> tuple[str, str, int]:
-        """
-        Run a command with shell in the sandbox environment.
-
-        Args:
-            cmd (list[str]): The command to run.
-            in_file (SandboxPath): The input file.
-            out_file (SandboxPath): The output file.
-            tl (float): Time limit in seconds.
-            ml (int): Memory limit in MB.
-            base_cmd (list[str]): The base command to run.
-
-        Returns:
-            tuple[str, str, int]: A tuple containing (stdout, stderr, return_code).
-        """
-        try:
-            main = ["sudo", "/judge/shell", str(math.ceil(tl)), str(ml * 1024 * 1024),
-                    str(100 * 1024 * 1024), repr(" ".join(base_cmd)),
-                    repr(" ".join(cmd)), in_file.sandbox, out_file.sandbox]
-            return call(self.prefix + main, timeout=tl + 1)
-        except subprocess.TimeoutExpired:
-            return "TLE", "TLE", 777777
-
-    def runwithinteractshell(self, cmd: list[str], interact_cmd: list[str], in_file: SandboxPath, out_file: SandboxPath,
-                             tl: float, ml: int, base_cmd: list[str]) -> tuple[str, str, int]:
-        """
-        Run a command with interactive shell in the sandbox environment.
-
-        Args:
-            cmd (list[str]): The command to run.
-            interact_cmd (list[str]): The command to run interactor.
-            in_file (SandboxPath): The input file.
-            out_file (SandboxPath): The output file.
-            tl (float): Time limit in seconds.
-            ml (int): Memory limit in MB.
-            base_cmd (list[str]): The base command to run.
-
-        Returns:
-            tuple[str, str, int]: A tuple containing (stdout, stderr, return_code).
-        """
-        try:
-            main = ["sudo", "/judge/interact_shell", str(math.ceil(tl)), str(ml * 1024 * 1024),
-                    str(100 * 1024 * 1024), repr(" ".join(base_cmd)),
-                    repr(" ".join(cmd)), repr(" ".join(interact_cmd)), in_file.sandbox, out_file.sandbox,
-                    self.path(tools.random_string())]
-            return call(self.prefix + main, timeout=tl + 1)
-        except subprocess.TimeoutExpired:
-            return "TLE", "TLE", 777777
-
     def __del__(self):
         """
         Clean up the environment when the object is deleted.
@@ -337,7 +281,6 @@ class Language:
             base_name = self.data["base_name"].format(**self.kwargs)
         exec_name = SandboxPath("judge", self.data["exec_name"].format(base_name, **self.kwargs))
         self.base_exec_cmd = self.get_execmd(exec_name)
-        call(["sudo", "lxc-attach", "-n", constants.lxc_name, "--"] + ["chmod", "755", exec_name])
 
     def compile(self, filename: SandboxPath, env: Environment, runner_filename: SandboxPath | None = None) -> \
             tuple[SandboxPath, str]:
@@ -384,23 +327,10 @@ class Language:
         return "compile_runner_cmd" in self.data
 
 
-def scheduled_restart_sandbox():
-    while True:
-        time.sleep(1800)
-        with server.app.app_context():
-            while datas.Submission.query.filter_by(completed=False).count() > 0:
-                time.sleep(60)
-            call(["sudo", "lxc-stop", "-n", constants.lxc_name])
-            call(["sudo", "lxc-start", "-n", constants.lxc_name])
-
-
 langs: dict[str, Language] = {}
 
 
 def init():
-    for name in os.listdir("judge"):
-        call(["sudo", "lxc-attach", "-n", constants.lxc_name, "--"] + ["chmod", "700", f"/judge/{name}"])
-    call(["sudo", "lxc-attach", "-n", constants.lxc_name, "--"] + ["chmod", "755", f"/judge/__pycache__"])
     for lang_file in lang_path.iterdir():
         if lang_file.suffix != ".json":
             continue
@@ -409,8 +339,3 @@ def init():
         keys = dat["branches"].keys()
         for key in keys:
             langs[key] = Language(lang_name, key)
-        for s in dat.get("executables", []):
-            call(["sudo", "lxc-attach", "-n", constants.lxc_name, "--"] + ["chmod", "755", s])
-    restarter = threading.Thread(target=scheduled_restart_sandbox)
-    restarter.daemon = True
-    restarter.start()

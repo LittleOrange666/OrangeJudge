@@ -26,10 +26,6 @@ class StandaloneApplication(BaseApplication):
 def main():
     if not sys.platform.startswith("linux"):
         raise RuntimeError("The judge server only supports Linux")
-    if not executing.call(["whoami"])[0].startswith("root\n"):
-        raise RuntimeError("The judge server must be run as root")
-    tools.system(f"sudo lxc-start {constants.lxc_name}")
-    tools.system(f"sudo cp -r -f judge {constants.lxc_root}")
     if not server.check_port("localhost", 6379):
         subprocess.Popen("redis-server")
     with server.app.app_context():
