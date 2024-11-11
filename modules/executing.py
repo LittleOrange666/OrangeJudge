@@ -97,8 +97,7 @@ class Environment:
         and initializing command prefixes for different execution contexts.
         """
         self.dirname: str = tools.random_string()
-        mkdir = ["sudo", "lxc-attach", "-n", constants.lxc_name, "--", "mkdir", "/" + self.dirname]
-        call(mkdir)
+        (constants.lxc_root_path / self.dirname).mkdir(parents=True, exist_ok=True)
         self.prefix: list[str] = ["sudo", "lxc-attach", "-n", constants.lxc_name, "--"]
         self.safe: list[str] = ["sudo", "-u", "nobody"]
         self.judge: list[str] = ["sudo", "-u", "judge"]

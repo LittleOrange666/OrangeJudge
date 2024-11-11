@@ -120,3 +120,5 @@ lxc_root = "/var/lib/lxc/" + lxc_name + "/rootfs"
 lxc_root_path = Path(lxc_root).absolute()
 
 testlib = Path("testlib/testlib.h").absolute()
+
+sandbox_path = Path("sandbox").absolute()
