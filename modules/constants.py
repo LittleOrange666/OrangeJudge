@@ -122,3 +122,5 @@ lxc_root_path = Path(lxc_root).absolute()
 testlib = Path("testlib/testlib.h").absolute()
 
 sandbox_path = Path("sandbox").absolute()
+
+judger_url = "http://localhost:9132"

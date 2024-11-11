@@ -11,6 +11,7 @@ sessions/
 verify/
 tmp/
 logs/
+sandbox/
 tools/inited
 contests/
 config.yaml

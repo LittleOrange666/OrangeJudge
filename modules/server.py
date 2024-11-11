@@ -2,6 +2,7 @@ import secrets
 import socket
 import traceback
 from pathlib import Path
+from loguru import logger
 
 from flask import Flask, render_template, request, Response, abort, send_file
 from flask_limiter import Limiter
@@ -108,7 +109,7 @@ def check_port(ip, port):
         else:
             return False
     except Exception as e:
-        print(f"Error: {str(e)}")
+        logger.error(f"Error: {str(e)}")
     finally:
         sock.close()
 

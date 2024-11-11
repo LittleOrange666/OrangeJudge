@@ -4,7 +4,9 @@ import traceback
 from multiprocessing import Queue
 from pathlib import Path
 
-from . import executing, constants, tools, locks, datas, config
+from loguru import logger
+
+from . import executing, constants, tools, locks, datas, config, judge
 from .constants import log_path
 
 last_judged = locks.Counter()
@@ -47,38 +49,31 @@ def run(lang: executing.Language, file: Path, env: executing.Environment, stdin:
     exec_cmd = lang.get_execmd(filename)
     Path(stdout).touch()
     out_file = env.send_file(stdout)
-    out = env.runwithshell(exec_cmd, env.send_file(stdin), out_file, 10, 1000, lang.base_exec_cmd)
-    if executing.is_tle(out):
+    err_file = env.path("stderr.txt")
+    res = judge.run(exec_cmd, 10 * 1000, 1000, env.send_file(stdin), out_file, err_file)
+    logger.debug(res)
+    if res.result == "JE":
+        return "JE: " + res.error
+    if res.result == "TLE":
         return "TLE: Testing is limited by 10 seconds"
-    result = {o[0]: o[1] for o in (s.split("=") for s in out[0].split("\n")) if len(o) == 2}
-    tools.log(out)
-    tools.write(out[1], Path(file).parent / "stderr.txt")
-    if "1" == result.get("WIFSIGNALED", None):
-        return "RE: " + "您的程式無法正常執行"
-    exit_code = result.get("WEXITSTATUS", "0")
-    if "153" == exit_code:
-        return "OLE"
-    if "0" != exit_code:
-        if exit_code in constants.exit_codes:
-            return "RE: " + constants.exit_codes[exit_code]
-        else:
-            return "RE: code=" + exit_code
-    time_usage = 0
-    if "time" in result and float(result["time"]) >= 0:
-        time_usage = int(float(result["time"]) * 1000)
-    memusage = 0
-    if "mem" in result and float(result["mem"]) >= 0:
-        memusage = (int(result["mem"]) - int(result["basemem"])) * int(result["pagesize"]) // 1000
+    tools.copy(err_file.full, Path(file).parent / "stderr.txt")
+    if res.result == "RE":
+        exit_code = str(res.exit_code)
+        msg = constants.exit_codes.get(exit_code, exit_code)
+        return f"RE: {msg}: signal {res.signal}"
+    if res.result == "MLE":
+        return "MLE: Testing is limited by 1000 MB"
     env.get_file(stdout)
-    env.rm_file(stdin)
-    return f"OK: {time_usage}ms, {memusage}KB"
+    time_usage = res.cpu_time
+    memusage = res.memory
+    return f"OK: {time_usage}ms, {memusage}B"
 
 
 def run_test(dat: datas.Submission) -> None:
     lang = executing.langs[dat.language]
     env = executing.Environment()
     idx = str(dat.id)
-    print("run test", idx)
+    logger.info("run test", idx)
     source = dat.path / dat.source
     in_file = dat.path / dat.data["infile"]
     out_file = dat.path / dat.data["outfile"]
@@ -116,7 +111,7 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
         out_info["CE"] = True
         simple_result = "CE"
     else:
-        tl = float(problem_info["timelimit"]) / 1000
+        tl = int(problem_info["timelimit"])
         ml = int(problem_info["memorylimit"])
         int_exec = []
         if problem_info["is_interact"]:
@@ -174,60 +169,54 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
                 if problem_info["is_interact"]:
                     env.judge_readable(in_path)
                     env.judge_writeable(out_path)
-                    out = env.runwithinteractshell(exec_cmd, int_exec, in_path, out_path, tl, ml, lang.base_exec_cmd)
+                    res = judge.interact_run(exec_cmd, int_exec, tl, ml, in_path, out_path,
+                                             interact_user=judge.SandboxUser.judge).result
                 else:
-                    out = env.runwithshell(exec_cmd, in_path, out_path, tl, ml, lang.base_exec_cmd)
-                if executing.is_tle(out):
+                    res = judge.run(exec_cmd, tl, ml, in_path, out_path)
+                exit_code = str(res.exit_code)
+                if res.result == "JE":
+                    ret = ["JE", res.error]
+                elif res.result == "TLE":
                     ret = ["TLE", "執行時間過長"]
+                elif res.result == "MLE":
+                    ret = ["MLE", "記憶體占用過大"]
+                elif exit_code == "153":
+                    ret = ["OLE", "輸出過大"]
                 else:
-                    result = {o[0]: o[1] for o in (s.split("=") for s in out[0].split("\n")) if len(o) == 2}
-                    tools.log(result)
-                    exit_code = result.get("WEXITSTATUS", "0")
-                    if "1" == result.get("WIFSIGNALED", None):
-                        ret = ["RE", "您的程式無法正常執行"]
-                    elif "0" != exit_code:
-                        if "153" == exit_code:
-                            ret = ["OLE", "輸出過多"]
-                        elif exit_code in constants.exit_codes:
+                    if res.result == "RE":
+                        if exit_code in constants.exit_codes:
                             ret = ["RE", constants.exit_codes[exit_code]]
                         else:
-                            ret = ["RE", out[1]]
+                            ret = ["RE", "執行期間錯誤"]
                     else:
-                        if "time" in result and float(result["time"]) >= 0:
-                            timeusage = int((float(result["time"]) + float(result["basetime"])) * 1000)
-                        if "mem" in result and float(result["mem"]) >= 0:
-                            memusage = (int(result["mem"]) - int(result["basemem"])) * int(result["pagesize"]) // 1000
+                        timeusage = res.cpu_time
+                        memusage = res.memory / 1000
                         groups[gp]["time"] = max(groups[gp]["time"], timeusage)
                         groups[gp]["mem"] = max(groups[gp]["mem"], memusage)
-                        if timeusage > tl * 950:
-                            ret = ["TLE", "執行時間過長"]
-                        elif memusage > ml * 1024:
-                            ret = ["MLE", "記憶體超出限制"]
+                        has_output = True
+                        ans_path = env.send_file(ans_file)
+                        full_checker_cmd = checker_cmd + [in_path, out_path, ans_path]
+                        env.judge_readable(ans_path, in_path, out_path)
+                        checker_out = judge.call(full_checker_cmd, user=judge.SandboxUser.judge)
+                        env.protected(ans_path, in_path, out_path)
+                        env.get_file(out_file)
+                        tools.create_truncated(Path(out_file), Path(out_file))
+                        if checker_out.stderr.startswith("partially correct"):
+                            score = checker_out.return_code
+                            name = "OK" if score >= top_score else "PARTIAL"
                         else:
-                            has_output = True
-                            ans_path = env.send_file(ans_file)
-                            full_checker_cmd = checker_cmd + [in_path, out_path, ans_path]
-                            env.judge_readable(ans_path, in_path, out_path)
-                            checker_out = env.judge_run(full_checker_cmd)
-                            env.protected(ans_path, in_path, out_path)
-                            env.get_file(out_file)
-                            tools.create_truncated(Path(out_file), Path(out_file))
-                            if checker_out[1].startswith("partially correct"):
-                                score = checker_out[2]
+                            name = constants.judge_exit_codes.get(checker_out.return_code, "JE")
+                            if name == "OK":
+                                score = top_score
+                            elif name == "POINTS":
+                                st = checker_out.stderr.split(" ")
+                                if len(st) > 1 and st[1].replace(".", "", 1).isdigit():
+                                    score = float(st[1])
                                 name = "OK" if score >= top_score else "PARTIAL"
-                            else:
-                                name = constants.judge_exit_codes.get(checker_out[2], "JE")
-                                if name == "OK":
-                                    score = top_score
-                                elif name == "POINTS":
-                                    st = checker_out[1].split(" ")
-                                    if len(st) > 1 and st[1].replace(".", "", 1).isdigit():
-                                        score = float(st[1])
-                                    name = "OK" if score >= top_score else "PARTIAL"
-                            score = max(score, 0)
-                            ret = [name, checker_out[1]]
+                        score = max(score, 0)
+                        ret = [name, checker_out.stderr]
             if ret[0] == "TLE":
-                timeusage = tl * 1000
+                timeusage = tl
             results.append({"time": timeusage, "mem": memusage, "result": ret[0], "info": ret[1],
                             "has_output": has_output, "score": score, "sample": is_sample})
             if ret[0] != "OK":
@@ -269,7 +258,7 @@ def get_queue_position(dat: datas.Submission) -> int:
 
 
 def runner(idx: int):
-    print("get", idx)
+    logger.info("get", idx)
     try:
         for _ in range(5):
             dat: datas.Submission = datas.Submission.query.get(idx)

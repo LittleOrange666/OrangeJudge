@@ -20,7 +20,7 @@ from werkzeug.utils import secure_filename
 
 from . import executing, tools, constants, createhtml, datas
 from .constants import tmp_path, preparing_problem_path, testlib, problem_path
-from .executing import SandboxPath
+from .judge import SandboxPath
 from .server import sending_file
 from .tools import TempFile
 
@@ -258,7 +258,7 @@ def create_problem(name: str, pid: str, user: datas.User) -> str:
 
 
 def log(s: str, success: bool | None = None):
-    tools.log(s)
+    logger.info(s)
     if not s.endswith("\n"):
         s += "\n"
     tools.append(s, preparing_problem_path / current_pid / "actions" / f"{current_idx}.log")
@@ -431,7 +431,7 @@ def do_import_polygon(pid: str, filename: str):
                 dat["testcases"].append({"in": fn, "out": fn + ".out", "group": group, "uncomplete": True})
             else:
                 gen_cmds.append([test.get("cmd"), group])
-    tools.log(gen_cmds)
+    logger.debug(" ".join(gen_cmds))
     assets = root.find("assets")
     checker = assets.find("checker").find("source")
     fn = "checker_" + Path(checker.get("path")).name
@@ -454,7 +454,7 @@ def do_import_polygon(pid: str, filename: str):
         nw_files.append({"name": fn, "type": constants.polygon_type.get(source.get("type"), "C++17")})
         if solution.get("tag") == "main":
             main_sol = fn
-        tools.log(source.get("path"), solution.get("tag"))
+        logger.debug(source.get("path") + " " + solution.get("tag"))
     for executable in root.iter("executable"):
         source = executable.find("source")
         fn = Path(source.get("path")).name
@@ -507,7 +507,7 @@ def runner():
     while True:
         action_data = worker_queue.get()
         try:
-            tools.log(f"{action_data=}")
+            logger.info(f"{action_data=}")
             action_name = action_data.pop("action")
             current_idx = -1
             if "idx" in action_data:
@@ -519,7 +519,7 @@ def runner():
                 background_actions.call(action_name, **action_data)
             end(True)
         except StopActionException:
-            tools.log("Stop Action")
+            logger.debug("Stop Action")
         except Exception as e:
             traceback.print_exception(e)
             try:

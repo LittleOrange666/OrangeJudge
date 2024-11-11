@@ -245,9 +245,7 @@ def check_access(dat: datas.Contest):
 
 
 def check_status(dat: datas.Contest) -> tuple[str, int, bool]:
-    per: datas.Period = datas.Period.query.get(dat.main_period_id)
-    if per is None:
-        abort(409)
+    per: datas.Period = datas.Period.query.get_or_404(dat.main_period_id)
     if current_user.is_authenticated:
         if current_user.id in dat.data["virtual_participants"]:
             vir_per: datas.Period = datas.Period.query.get(dat.data["virtual_participants"][current_user.id])

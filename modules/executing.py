@@ -1,13 +1,17 @@
 import math
 import os
+import shutil
 import subprocess
 import threading
 import time
 from pathlib import Path
 from typing import Callable, Any
 
-from . import constants, tools, datas, server
+from loguru import logger
+
+from . import constants, tools, datas, server, judge
 from .constants import lang_path
+from .judge import SandboxPath
 
 
 def call(cmd: list[Any], stdin: str = "", timeout: float | None = None) -> tuple[str, str, int]:
@@ -23,7 +27,7 @@ def call(cmd: list[Any], stdin: str = "", timeout: float | None = None) -> tuple
         tuple[str, str, int]: A tuple containing the command's standard output, standard error, and return code.
     """
     cmd = list(map(str, cmd))
-    tools.log(*cmd)
+    logger.debug(" ".join(cmd))
     if timeout is None:
         timeout = 30
     process = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -33,57 +37,6 @@ def call(cmd: list[Any], stdin: str = "", timeout: float | None = None) -> tuple
 
 def is_tle(result: tuple[str, str, int]) -> bool:
     return result == ("TLE", "TLE", 777777)
-
-
-class SandboxPath:
-    def __init__(self, dirname: str, path: str):
-        self._dirname = dirname
-        self._path = path
-
-    @property
-    def full(self):
-        """
-        Returns the file's full path outside the sandbox.
-        :return: full path
-        """
-        return constants.lxc_root_path / self._dirname / self._path
-
-    @property
-    def sandbox(self):
-        """
-        Returns the file's full path within the sandbox.
-        :return: sandbox path
-        """
-        return Path("/") / self._dirname / self._path
-
-    @property
-    def inner(self):
-        """
-        Returns the file's path within the Environment.
-        :return: inner path
-        """
-        return Path(self._path)
-
-    @property
-    def stem(self):
-        """
-        The final path component, minus its last suffix.
-        :return: stem
-        """
-        return Path(self._path).stem
-
-    def exists(self) -> bool:
-        """
-        Check if the file exists.
-        :return: True if exists, False otherwise
-        """
-        return self.full.exists()
-
-    def __str__(self):
-        return str(self.sandbox)
-
-    def __repr__(self):
-        return repr(self.sandbox)
 
 
 class Environment:
@@ -97,7 +50,7 @@ class Environment:
         and initializing command prefixes for different execution contexts.
         """
         self.dirname: str = tools.random_string()
-        (constants.lxc_root_path / self.dirname).mkdir(parents=True, exist_ok=True)
+        (constants.sandbox_path / self.dirname).mkdir(parents=True, exist_ok=True)
         self.prefix: list[str] = ["sudo", "lxc-attach", "-n", constants.lxc_name, "--"]
         self.safe: list[str] = ["sudo", "-u", "nobody"]
         self.judge: list[str] = ["sudo", "-u", "judge"]
@@ -125,7 +78,7 @@ class Environment:
         Returns:
             SandboxPath: A SandboxPath object representing the file sent in the sandbox.
         """
-        tools.log("send", filepath)
+        logger.debug("send", filepath)
         out = self.path(filepath.name)
         tools.copy(filepath, out.full)
         if nxt is None:
@@ -185,19 +138,8 @@ class Environment:
         """
         tools.delete(self.path(filepath.name).full)
 
-    def simple_run(self, cmd: list[str]) -> tuple[str, str, int]:
-        """
-        Run a command in the sandbox environment.
-
-        Args:
-            cmd (list[str]): The command to run.
-
-        Returns:
-            tuple[str, str, int]: A tuple containing (stdout, stderr, return_code).
-        """
-        return call(self.prefix + cmd)
-
-    def safe_run(self, cmd: list[str]) -> tuple[str, str, int]:
+    @staticmethod
+    def safe_run(cmd: list[str]) -> tuple[str, str, int]:
         """
         Run a command in the sandbox environment as a non-privileged user.
 
@@ -207,21 +149,11 @@ class Environment:
         Returns:
             tuple[str, str, int]: A tuple containing (stdout, stderr, return_code).
         """
-        return call(self.prefix + self.safe + cmd)
+        res = judge.call(cmd, user=judge.SandboxUser.nobody)
+        return res.stdout, res.stderr, res.return_code
 
-    def judge_run(self, cmd: list[str]) -> tuple[str, str, int]:
-        """
-        Run a command in the sandbox environment as the judge user.
-
-        Args:
-            cmd (list[str]): The command to run.
-
-        Returns:
-            tuple[str, str, int]: A tuple containing (stdout, stderr, return_code).
-        """
-        return call(self.prefix + self.judge + cmd)
-
-    def judge_writeable(self, *filenames: SandboxPath) -> None:
+    @staticmethod
+    def judge_writeable(*filenames: SandboxPath) -> None:
         """
         Make files writable by the judge user in the sandbox environment.
 
@@ -232,10 +164,11 @@ class Environment:
             if not filename.exists():
                 filename.full.touch()
             filepath = filename.sandbox
-            call(self.prefix + ["chgrp", "judge", filepath])
-            call(self.prefix + ["chmod", "760", filepath])
+            judge.call(["chgrp", "judge", filepath])
+            judge.call(["chmod", "760", filepath])
 
-    def writeable(self, *filenames: SandboxPath) -> None:
+    @staticmethod
+    def writeable(*filenames: SandboxPath) -> None:
         """
         Make files writable by all users in the sandbox environment.
 
@@ -246,9 +179,10 @@ class Environment:
             if not filename.exists():
                 filename.full.touch()
             filepath = filename.sandbox
-            call(self.prefix + ["chmod", "766", filepath])
+            judge.call(["chmod", "766", filepath])
 
-    def judge_executable(self, *filenames: SandboxPath) -> None:
+    @staticmethod
+    def judge_executable(*filenames: SandboxPath) -> None:
         """
         Make files executable by the judge user in the sandbox environment.
 
@@ -257,10 +191,11 @@ class Environment:
         """
         for filename in filenames:
             filepath = filename.sandbox
-            call(self.prefix + ["chgrp", "judge", filepath])
-            call(self.prefix + ["chmod", "750", filepath])
+            judge.call(["chgrp", "judge", filepath])
+            judge.call(["chmod", "750", filepath])
 
-    def executable(self, *filenames: SandboxPath) -> None:
+    @staticmethod
+    def executable(*filenames: SandboxPath) -> None:
         """
         Make files executable by all users in the sandbox environment.
 
@@ -269,9 +204,10 @@ class Environment:
         """
         for filename in filenames:
             filepath = filename.sandbox
-            call(self.prefix + ["chmod", "755", filepath])
+            judge.call(["chmod", "755", filepath])
 
-    def readable(self, *filenames: SandboxPath) -> None:
+    @staticmethod
+    def readable(*filenames: SandboxPath) -> None:
         """
         Make files readable by all users in the sandbox environment.
 
@@ -280,9 +216,10 @@ class Environment:
         """
         for filename in filenames:
             filepath = filename.sandbox
-            call(self.prefix + ["chmod", "744", filepath])
+            judge.call(["chmod", "744", filepath])
 
-    def judge_readable(self, *filenames: SandboxPath) -> None:
+    @staticmethod
+    def judge_readable(*filenames: SandboxPath) -> None:
         """
         Make files readable by the judge user in the sandbox environment.
 
@@ -291,10 +228,11 @@ class Environment:
         """
         for filename in filenames:
             filepath = filename.sandbox
-            call(self.prefix + ["chgrp", "judge", filepath])
-            call(self.prefix + ["chmod", "740", filepath])
+            judge.call(["chgrp", "judge", filepath])
+            judge.call(["chmod", "740", filepath])
 
-    def protected(self, *filenames: SandboxPath) -> None:
+    @staticmethod
+    def protected(*filenames: SandboxPath) -> None:
         """
         Make files accessible only by the owner in the sandbox environment.
 
@@ -303,7 +241,7 @@ class Environment:
         """
         for filename in filenames:
             filepath = filename.sandbox
-            call(self.prefix + ["chmod", "700", filepath])
+            judge.call(["chmod", "700", filepath])
 
     def runwithshell(self, cmd: list[str], in_file: SandboxPath, out_file: SandboxPath, tl: float, ml: int,
                      base_cmd: list[str]) -> tuple[str, str, int]:
@@ -361,8 +299,7 @@ class Environment:
 
         This method removes the directory created for this environment in the sandbox.
         """
-        cmd = ["sudo", "lxc-attach", "-n", constants.lxc_name, "--", "sudo", "rm", "-rf", "/" + self.dirname]
-        call(cmd)
+        shutil.rmtree(constants.sandbox_path / self.dirname)
 
 
 class Language:
@@ -424,15 +361,15 @@ class Language:
                 compile_cmd = self.data["compile_cmd"][:]
                 for i in range(len(compile_cmd)):
                     compile_cmd[i] = compile_cmd[i].format(filename, new_filename, **self.kwargs)
-            out = env.simple_run(compile_cmd)
+            out = judge.call(compile_cmd)
             if other_file is not None:
                 other_file = env.simple_path(other_file)
                 env.executable(other_file)
             new_filename = env.simple_path(new_filename)
             env.executable(new_filename)
-            if out[1] and out[2] != 0:
-                tools.log(out[1])
-                return new_filename, out[1]
+            if out.stderr and out.return_code != 0:
+                logger.warning(out.stderr)
+                return new_filename, out.stderr
             return new_filename, ""
         env.executable(filename)
         return filename, ""
