@@ -1,3 +1,4 @@
+import math
 import multiprocessing
 import time
 import traceback
@@ -170,7 +171,9 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
                     env.judge_readable(in_path)
                     env.judge_writeable(out_path)
                     res = judge.interact_run(exec_cmd, int_exec, tl, ml, in_path, out_path,
-                                             interact_user=judge.SandboxUser.judge).result
+                                             interact_user=judge.SandboxUser.judge,
+                                             seccomp_rule=lang.seccomp_rule).result
+                    res = judge.Result(**res)
                 else:
                     res = judge.run(exec_cmd, tl, ml, in_path, out_path, seccomp_rule=lang.seccomp_rule)
                 exit_code = str(res.exit_code)
@@ -189,8 +192,8 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
                         else:
                             ret = ["RE", "執行期間錯誤"]
                     else:
-                        timeusage = res.cpu_time
-                        memusage = res.memory / 1000
+                        timeusage = max(0, res.cpu_time - lang.base_time)
+                        memusage = math.ceil(max(0, res.memory - lang.base_memory) / 1000)
                         groups[gp]["time"] = max(groups[gp]["time"], timeusage)
                         groups[gp]["mem"] = max(groups[gp]["mem"], memusage)
                         has_output = True

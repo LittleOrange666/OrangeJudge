@@ -242,7 +242,7 @@ class Language:
         base_name = "base_" + self.name
         if "base_name" in self.data:
             base_name = self.data["base_name"].format(**self.kwargs)
-        self.base_exec_name = self.data["exec_name"].format(base_name, **self.kwargs)
+        self.base_exec_name = base_name + self.data["source_ext"]
         self.base_time = 0
         self.base_memory = 0
         self.seccomp_rule = judge.SeccompRule.general
@@ -296,13 +296,16 @@ class Language:
     def update_base_resource_usage(self, env: Environment):
         logger.info(f"Updating base resource usage for {self.branch}")
         filename = env.send_file(constants.judge_path / self.base_exec_name)
-        exec_cmd = self.get_execmd(filename)
+        exec_filename, ce_msg = self.compile(filename, env)
+        if ce_msg:
+            logger.warning(f"Base resource usage for {self.branch} failed: CE")
+        exec_cmd = self.get_execmd(exec_filename)
         res = judge.run(exec_cmd, seccomp_rule=self.seccomp_rule)
         if res.result != "AC":
             logger.warning(f"Base resource usage for {self.branch} failed: {res.result}")
         else:
-            self.base_time = res.cpu_time*9//10
-            self.base_memory = res.memory * 9 // 10
+            self.base_time = res.cpu_time * 9 // 10
+            self.base_memory = res.memory
             logger.info(f"Base resource usage for {self.branch}: {self.base_time} ms, {self.base_memory} B")
 
 

@@ -23,27 +23,31 @@ sudo ./tools/autoinit.sh
 ```
 再用
 ```shell
-sudo python3 main.py
+python3 main.py
 ```
 啟動伺服器
 
 然後到config.yaml裡面填上必要的東東
 
-如果安裝過程出現temporary failure resolving ...
-
-且無法跑程式
-
-可能可以用
-```shell
-sudo lxc-stop -n lxc-test
-sudo lxc-destroy -n lxc-test
-sudo ./tools/autoinit.sh
-```
-把沙盒砸掉重裝，可能會好
-
 然後初次執行會建立帳密都是root的管理者帳號
 
 記得改密碼
+
+要注意autoinit.sh會在這個repo的上層資料夾下載
+
+https://github.com/LittleOrange666/OrangeJudge_Judger
+
+並build docker image
+
+然後再用這裡的docker-compose.yml開judge server
+
+有時候可能需要去想辦法打開他
+
+目前這repo還沒有Dockerfile，之後大概會有吧
+
+要用全docker可能要自己通靈一下docker-compose.yml怎寫
+
+再去modules.constants.py改些參數
 
 剩下請自行通靈
 
