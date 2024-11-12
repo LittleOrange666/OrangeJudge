@@ -8,6 +8,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_session import Session
 from flask_wtf import CSRFProtect
+from loguru import logger
 
 from . import tools, config
 from .constants import log_path
@@ -108,7 +109,7 @@ def check_port(ip, port):
         else:
             return False
     except Exception as e:
-        print(f"Error: {str(e)}")
+        logger.error(f"Error: {str(e)}")
     finally:
         sock.close()
 

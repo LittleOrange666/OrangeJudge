@@ -4,7 +4,6 @@
   "source_ext": ".py",
   "exec_name": "__pycache__/{0}.{ext}.pyc",
   "compile_cmd": ["{arg}", "-m","py_compile", "{0}"],
-  "compile_runner_cmd": ["{arg}", "-m","py_compile", "{0}", "{2}"],
   "exec_cmd": ["{arg}","{0}"],
   "branches": {
     "Python3.10": {
@@ -18,13 +17,9 @@
     "PyPy3.10": {
       "arg": "/python/pypy3.10.14/bin/pypy3",
       "ext": "pypy310"
-    },
-    "PyPy3.6": {
-      "arg": "/python/pypy3.6.9/bin/pypy3",
-      "ext": "pypy36"
     }
   },
-  "default_branch": "PyPy3",
+  "default_branch": "Python3.10",
   "executables": ["/python/python3.10.14/bin/python3",
     "/python/python3.6.9/bin/python3",
     "/python/pypy3.10.14/bin/pypy3",

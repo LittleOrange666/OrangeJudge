@@ -2,6 +2,7 @@ from enum import Enum
 from typing import Generic, TypeVar, Type
 
 import yaml
+from loguru import logger
 
 T = TypeVar('T')
 
@@ -13,8 +14,7 @@ class ConfigError(Exception):
 with open("config.yaml") as f:
     config = yaml.load(f, yaml.loader.SafeLoader)
 
-
-# print("config=", config)
+logger.info("config=" + str(config))
 
 
 def save_config():

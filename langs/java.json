@@ -18,5 +18,6 @@
     }
   },
   "default_branch": "Java8",
-  "executables": ["/usr/lib/jvm/java-8-openjdk-amd64/bin/java", "/usr/lib/jvm/java-17-openjdk-amd64/bin/java"]
+  "executables": ["/usr/lib/jvm/java-8-openjdk-amd64/bin/java", "/usr/lib/jvm/java-17-openjdk-amd64/bin/java"],
+  "seccomp_rule": "golang"
 }

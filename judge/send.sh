@@ -1,1 +1,0 @@
-sudo cp -r ./ /var/lib/lxc/lxc-test/rootfs/judge

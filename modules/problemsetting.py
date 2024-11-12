@@ -12,15 +12,17 @@ from xml.etree import ElementTree
 from xml.etree.ElementTree import Element
 
 from flask import Response, abort, render_template, request, redirect
+from loguru import logger
 from pyzipper import AESZipFile
 from pyzipper.zipfile_aes import AESZipInfo
 from sqlalchemy.orm.attributes import flag_modified
 from werkzeug.datastructures import ImmutableMultiDict, MultiDict
 from werkzeug.utils import secure_filename
 
+import judge
 from . import executing, tools, constants, createhtml, datas
 from .constants import tmp_path, preparing_problem_path, testlib, problem_path
-from .executing import SandboxPath
+from .judge import SandboxPath
 from .server import sending_file
 from .tools import TempFile
 
@@ -258,7 +260,7 @@ def create_problem(name: str, pid: str, user: datas.User) -> str:
 
 
 def log(s: str, success: bool | None = None):
-    tools.log(s)
+    logger.info(s)
     if not s.endswith("\n"):
         s += "\n"
     tools.append(s, preparing_problem_path / current_pid / "actions" / f"{current_idx}.log")
@@ -289,7 +291,7 @@ def generate_testcase(pid: str):
 
     if problem["is_interact"]:
         int_cmd = get_cmd(problem["interactor_source"], "interactor")
-    tl = float(problem["timelimit"]) / 1000
+    tl = int(problem["timelimit"])
     ml = int(problem["memorylimit"])
     log("clear folder")
     testcase_path = problem.path / "testcases_gen"
@@ -308,51 +310,35 @@ def generate_testcase(pid: str):
                 in_file = testcase_path / f"{name}.in"
                 out_file = testcase_path / f"{name}.out"
                 log(f"generating testcase {name!r}")
-                gen_out = env.safe_run(file1_cmd + cmd.split())
-                if gen_out[2]:
+                gen_out = judge.call(file1_cmd + cmd.split(), user=judge.SandboxUser.judge)
+                if gen_out.return_code:
                     log("generator RE")
                     gen_group['status'] = "生成失敗：生成器RE"
-                    log(gen_out[1])
+                    log(gen_out.stderr)
                     break
-                tools.write(gen_out[0], in_file)
+                tools.write(gen_out.stdout, in_file)
                 if gen_group['type'] == "sol":
                     in_path = env.send_file(in_file)
                     out_path = env.path(out_file.name)
                     if problem["is_interact"]:
                         env.judge_readable(in_path)
                         env.judge_writeable(out_path)
-                        out = env.runwithinteractshell(file2_cmd, int_cmd, in_path, out_path, tl, ml,
-                                                       lang.base_exec_cmd)
+                        res = judge.interact_run(file2_cmd, int_cmd, tl, ml, in_path, out_path,
+                                                 interact_user=judge.SandboxUser.judge).result
                     else:
-                        out = env.runwithshell(file2_cmd, in_path, out_path, tl, ml, lang.base_exec_cmd)
-                    if executing.is_tle(out):
-                        log("solution TLE")
-                        gen_group['status'] = "生成失敗：官解TLE"
-                        log(out[1])
-                        break
-                    result = {o[0]: o[1] for o in (s.split("=") for s in out[0].split("\n")) if len(o) == 2}
-                    if "1" == result.get("WIFSIGNALED", None) or "0" != result.get("WEXITSTATUS", "0"):
-                        log("solution RE")
-                        gen_group['status'] = "生成失敗：官解RE"
-                        log(out[1])
-                        break
-                    if "time" in result and float(result["time"]) >= 0:
-                        timeusage = int((float(result["time"]) + float(result["basetime"])) * 1000)
-                        if timeusage > tl * 950:
-                            gen_group['status'] = "生成失敗：官解TLE"
-                    if "mem" in result and float(result["mem"]) >= 0:
-                        memusage = (int(result["mem"]) - int(result["basemem"])) * int(result["pagesize"]) // 1000
-                        if memusage > ml * 1024:
-                            gen_group['status'] = "生成失敗：官解MLE"
+                        res = judge.run(file2_cmd, tl, ml, in_path, out_path)
+                    if res.result != "AC":
+                        logger.info(f"solution {res.result}")
+                        gen_group['status'] = f"生成失敗：官解{res.result}"
                     env.get_file(out_file)
                 else:
-                    gen_out = env.safe_run(file2_cmd + cmd.split())
-                    if gen_out[2]:
+                    gen_out = judge.call(file2_cmd + cmd.split(), user=judge.SandboxUser.judge)
+                    if gen_out.return_code:
                         log("generator RE")
                         gen_group['status'] = "生成失敗：答案生成器RE"
-                        log(gen_out[1])
+                        log(gen_out.stderr)
                         break
-                    tools.write(gen_out[0], in_file)
+                    tools.write(gen_out.stdout, in_file)
                 cur.append({"in": name + ".in", "out": name + ".out", "sample": False, "pretest": False,
                             "group": gen_group['group']})
             else:
@@ -431,7 +417,7 @@ def do_import_polygon(pid: str, filename: str):
                 dat["testcases"].append({"in": fn, "out": fn + ".out", "group": group, "uncomplete": True})
             else:
                 gen_cmds.append([test.get("cmd"), group])
-    tools.log(gen_cmds)
+    logger.debug(str(gen_cmds))
     assets = root.find("assets")
     checker = assets.find("checker").find("source")
     fn = "checker_" + Path(checker.get("path")).name
@@ -454,7 +440,7 @@ def do_import_polygon(pid: str, filename: str):
         nw_files.append({"name": fn, "type": constants.polygon_type.get(source.get("type"), "C++17")})
         if solution.get("tag") == "main":
             main_sol = fn
-        tools.log(source.get("path"), solution.get("tag"))
+        logger.debug(source.get("path") + " " + solution.get("tag"))
     for executable in root.iter("executable"):
         source = executable.find("source")
         fn = Path(source.get("path")).name
@@ -507,7 +493,7 @@ def runner():
     while True:
         action_data = worker_queue.get()
         try:
-            tools.log(f"{action_data=}")
+            logger.info(f"{action_data=}")
             action_name = action_data.pop("action")
             current_idx = -1
             if "idx" in action_data:
@@ -519,7 +505,7 @@ def runner():
                 background_actions.call(action_name, **action_data)
             end(True)
         except StopActionException:
-            tools.log("Stop Action")
+            logger.debug("Stop Action")
         except Exception as e:
             traceback.print_exception(e)
             try:

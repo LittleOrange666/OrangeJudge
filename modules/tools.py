@@ -1,3 +1,4 @@
+import io
 import json
 import shutil
 import subprocess
@@ -8,6 +9,7 @@ from pathlib import Path
 from typing import Callable, Any
 
 from flask import abort, request
+from loguru import logger
 
 from . import locks, config, constants
 from .constants import tmp_path
@@ -31,7 +33,7 @@ def system(s: str, cwd: Path = Path.cwd()) -> None:
     Note:
         The function logs the command and its execution directory before running it.
     """
-    log(f"system command in {str(cwd.absolute())!r}:", s)
+    logger.info(f"system command in {str(cwd.absolute())!r}: {s}")
     subprocess.call(s, cwd=cwd.absolute(), shell=True)
 
 
@@ -342,9 +344,11 @@ def to_datetime(text: str, **replace_kwargs) -> datetime:
 has_log: bool = config.debug.log
 
 
-def log(*args):
-    if has_log:
-        print(*args)
+def print_to_string(*args, **kwargs):
+    output: io.StringIO
+    with io.StringIO() as output:
+        print(*args, file=output, **kwargs)
+        return output.getvalue()
 
 
 def pagination(sql_obj, rev: bool = True, page: int | str | None = None, page_size: int = constants.page_size) -> \
@@ -392,15 +396,15 @@ def pagination(sql_obj, rev: bool = True, page: int | str | None = None, page_si
 
 
 def move(src: Path, dst: Path):
-    log(f"Moving {str(src)!r} to {str(dst)!r}")
+    logger.debug(f"Moving {str(src)!r} to {str(dst)!r}")
     shutil.move(src, dst)
 
 
 def copy(src: Path, dst: Path):
-    log(f"Copying {str(src)!r} to {str(dst)!r}")
+    logger.debug(f"Copying {str(src)!r} to {str(dst)!r}")
     shutil.copy(src, dst)
 
 
 def delete(target: Path):
-    log(f"Deleting {str(target)!r}")
+    logger.debug(f"Deleting {str(target)!r}")
     target.unlink()

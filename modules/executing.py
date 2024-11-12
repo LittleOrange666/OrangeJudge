@@ -1,93 +1,20 @@
-import math
-import os
-import subprocess
-import threading
-import time
+import shutil
 from pathlib import Path
-from typing import Callable, Any
+from typing import Callable
 
-from . import constants, tools, datas, server
+from loguru import logger
+
+from . import constants, tools, judge
 from .constants import lang_path
-
-
-def call(cmd: list[Any], stdin: str = "", timeout: float | None = None) -> tuple[str, str, int]:
-    """
-    Execute a command in a subprocess and return its output, error, and return code.
-
-    Args:
-        cmd (list[Any]): The command to execute. Each element in the list should be a string or convertible to a string.
-        stdin (str, optional): The input to provide to the command. Defaults to an empty string.
-        timeout (float | None, optional): The maximum time to wait for the command to complete. If None, the default timeout is 30 seconds.
-
-    Returns:
-        tuple[str, str, int]: A tuple containing the command's standard output, standard error, and return code.
-    """
-    cmd = list(map(str, cmd))
-    tools.log(*cmd)
-    if timeout is None:
-        timeout = 30
-    process = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    ret = process.communicate(stdin.encode("utf8"), timeout=timeout)
-    return ret[0].decode("utf8"), ret[1].decode("utf8"), process.returncode
+from .judge import SandboxPath
 
 
 def is_tle(result: tuple[str, str, int]) -> bool:
     return result == ("TLE", "TLE", 777777)
 
 
-class SandboxPath:
-    def __init__(self, dirname: str, path: str):
-        self._dirname = dirname
-        self._path = path
-
-    @property
-    def full(self):
-        """
-        Returns the file's full path outside the sandbox.
-        :return: full path
-        """
-        return constants.lxc_root_path / self._dirname / self._path
-
-    @property
-    def sandbox(self):
-        """
-        Returns the file's full path within the sandbox.
-        :return: sandbox path
-        """
-        return Path("/") / self._dirname / self._path
-
-    @property
-    def inner(self):
-        """
-        Returns the file's path within the Environment.
-        :return: inner path
-        """
-        return Path(self._path)
-
-    @property
-    def stem(self):
-        """
-        The final path component, minus its last suffix.
-        :return: stem
-        """
-        return Path(self._path).stem
-
-    def exists(self) -> bool:
-        """
-        Check if the file exists.
-        :return: True if exists, False otherwise
-        """
-        return self.full.exists()
-
-    def __str__(self):
-        return str(self.sandbox)
-
-    def __repr__(self):
-        return repr(self.sandbox)
-
-
 class Environment:
-    __slots__ = ("dirname", "prefix", "safe", "judge")
+    __slots__ = ("dirname",)
 
     def __init__(self):
         """
@@ -97,10 +24,7 @@ class Environment:
         and initializing command prefixes for different execution contexts.
         """
         self.dirname: str = tools.random_string()
-        (constants.lxc_root_path / self.dirname).mkdir(parents=True, exist_ok=True)
-        self.prefix: list[str] = ["sudo", "lxc-attach", "-n", constants.lxc_name, "--"]
-        self.safe: list[str] = ["sudo", "-u", "nobody"]
-        self.judge: list[str] = ["sudo", "-u", "judge"]
+        (constants.sandbox_path / self.dirname).mkdir(parents=True, exist_ok=True)
 
     def path(self, path: str) -> SandboxPath:
         """
@@ -125,7 +49,7 @@ class Environment:
         Returns:
             SandboxPath: A SandboxPath object representing the file sent in the sandbox.
         """
-        tools.log("send", filepath)
+        logger.debug("send", filepath)
         out = self.path(filepath.name)
         tools.copy(filepath, out.full)
         if nxt is None:
@@ -185,43 +109,8 @@ class Environment:
         """
         tools.delete(self.path(filepath.name).full)
 
-    def simple_run(self, cmd: list[str]) -> tuple[str, str, int]:
-        """
-        Run a command in the sandbox environment.
-
-        Args:
-            cmd (list[str]): The command to run.
-
-        Returns:
-            tuple[str, str, int]: A tuple containing (stdout, stderr, return_code).
-        """
-        return call(self.prefix + cmd)
-
-    def safe_run(self, cmd: list[str]) -> tuple[str, str, int]:
-        """
-        Run a command in the sandbox environment as a non-privileged user.
-
-        Args:
-            cmd (list[str]): The command to run.
-
-        Returns:
-            tuple[str, str, int]: A tuple containing (stdout, stderr, return_code).
-        """
-        return call(self.prefix + self.safe + cmd)
-
-    def judge_run(self, cmd: list[str]) -> tuple[str, str, int]:
-        """
-        Run a command in the sandbox environment as the judge user.
-
-        Args:
-            cmd (list[str]): The command to run.
-
-        Returns:
-            tuple[str, str, int]: A tuple containing (stdout, stderr, return_code).
-        """
-        return call(self.prefix + self.judge + cmd)
-
-    def judge_writeable(self, *filenames: SandboxPath) -> None:
+    @staticmethod
+    def judge_writeable(*filenames: SandboxPath) -> None:
         """
         Make files writable by the judge user in the sandbox environment.
 
@@ -232,10 +121,11 @@ class Environment:
             if not filename.exists():
                 filename.full.touch()
             filepath = filename.sandbox
-            call(self.prefix + ["chgrp", "judge", filepath])
-            call(self.prefix + ["chmod", "760", filepath])
+            judge.call(["chgrp", "judge", filepath])
+            judge.call(["chmod", "760", filepath])
 
-    def writeable(self, *filenames: SandboxPath) -> None:
+    @staticmethod
+    def writeable(*filenames: SandboxPath) -> None:
         """
         Make files writable by all users in the sandbox environment.
 
@@ -246,9 +136,10 @@ class Environment:
             if not filename.exists():
                 filename.full.touch()
             filepath = filename.sandbox
-            call(self.prefix + ["chmod", "766", filepath])
+            judge.call(["chmod", "766", filepath])
 
-    def judge_executable(self, *filenames: SandboxPath) -> None:
+    @staticmethod
+    def judge_executable(*filenames: SandboxPath) -> None:
         """
         Make files executable by the judge user in the sandbox environment.
 
@@ -257,10 +148,11 @@ class Environment:
         """
         for filename in filenames:
             filepath = filename.sandbox
-            call(self.prefix + ["chgrp", "judge", filepath])
-            call(self.prefix + ["chmod", "750", filepath])
+            judge.call(["chgrp", "judge", filepath])
+            judge.call(["chmod", "750", filepath])
 
-    def executable(self, *filenames: SandboxPath) -> None:
+    @staticmethod
+    def executable(*filenames: SandboxPath) -> None:
         """
         Make files executable by all users in the sandbox environment.
 
@@ -269,9 +161,10 @@ class Environment:
         """
         for filename in filenames:
             filepath = filename.sandbox
-            call(self.prefix + ["chmod", "755", filepath])
+            judge.call(["chmod", "755", filepath])
 
-    def readable(self, *filenames: SandboxPath) -> None:
+    @staticmethod
+    def readable(*filenames: SandboxPath) -> None:
         """
         Make files readable by all users in the sandbox environment.
 
@@ -280,9 +173,10 @@ class Environment:
         """
         for filename in filenames:
             filepath = filename.sandbox
-            call(self.prefix + ["chmod", "744", filepath])
+            judge.call(["chmod", "744", filepath])
 
-    def judge_readable(self, *filenames: SandboxPath) -> None:
+    @staticmethod
+    def judge_readable(*filenames: SandboxPath) -> None:
         """
         Make files readable by the judge user in the sandbox environment.
 
@@ -291,10 +185,11 @@ class Environment:
         """
         for filename in filenames:
             filepath = filename.sandbox
-            call(self.prefix + ["chgrp", "judge", filepath])
-            call(self.prefix + ["chmod", "740", filepath])
+            judge.call(["chgrp", "judge", filepath])
+            judge.call(["chmod", "740", filepath])
 
-    def protected(self, *filenames: SandboxPath) -> None:
+    @staticmethod
+    def protected(*filenames: SandboxPath) -> None:
         """
         Make files accessible only by the owner in the sandbox environment.
 
@@ -303,57 +198,7 @@ class Environment:
         """
         for filename in filenames:
             filepath = filename.sandbox
-            call(self.prefix + ["chmod", "700", filepath])
-
-    def runwithshell(self, cmd: list[str], in_file: SandboxPath, out_file: SandboxPath, tl: float, ml: int,
-                     base_cmd: list[str]) -> tuple[str, str, int]:
-        """
-        Run a command with shell in the sandbox environment.
-
-        Args:
-            cmd (list[str]): The command to run.
-            in_file (SandboxPath): The input file.
-            out_file (SandboxPath): The output file.
-            tl (float): Time limit in seconds.
-            ml (int): Memory limit in MB.
-            base_cmd (list[str]): The base command to run.
-
-        Returns:
-            tuple[str, str, int]: A tuple containing (stdout, stderr, return_code).
-        """
-        try:
-            main = ["sudo", "/judge/shell", str(math.ceil(tl)), str(ml * 1024 * 1024),
-                    str(100 * 1024 * 1024), repr(" ".join(base_cmd)),
-                    repr(" ".join(cmd)), in_file.sandbox, out_file.sandbox]
-            return call(self.prefix + main, timeout=tl + 1)
-        except subprocess.TimeoutExpired:
-            return "TLE", "TLE", 777777
-
-    def runwithinteractshell(self, cmd: list[str], interact_cmd: list[str], in_file: SandboxPath, out_file: SandboxPath,
-                             tl: float, ml: int, base_cmd: list[str]) -> tuple[str, str, int]:
-        """
-        Run a command with interactive shell in the sandbox environment.
-
-        Args:
-            cmd (list[str]): The command to run.
-            interact_cmd (list[str]): The command to run interactor.
-            in_file (SandboxPath): The input file.
-            out_file (SandboxPath): The output file.
-            tl (float): Time limit in seconds.
-            ml (int): Memory limit in MB.
-            base_cmd (list[str]): The base command to run.
-
-        Returns:
-            tuple[str, str, int]: A tuple containing (stdout, stderr, return_code).
-        """
-        try:
-            main = ["sudo", "/judge/interact_shell", str(math.ceil(tl)), str(ml * 1024 * 1024),
-                    str(100 * 1024 * 1024), repr(" ".join(base_cmd)),
-                    repr(" ".join(cmd)), repr(" ".join(interact_cmd)), in_file.sandbox, out_file.sandbox,
-                    self.path(tools.random_string())]
-            return call(self.prefix + main, timeout=tl + 1)
-        except subprocess.TimeoutExpired:
-            return "TLE", "TLE", 777777
+            judge.call(["chmod", "700", filepath])
 
     def __del__(self):
         """
@@ -361,19 +206,17 @@ class Environment:
 
         This method removes the directory created for this environment in the sandbox.
         """
-        cmd = ["sudo", "lxc-attach", "-n", constants.lxc_name, "--", "sudo", "rm", "-rf", "/" + self.dirname]
-        call(cmd)
+        shutil.rmtree(constants.sandbox_path / self.dirname)
 
 
 class Language:
     """
-    A class representing a programming language with its compilation and execution capabilities.
+    A class representing a programming language with compile and execution capabilities.
 
     Attributes:
     name (str): The name of the programming language.
-    data (dict): The configuration data for the programming language.
     branch (str): The branch of the programming language.
-    kwargs (dict): The keyword arguments for the programming language.
+    kwargs (dict): Keyword arguments for the programming language.
     base_exec_cmd (list[str]): The base execution command for the programming language.
 
     Methods:
@@ -381,13 +224,14 @@ class Language:
         Initializes the Language object with the given name and branch.
 
     compile(self, filename: SandboxPath, env: Environment, runner_filename: SandboxPath | None = None) -> tuple[SandboxPath, str]:
-        Compiles the given source code file using the programming language.
+        Compiles the given source file using the programming language's compiler.
+        Returns the compiled file's path and any compilation errors.
 
     get_execmd(self, filename: SandboxPath) -> list[str]:
-        Returns the execution command for the given source code file.
+        Returns the execution command for the given source file.
 
     supports_runner(self) -> bool:
-        Checks if the programming language supports running a runner file.
+        Returns True if the programming language supports running a runner file, False otherwise.
     """
 
     def __init__(self, name: str, branch: str | None = None):
@@ -398,9 +242,12 @@ class Language:
         base_name = "base_" + self.name
         if "base_name" in self.data:
             base_name = self.data["base_name"].format(**self.kwargs)
-        exec_name = SandboxPath("judge", self.data["exec_name"].format(base_name, **self.kwargs))
-        self.base_exec_cmd = self.get_execmd(exec_name)
-        call(["sudo", "lxc-attach", "-n", constants.lxc_name, "--"] + ["chmod", "755", exec_name])
+        self.base_exec_name = base_name + self.data["source_ext"]
+        self.base_time = 0
+        self.base_memory = 0
+        self.seccomp_rule = judge.SeccompRule.general
+        if "seccomp_rule" in self.data:
+            self.seccomp_rule = judge.SeccompRule[self.data["seccomp_rule"]]
 
     def compile(self, filename: SandboxPath, env: Environment, runner_filename: SandboxPath | None = None) -> \
             tuple[SandboxPath, str]:
@@ -424,15 +271,15 @@ class Language:
                 compile_cmd = self.data["compile_cmd"][:]
                 for i in range(len(compile_cmd)):
                     compile_cmd[i] = compile_cmd[i].format(filename, new_filename, **self.kwargs)
-            out = env.simple_run(compile_cmd)
+            out = judge.call(compile_cmd)
             if other_file is not None:
                 other_file = env.simple_path(other_file)
                 env.executable(other_file)
             new_filename = env.simple_path(new_filename)
             env.executable(new_filename)
-            if out[1] and out[2] != 0:
-                tools.log(out[1])
-                return new_filename, out[1]
+            if out.stderr and out.return_code != 0:
+                logger.warning(out.stderr)
+                return new_filename, out.stderr
             return new_filename, ""
         env.executable(filename)
         return filename, ""
@@ -446,24 +293,26 @@ class Language:
     def supports_runner(self) -> bool:
         return "compile_runner_cmd" in self.data
 
-
-def scheduled_restart_sandbox():
-    while True:
-        time.sleep(1800)
-        with server.app.app_context():
-            while datas.Submission.query.filter_by(completed=False).count() > 0:
-                time.sleep(60)
-            call(["sudo", "lxc-stop", "-n", constants.lxc_name])
-            call(["sudo", "lxc-start", "-n", constants.lxc_name])
+    def update_base_resource_usage(self, env: Environment):
+        logger.info(f"Updating base resource usage for {self.branch}")
+        filename = env.send_file(constants.judge_path / self.base_exec_name)
+        exec_filename, ce_msg = self.compile(filename, env)
+        if ce_msg:
+            logger.warning(f"Base resource usage for {self.branch} failed: CE")
+        exec_cmd = self.get_execmd(exec_filename)
+        res = judge.run(exec_cmd, seccomp_rule=self.seccomp_rule)
+        if res.result != "AC":
+            logger.warning(f"Base resource usage for {self.branch} failed: {res.result}")
+        else:
+            self.base_time = res.cpu_time * 9 // 10
+            self.base_memory = res.memory
+            logger.info(f"Base resource usage for {self.branch}: {self.base_time} ms, {self.base_memory} B")
 
 
 langs: dict[str, Language] = {}
 
 
 def init():
-    for name in os.listdir("judge"):
-        call(["sudo", "lxc-attach", "-n", constants.lxc_name, "--"] + ["chmod", "700", f"/judge/{name}"])
-    call(["sudo", "lxc-attach", "-n", constants.lxc_name, "--"] + ["chmod", "755", f"/judge/__pycache__"])
     for lang_file in lang_path.iterdir():
         if lang_file.suffix != ".json":
             continue
@@ -472,8 +321,6 @@ def init():
         keys = dat["branches"].keys()
         for key in keys:
             langs[key] = Language(lang_name, key)
-        for s in dat.get("executables", []):
-            call(["sudo", "lxc-attach", "-n", constants.lxc_name, "--"] + ["chmod", "755", s])
-    restarter = threading.Thread(target=scheduled_restart_sandbox)
-    restarter.daemon = True
-    restarter.start()
+    env = Environment()
+    for lang in langs.values():
+        lang.update_base_resource_usage(env)

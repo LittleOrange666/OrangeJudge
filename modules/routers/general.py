@@ -127,7 +127,7 @@ def submission(idx: str):
             abort(403)
         super_access = current_user.has(Permission.admin) or current_user.id in problem_info["users"]
         result = {}
-        if completed and not dat.data.get("JE", False):
+        if completed and not dat.data.get("JE", False) and dat.result is not None:
             result_data = dat.result
             result["CE"] = result_data["CE"]
             results = result_data["results"]

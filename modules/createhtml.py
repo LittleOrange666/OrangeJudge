@@ -198,6 +198,6 @@ def main(logger: Callable[[str], None]):
 
 
 if __name__ == '__main__':
-    os.chdir("../problems")
+    os.chdir("../data/problems")
     main(print)
     os.system("pause")

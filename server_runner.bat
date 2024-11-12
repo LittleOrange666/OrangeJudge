@@ -1,2 +1,2 @@
-wsl -e sudo python3 tools/server_runner.py
+wsl -e python3 tools/server_runner.py
 pause

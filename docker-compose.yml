@@ -1,4 +1,3 @@
-version: "3"
 services:
     judge_server:
         image: judge_server
