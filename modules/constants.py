@@ -101,6 +101,8 @@ source_file_name = "Main"
 
 runner_source_file_name = "Runner"
 
+data_path = Path("data").absolute()
+
 problem_path = Path("problems").absolute()
 
 preparing_problem_path = Path("preparing_problems").absolute()

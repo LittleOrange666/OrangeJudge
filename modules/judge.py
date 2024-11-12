@@ -1,3 +1,4 @@
+import secrets
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -5,7 +6,7 @@ from pathlib import Path
 import requests
 from loguru import logger
 
-from . import constants
+from . import constants, server
 
 
 class SandboxPath:
@@ -102,6 +103,14 @@ class SandboxUser(Enum):
     nobody = 65534
 
 
+def send_request(op: str, dat: dict):
+    headers = {
+        "token": server.app.config["JUDGE_TOKEN"]
+    }
+    res = requests.post(constants.judger_url + "/" + op, json=dat, headers=headers)
+    return res.json()
+
+
 def call(cmd: list[str], user: SandboxUser = SandboxUser.root, stdin: str = "",
          timeout: float | None = None) -> CallResult:
     dat = {
@@ -111,8 +120,7 @@ def call(cmd: list[str], user: SandboxUser = SandboxUser.root, stdin: str = "",
         "timeout": timeout
     }
     logger.debug(dat)
-    res = requests.post(constants.judger_url + "/call", json=dat)
-    data = res.json()
+    data = send_request("call", dat)
     logger.debug(data)
     return CallResult(*data)
 
@@ -132,8 +140,7 @@ def run(cmd: list[str], tl: int = 1000, ml: int = 128, in_file: SandboxPath | No
         "uid": user.value
     }
     logger.debug(dat)
-    res = requests.post(constants.judger_url + "/judge", json=dat)
-    data = res.json()
+    data = send_request("judge", dat)
     logger.debug(data)
     return Result(**data)
 
@@ -158,7 +165,32 @@ def interact_run(cmd: list[str], interact_cmd: list[str], tl: int = 1000, ml: in
         "interact_uid": interact_user.value
     }
     logger.debug(dat)
-    res = requests.post(constants.judger_url + "/interact_judge", json=dat)
-    data = res.json()
+    data = send_request("interact_judge", dat)
     logger.debug(data)
     return InteractResult(**data)
+
+
+def init():
+    token_path = (constants.data_path / "TOKEN")
+    new_token = secrets.token_urlsafe(33)
+    try:
+        res = requests.post(constants.judger_url + "/init", json={"token": new_token, "op": "init"}, timeout=10).text
+        logger.debug("response of init: " + res)
+        if "OK" not in res:
+            if not token_path.is_file():
+                logger.error("Failed to init judge token (old token not found)")
+                exit()
+            old_token = token_path.read_text()
+            res1 = requests.post(constants.judger_url + "/init", json={"token": old_token, "op": "check"}).text
+            logger.debug("response of init: " + res1)
+            if "OK" not in res1:
+                logger.error("Failed to init judge token (old token not match)")
+                exit()
+            server.app.config["JUDGE_TOKEN"] = old_token
+        else:
+            token_path.write_text(new_token)
+            server.app.config["JUDGE_TOKEN"] = new_token
+        logger.info("Judge token set successful")
+    except requests.ConnectTimeout:
+        logger.error("Failed to init judge token (connect timeout)")
+        exit()

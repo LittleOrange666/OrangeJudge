@@ -1,34 +1,12 @@
 import shutil
-import subprocess
 from pathlib import Path
-from typing import Callable, Any
+from typing import Callable
 
 from loguru import logger
 
 from . import constants, tools, judge
 from .constants import lang_path
 from .judge import SandboxPath
-
-
-def call(cmd: list[Any], stdin: str = "", timeout: float | None = None) -> tuple[str, str, int]:
-    """
-    Execute a command in a subprocess and return its output, error, and return code.
-
-    Args:
-        cmd (list[Any]): The command to execute. Each element in the list should be a string or convertible to a string.
-        stdin (str, optional): The input to provide to the command. Defaults to an empty string.
-        timeout (float | None, optional): The maximum time to wait for the command to complete. If None, the default timeout is 30 seconds.
-
-    Returns:
-        tuple[str, str, int]: A tuple containing the command's standard output, standard error, and return code.
-    """
-    cmd = list(map(str, cmd))
-    logger.debug(" ".join(cmd))
-    if timeout is None:
-        timeout = 30
-    process = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    ret = process.communicate(stdin.encode("utf8"), timeout=timeout)
-    return ret[0].decode("utf8"), ret[1].decode("utf8"), process.returncode
 
 
 def is_tle(result: tuple[str, str, int]) -> bool:
