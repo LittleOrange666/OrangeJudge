@@ -51,7 +51,8 @@ def test_submit():
     fn = constants.source_file_name + ext
     dat = datas.Submission(source=fn, time=datetime.datetime.now(), user=current_user.data,
                            problem=datas.Problem.query.filter_by(pid="test").first(), language=lang,
-                           data={"infile": "in.txt", "outfile": "out.txt"}, pid="test", simple_result="waiting")
+                           data={"infile": "in.txt", "outfile": "out.txt"}, pid="test", simple_result="waiting",
+                           queue_position=0)
     datas.add(dat)
     idx = str(dat.id)
     tools.write(code, dat.path / fn)

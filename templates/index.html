@@ -1,3 +1,11 @@
 {% extends "base.html" %}
 
 {% block title %}首頁{% endblock %}
+
+{% block main %}
+    <h1>歡迎!</h1>
+    {% if not current_user.is_authenticated %}
+        <p>您似乎尚未登入</p>
+        <p>請先<a href="/login">登入</a>或<a href="/signup">註冊</a></p>
+    {% endif %}
+{% endblock %}

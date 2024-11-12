@@ -129,6 +129,13 @@ def run(cmd: list[str], tl: int = 1000, ml: int = 128, in_file: SandboxPath | No
         out_file: SandboxPath | None = None,
         err_file: SandboxPath | None = None, seccomp_rule: SeccompRule | None = SeccompRule.general,
         user: SandboxUser = SandboxUser.nobody) -> Result:
+    if user != SandboxUser.root:
+        if in_file is not None:
+            call(["chmod", "744", str(in_file.sandbox)])
+        if out_file is not None:
+            call(["chmod", "766", str(out_file.sandbox)])
+        if err_file is not None:
+            call(["chmod", "766", str(err_file.sandbox)])
     dat = {
         "cmd": list(map(str, cmd)),
         "tl": tl,

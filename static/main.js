@@ -157,12 +157,20 @@ $(".time-string").each(function () {
 const myModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('myModal'));
 let current_modal_session = "";
 
-function show_modal(title, text, refresh, next_page) {
+function show_modal(title, text, refresh, next_page, skip) {
     document.getElementById('myModal').focus();
     $("#myModalTitle").text(title);
     $("#myModalText").text(text);
     let session_id = +new Date()+""+Math.random();
     current_modal_session = session_id;
+    if (skip){
+        if (next_page) {
+            location.href = next_page;
+        }else{
+            location.reload();
+        }
+        return;
+    }
     if (next_page) {
         $("#myModal").on("hidden.bs.modal", function () {
             if (session_id === current_modal_session) {
@@ -293,7 +301,7 @@ $(".submitter").each(function () {
         response.text().then(function (text) {
             if (response.ok) {
                 if (!!$this.data("redirect")) {
-                    show_modal("成功", "成功" + action_name, !$this.data("no-refresh"), text);
+                    show_modal("成功", "成功" + action_name, !$this.data("no-refresh"), text, !!$this.data("skip-success"));
                 } else if ($this.data("filename")) {
                     response.blob().then(function (blob) {
                         let url = window.URL.createObjectURL(blob);
@@ -302,7 +310,7 @@ $(".submitter").each(function () {
                         window.URL.revokeObjectURL(url);
                     });
                 } else {
-                    show_modal("成功", "成功" + action_name, !$this.data("no-refresh"), $this.data("next"));
+                    show_modal("成功", "成功" + action_name, !$this.data("no-refresh"), $this.data("next"), !!$this.data("skip-success"));
                 }
             } else if (response.status === 500) {
                 show_modal("失敗", "伺服器內部錯誤，log uid=" + text);
