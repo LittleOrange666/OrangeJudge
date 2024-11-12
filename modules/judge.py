@@ -175,15 +175,15 @@ def init():
     new_token = secrets.token_urlsafe(33)
     try:
         res = requests.post(constants.judger_url + "/init", json={"token": new_token, "op": "init"}, timeout=10).text
-        logger.debug("response of init: " + res)
-        if "OK" not in res:
+        logger.debug("response of init: " + repr(res))
+        if '"OK"' != res:
             if not token_path.is_file():
                 logger.error("Failed to init judge token (old token not found)")
                 exit()
             old_token = token_path.read_text()
             res1 = requests.post(constants.judger_url + "/init", json={"token": old_token, "op": "check"}).text
-            logger.debug("response of init: " + res1)
-            if "OK" not in res1:
+            logger.debug("response of init1: " + repr(res1))
+            if '"OK"' != res1:
                 logger.error("Failed to init judge token (old token not match)")
                 exit()
             server.app.config["JUDGE_TOKEN"] = old_token

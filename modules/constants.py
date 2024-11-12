@@ -103,26 +103,24 @@ runner_source_file_name = "Runner"
 
 data_path = Path("data").absolute()
 
-problem_path = Path("problems").absolute()
+problem_path = data_path / "problems"
 
-preparing_problem_path = Path("preparing_problems").absolute()
+preparing_problem_path = data_path / "preparing_problems"
 
 tmp_path = Path("tmp").absolute()
 
-contest_path = Path("contests").absolute()
+contest_path = data_path / "contests"
 
 lang_path = Path("langs").absolute()
 
-submission_path = Path("submissions").absolute()
+submission_path = data_path / "submissions"
 
-log_path = Path("logs").absolute()
-
-lxc_root = "/var/lib/lxc/" + lxc_name + "/rootfs"
-
-lxc_root_path = Path(lxc_root).absolute()
+log_path = data_path / "logs"
 
 testlib = Path("testlib/testlib.h").absolute()
 
 sandbox_path = Path("sandbox").absolute()
 
 judger_url = "http://localhost:9132"
+
+judge_path = Path("judge").absolute()

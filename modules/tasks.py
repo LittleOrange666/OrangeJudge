@@ -50,7 +50,7 @@ def run(lang: executing.Language, file: Path, env: executing.Environment, stdin:
     Path(stdout).touch()
     out_file = env.send_file(stdout)
     err_file = env.path("stderr.txt")
-    res = judge.run(exec_cmd, 10 * 1000, 1000, env.send_file(stdin), out_file, err_file)
+    res = judge.run(exec_cmd, 10 * 1000, 1000, env.send_file(stdin), out_file, err_file, seccomp_rule=lang.seccomp_rule)
     logger.debug(res)
     if res.result == "JE":
         return "JE: " + res.error
@@ -64,8 +64,8 @@ def run(lang: executing.Language, file: Path, env: executing.Environment, stdin:
     if res.result == "MLE":
         return "MLE: Testing is limited by 1000 MB"
     env.get_file(stdout)
-    time_usage = res.cpu_time
-    memusage = res.memory
+    time_usage = max(0, res.cpu_time - lang.base_time)
+    memusage = max(0, res.memory - lang.base_memory)
     return f"OK: {time_usage}ms, {memusage}B"
 
 
@@ -172,7 +172,7 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
                     res = judge.interact_run(exec_cmd, int_exec, tl, ml, in_path, out_path,
                                              interact_user=judge.SandboxUser.judge).result
                 else:
-                    res = judge.run(exec_cmd, tl, ml, in_path, out_path)
+                    res = judge.run(exec_cmd, tl, ml, in_path, out_path, seccomp_rule=lang.seccomp_rule)
                 exit_code = str(res.exit_code)
                 if res.result == "JE":
                     ret = ["JE", res.error]
