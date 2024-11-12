@@ -161,6 +161,7 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
             out_file = testcase_path / f"{i}.out"
             tools.create_truncated(Path(in_file), testcase_path / f"{i}.in")
             tools.create_truncated(Path(ans_file), testcase_path / f"{i}.ans")
+            ret = []
             if just_pretest and not testcase.get("pretest", False):
                 ret = ["OK", "Skip by pretest policy"]
                 score = top_score
@@ -170,10 +171,13 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
                 if problem_info["is_interact"]:
                     env.judge_readable(in_path)
                     env.judge_writeable(out_path)
-                    res = judge.interact_run(exec_cmd, int_exec, tl, ml, in_path, out_path,
-                                             interact_user=judge.SandboxUser.judge,
-                                             seccomp_rule=lang.seccomp_rule).result
-                    res = judge.Result(**res)
+                    interr = env.path("interr.txt")
+                    all_res = judge.interact_run(exec_cmd, int_exec, tl, ml, in_path, out_path,
+                                                 interact_user=judge.SandboxUser.judge,
+                                                 seccomp_rule=lang.seccomp_rule, interact_err_file=interr)
+                    res = all_res.result
+                    if all_res.interact_result.result == "RE":
+                        ret = ["WA", interr.full.read_text()]
                 else:
                     res = judge.run(exec_cmd, tl, ml, in_path, out_path, seccomp_rule=lang.seccomp_rule)
                 exit_code = str(res.exit_code)
@@ -185,39 +189,38 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
                     ret = ["MLE", "記憶體占用過大"]
                 elif exit_code == "153":
                     ret = ["OLE", "輸出過大"]
-                else:
-                    if res.result == "RE":
-                        if exit_code in constants.exit_codes:
-                            ret = ["RE", constants.exit_codes[exit_code]]
-                        else:
-                            ret = ["RE", "執行期間錯誤"]
+                elif res.result == "RE":
+                    if exit_code in constants.exit_codes:
+                        ret = ["RE", constants.exit_codes[exit_code]]
                     else:
-                        timeusage = max(0, res.cpu_time - lang.base_time)
-                        memusage = math.ceil(max(0, res.memory - lang.base_memory) / 1000)
-                        groups[gp]["time"] = max(groups[gp]["time"], timeusage)
-                        groups[gp]["mem"] = max(groups[gp]["mem"], memusage)
-                        has_output = True
-                        ans_path = env.send_file(ans_file)
-                        full_checker_cmd = checker_cmd + [in_path, out_path, ans_path]
-                        env.judge_readable(ans_path, in_path, out_path)
-                        checker_out = judge.call(full_checker_cmd, user=judge.SandboxUser.judge)
-                        env.protected(ans_path, in_path, out_path)
-                        env.get_file(out_file)
-                        tools.create_truncated(Path(out_file), Path(out_file))
-                        if checker_out.stderr.startswith("partially correct"):
-                            score = checker_out.return_code
+                        ret = ["RE", "執行期間錯誤"]
+                elif len(ret) == 0:  # skip code below if interactor return with non-zero return code
+                    timeusage = max(0, res.cpu_time - lang.base_time)
+                    memusage = math.ceil(max(0, res.memory - lang.base_memory) / 1000)
+                    groups[gp]["time"] = max(groups[gp]["time"], timeusage)
+                    groups[gp]["mem"] = max(groups[gp]["mem"], memusage)
+                    has_output = True
+                    ans_path = env.send_file(ans_file)
+                    full_checker_cmd = checker_cmd + [in_path, out_path, ans_path]
+                    env.judge_readable(ans_path, in_path, out_path)
+                    checker_out = judge.call(full_checker_cmd, user=judge.SandboxUser.judge)
+                    env.protected(ans_path, in_path, out_path)
+                    env.get_file(out_file)
+                    tools.create_truncated(Path(out_file), Path(out_file))
+                    if checker_out.stderr.startswith("partially correct"):
+                        score = checker_out.return_code
+                        name = "OK" if score >= top_score else "PARTIAL"
+                    else:
+                        name = constants.judge_exit_codes.get(checker_out.return_code, "JE")
+                        if name == "OK":
+                            score = top_score
+                        elif name == "POINTS":
+                            st = checker_out.stderr.split(" ")
+                            if len(st) > 1 and st[1].replace(".", "", 1).isdigit():
+                                score = float(st[1])
                             name = "OK" if score >= top_score else "PARTIAL"
-                        else:
-                            name = constants.judge_exit_codes.get(checker_out.return_code, "JE")
-                            if name == "OK":
-                                score = top_score
-                            elif name == "POINTS":
-                                st = checker_out.stderr.split(" ")
-                                if len(st) > 1 and st[1].replace(".", "", 1).isdigit():
-                                    score = float(st[1])
-                                name = "OK" if score >= top_score else "PARTIAL"
-                        score = max(score, 0)
-                        ret = [name, checker_out.stderr]
+                    score = max(score, 0)
+                    ret = [name, checker_out.stderr]
             if ret[0] == "TLE":
                 timeusage = tl
             results.append({"time": timeusage, "mem": memusage, "result": ret[0], "info": ret[1],

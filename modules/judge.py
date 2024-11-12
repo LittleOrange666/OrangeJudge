@@ -167,7 +167,7 @@ def interact_run(cmd: list[str], interact_cmd: list[str], tl: int = 1000, ml: in
     logger.debug(dat)
     data = send_request("interact_judge", dat)
     logger.debug(data)
-    return InteractResult(**data)
+    return InteractResult(result=Result(**data["result"]), interact_result=Result(**data["interact_result"]))
 
 
 def init():
