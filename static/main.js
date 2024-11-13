@@ -161,12 +161,12 @@ function show_modal(title, text, refresh, next_page, skip) {
     document.getElementById('myModal').focus();
     $("#myModalTitle").text(title);
     $("#myModalText").text(text);
-    let session_id = +new Date()+""+Math.random();
+    let session_id = +new Date() + "" + Math.random();
     current_modal_session = session_id;
-    if (skip){
+    if (skip) {
         if (next_page) {
             location.href = next_page;
-        }else{
+        } else {
             location.reload();
         }
         return;
@@ -185,12 +185,12 @@ function show_modal(title, text, refresh, next_page, skip) {
         });
     }
     myModal.show();
-    if(title==="成功"){
+    if (title === "成功") {
         let timeout_id = window.setTimeout(function () {
             myModal.hide();
-        },3000);
+        }, 3000);
         $("#myModal").on("hidden.bs.modal", function () {
-            if(timeout_id !== -1){
+            if (timeout_id !== -1) {
                 window.clearTimeout(timeout_id);
                 timeout_id = -1;
             }
@@ -316,9 +316,9 @@ $(".submitter").each(function () {
                 show_modal("失敗", "伺服器內部錯誤，log uid=" + text);
             } else {
                 let msg = $this.data("msg-" + response.status);
-                if($this.data("msg-type-" + response.status)==="return") msg = text;
+                if ($this.data("msg-type-" + response.status) === "return") msg = text;
                 if (!msg && response.status === 400) {
-                    if(text.includes("The CSRF token is invalid")) msg = "CSRFtoken失效，請刷新頁面再試一次";
+                    if (text.includes("The CSRF token is invalid")) msg = "CSRFtoken失效，請刷新頁面再試一次";
                     else msg = "輸入格式不正確"
                 }
                 if (!msg && response.status === 403) msg = "您似乎沒有權限執行此操作"

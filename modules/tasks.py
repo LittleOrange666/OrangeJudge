@@ -196,7 +196,7 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
                         ret = ["RE", "執行期間錯誤"]
                 elif len(ret) == 0:  # skip code below if interactor return with non-zero return code
                     timeusage = max(0, res.cpu_time - lang.base_time)
-                    memusage = math.ceil(max(0, res.memory - lang.base_memory) / 1000)
+                    memusage = math.ceil(max(0, res.memory - lang.base_memory) / 1024)
                     groups[gp]["time"] = max(groups[gp]["time"], timeusage)
                     groups[gp]["mem"] = max(groups[gp]["mem"], memusage)
                     has_output = True

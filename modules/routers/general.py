@@ -225,33 +225,6 @@ def problem_file(idx, filename):
     return sending_file(target)
 
 
-@app.route("/my_submissions", methods=['GET'])
-@login_required
-def my_submissions():
-    data: datas.User = current_user.data
-    submission_obj = data.submissions
-    if "pid" in request.args:
-        submission_obj = submission_obj.filter_by(pid=request.args.get("pid"))
-    got_data, page_cnt, page_idx, show_pages = tools.pagination(submission_obj)
-    out = []
-    for dat in got_data:
-        dat: datas.Submission
-        o = {"name": str(dat.id), "time": dat.time.timestamp(), "result": dat.simple_result or "unknown"}
-        if dat.problem is None:
-            continue
-        if dat.problem.pid == "test":
-            o["source"] = "/test"
-            o["source_name"] = "Simple Testing"
-        else:
-            o["source"] = "/problem/" + dat.problem.pid
-            source_dat = dat.problem
-            o["source_name"] = source_dat.name
-        o["lang"] = dat.language
-        out.append(o)
-    return render_template("my_submissions.html", submissions=out, page_cnt=page_cnt, page_idx=page_idx,
-                           show_pages=show_pages)
-
-
 @app.route("/status", methods=["GET"])
 def all_status():
     return render_template("status.html")

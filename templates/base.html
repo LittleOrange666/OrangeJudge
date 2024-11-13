@@ -53,7 +53,7 @@
                                aria-expanded="false">{{ current_user.data.display_name }}</a>
                             <ul class="dropdown-menu">
                                 <li><a class="dropdown-item" href="/user/{{ current_user.id }}">個人頁面</a></li>
-                                <li><a class="dropdown-item" href="/my_submissions">解題列表</a></li>
+                                <li><a class="dropdown-item" href="/status?user={{ current_user.id }}">解題列表</a></li>
                                 <li><a class="dropdown-item" href="/settings">帳號設定</a></li>
                                 <li><a class="dropdown-item" href="/preferences">偏好設定</a></li>
                                 {% if current_user.has_str("make_problems") %}

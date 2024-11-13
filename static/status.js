@@ -3,14 +3,24 @@ $(function () {
     let url = new URL(location.href);
     let user_field = $("#status_filter_username");
     let pid_field = $("#status_filter_pid");
-    user_field.val(url.searchParams.get("user")||"");
-    pid_field.val(url.searchParams.get("pid")||"");
-    current_page = Number(url.searchParams.get("page")||"1");
-    function change_page(page) {
+    let btn = $("#status_filter");
+    user_field.val(url.searchParams.get("user") || "");
+    pid_field.val(url.searchParams.get("pid") || "");
+    current_page = Number(url.searchParams.get("page") || "1");
+
+    function change_page(page, is_init, target_url) {
         current_page = page;
         let fd = new FormData();
         let user = user_field.val().toLowerCase();
         let pid = pid_field.val();
+        if(target_url){
+            target_url = new URL(target_url);
+            user = target_url.searchParams.get("user") || user;
+            pid = target_url.searchParams.get("pid") || pid;
+            page = target_url.searchParams.get("page") || page;
+            user_field.val(user);
+            pid_field.val(pid);
+        }
         fd.append("user", user);
         fd.append("pid", pid);
         fd.append("page", page);
@@ -26,7 +36,8 @@ $(function () {
             url.searchParams.set("user", user);
             url.searchParams.set("pid", pid);
             url.searchParams.set("page", current_page);
-            history.pushState({}, "", url);
+            if (is_init) history.replaceState({"link": url.href}, "", url);
+            else history.pushState({"link": url.href}, "", url);
             let table = $("#status_table");
             table.empty();
             for (let obj of data["data"]) {
@@ -75,14 +86,19 @@ $(function () {
         });
     }
 
-    change_page(current_page);
-    $("#status_filter").click(function () {
+    change_page(current_page, true);
+    btn.click(function () {
         change_page(current_page);
     });
-    function try_filter(e){
-        if(e.key === "Enter")
-            change_page(current_page);
+
+    function try_filter(e) {
+        if (e.key === "Enter")
+            btn.click();
     }
+
     user_field.on("keypress", try_filter);
     pid_field.on("keypress", try_filter);
+    window.addEventListener('popstate', (e) => {
+        change_page(current_page, true, e.state.link);
+    });
 });
