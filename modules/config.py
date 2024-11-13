@@ -1,4 +1,5 @@
 from enum import Enum
+from pathlib import Path
 from typing import Generic, TypeVar, Type
 
 import yaml
@@ -11,14 +12,19 @@ class ConfigError(Exception):
     pass
 
 
-with open("config.yaml") as f:
-    config = yaml.load(f, yaml.loader.SafeLoader)
+config_file = Path("data/config.yaml").absolute()
+
+if config_file.is_file():
+    with config_file.open() as f:
+        config = yaml.load(f, yaml.loader.SafeLoader)
+else:
+    config = {}
 
 logger.info("config=" + str(config))
 
 
 def save_config():
-    with open("config.yaml", "w") as file:
+    with config_file.open("w") as file:
         yaml.dump(config, file)
 
 
@@ -39,6 +45,7 @@ class ConfigCategory:
     Raises:
         ConfigError: If the data for the given key is not a dictionary.
     """
+    __slots__ = ("key", "name", "data", "source")
 
     def __init__(self, data: dict, key: str, name: str):
         """
@@ -192,7 +199,7 @@ class JudgeConfig(ConfigCategory):
 
 
 class DebugConfig(ConfigCategory):
-    log = ConfigProperty[bool]("除錯紀錄是否啟用", bool, False)
+    disable_csrf = ConfigProperty[bool]("關閉CSRF保護", bool, False)
     single_secret = ConfigProperty[bool]("使用固定的SECRET_KEY", bool, False)
 
     def __init__(self, data: dict):

@@ -341,9 +341,6 @@ def to_datetime(text: str, **replace_kwargs) -> datetime:
         abort(400)
 
 
-has_log: bool = config.debug.log
-
-
 def print_to_string(*args, **kwargs):
     output: io.StringIO
     with io.StringIO() as output:

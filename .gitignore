@@ -10,5 +10,5 @@ verify/
 tmp/
 sandbox/
 tools/inited
-config.yaml
+data/config.yaml
 *.pyc

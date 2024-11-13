@@ -24,7 +24,8 @@ app.config["SESSION_COOKIE_NAME"] = "OrangeJudgeSession"
 app.config['SESSION_PERMANENT'] = True
 app.config["PERMANENT_SESSION_LIFETIME"] = 200000
 Session(app)
-CSRFProtect(app)
+if not config.debug.disable_csrf:
+    CSRFProtect(app)
 limiter = Limiter(
     get_remote_address,
     app=app,
