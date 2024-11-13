@@ -1,11 +1,17 @@
 $(function () {
     let current_page = 1;
-    let pid = "";
-
+    let url = new URL(location.href);
+    let user_field = $("#status_filter_username");
+    let pid_field = $("#status_filter_pid");
+    user_field.val(url.searchParams.get("user")||"");
+    pid_field.val(url.searchParams.get("pid")||"");
+    current_page = Number(url.searchParams.get("page")||"1");
     function change_page(page) {
         current_page = page;
         let fd = new FormData();
-        fd.append("user", $("#status_filter_username").val().toLowerCase());
+        let user = user_field.val().toLowerCase();
+        let pid = pid_field.val();
+        fd.append("user", user);
         fd.append("pid", pid);
         fd.append("page", page);
         fetch("/status_data", {
@@ -16,6 +22,11 @@ $(function () {
             return response.json();
         }).then(function (data) {
             current_page = data["page"];
+            let url = new URL(location.href);
+            url.searchParams.set("user", user);
+            url.searchParams.set("pid", pid);
+            url.searchParams.set("page", current_page);
+            history.pushState({}, "", url);
             let table = $("#status_table");
             table.empty();
             for (let obj of data["data"]) {
@@ -52,7 +63,7 @@ $(function () {
                 pagination.append(li);
             }
             let last = $('<li class="page-item">');
-            if (page == data["page_cnt"]) {
+            if (Number(page) === Number(data["page_cnt"])) {
                 last.addClass("disabled");
             }
             let last_btn = $('<a class="page-link" aria-label="Next"><span aria-hidden="true">&raquo;</span></a>');
@@ -66,7 +77,12 @@ $(function () {
 
     change_page(current_page);
     $("#status_filter").click(function () {
-        pid = $("#status_filter_pid").val();
         change_page(current_page);
     });
+    function try_filter(e){
+        if(e.key === "Enter")
+            change_page(current_page);
+    }
+    user_field.on("keypress", try_filter);
+    pid_field.on("keypress", try_filter);
 });

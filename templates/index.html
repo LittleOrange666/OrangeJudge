@@ -7,5 +7,9 @@
     {% if not current_user.is_authenticated %}
         <p>您似乎尚未登入</p>
         <p>請先<a href="/login">登入</a>或<a href="/signup">註冊</a></p>
+        <br>
+        <p>接著</p>
     {% endif %}
+    <p>您可以到<a href="/problems">公開題目</a>寫寫題目</p>
+    <p>或到<a href="/contests">競賽列表</a>參與競賽</p>
 {% endblock %}

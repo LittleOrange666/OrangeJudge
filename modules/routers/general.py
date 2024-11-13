@@ -261,8 +261,12 @@ def all_status():
 def all_status_data():
     status = datas.Submission.query.filter_by(contest_id=None)
     if "user" in request.form and len(request.form["user"]):
-        user: datas.User = datas.User.query.filter_by(username=request.form["user"]).first_or_404()
-        status = status.filter_by(user=user)
+        users = datas.User.query.filter_by(username=request.form["user"])
+        if users.count() == 0:
+            status = status.filter_by(id=-1)
+        else:
+            user: datas.User = users.first()
+            status = status.filter_by(user=user)
     if "pid" in request.form and len(request.form["pid"]):
         status = status.filter_by(pid=request.form["pid"])
     got_data, page_cnt, page_idx, show_pages = tools.pagination(status)

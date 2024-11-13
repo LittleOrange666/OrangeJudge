@@ -382,8 +382,10 @@ def pagination(sql_obj, rev: bool = True, page: int | str | None = None, page_si
             page = request.form.get("page", "1")
     if type(page) is str:
         page = to_int(page)
-    if page <= 0 or page > page_cnt:
-        abort(404)
+    if page <= 0:
+        page = 1
+    if page > page_cnt:
+        page = page_cnt
     if rev:
         got_data = list(reversed(sql_obj.slice(max(0, cnt - page_size * page),
                                                cnt - page_size * (page - 1)).all()))
