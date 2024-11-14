@@ -241,6 +241,7 @@ class Language:
                 for i in range(len(compile_cmd)):
                     compile_cmd[i] = compile_cmd[i].format(filename, new_filename, **self.kwargs)
             SandboxUser.compile.executable(filename)
+            SandboxUser.compile.writeable(new_filename)
             out = judge.call(compile_cmd, user=SandboxUser.compile)
             if other_file is not None:
                 other_file = env.simple_path(other_file)
