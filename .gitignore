@@ -13,3 +13,4 @@ tools/inited
 data/config.yaml
 *.pyc
 venv/
+
