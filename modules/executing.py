@@ -121,12 +121,13 @@ class Environment:
             user (SandboxUser | None, optional): The user to make the files writable. Defaults to None (all_user).
         """
         for filename in filenames:
-            if not filepath.full.parent.exists():
-                filepath.full.parent.mkdir(parents=True,exist_ok=True)
+            if not filename.full.parent.exists():
+                filename.full.parent.mkdir(parents=True, exist_ok=True)
+                judge.chmod(filename.full.parent, 0o777)
             if not filename.exists():
                 filename.full.touch()
             if user is None:
-                judge.chmod(filename, 0o722)
+                judge.chmod(filename, 0o766)
             else:
                 user.writeable(filename)
 
