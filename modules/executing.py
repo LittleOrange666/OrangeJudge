@@ -121,6 +121,8 @@ class Environment:
             user (SandboxUser | None, optional): The user to make the files writable. Defaults to None (all_user).
         """
         for filename in filenames:
+            if not filepath.full.parent.exists():
+                filepath.full.parent.mkdir(parents=True,exist_ok=True)
             if not filename.exists():
                 filename.full.touch()
             if user is None:

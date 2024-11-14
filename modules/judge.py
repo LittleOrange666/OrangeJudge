@@ -112,6 +112,8 @@ class SandboxUser(Enum):
         chmod(filepath, 0o740)
 
     def writeable(self, filepath: SandboxPath):
+        if not filepath.full.parent.exists():
+            filepath.full.parent.mkdir(parents=True,exist_ok=True)
         if not filepath.exists():
             filepath.full.touch()
         call(["chgrp", self.name, filepath])
