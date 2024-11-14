@@ -123,7 +123,7 @@ class Environment:
         for filename in filenames:
             if not filename.full.parent.exists():
                 filename.full.parent.mkdir(parents=True, exist_ok=True)
-                judge.chmod(filename.full.parent, 0o777)
+                judge.chmod(filename.parent, 0o777)
             if not filename.exists():
                 filename.full.touch()
             if user is None:

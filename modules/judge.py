@@ -47,6 +47,14 @@ class SandboxPath:
         """
         return Path(self._path).stem
 
+    @property
+    def parent(self):
+        """
+        The path's parent directory.
+        :return: parent
+        """
+        return SandboxPath(self._dirname, os.path.dirname(self._path))
+
     def exists(self) -> bool:
         """
         Check if the file exists.
@@ -114,7 +122,7 @@ class SandboxUser(Enum):
     def writeable(self, filepath: SandboxPath):
         if not filepath.full.parent.exists():
             filepath.full.parent.mkdir(parents=True,exist_ok=True)
-            chmod(filepath.full.parent, 0o777)
+            chmod(filepath.parent, 0o777)
         if not filepath.exists():
             filepath.full.touch()
         call(["chgrp", self.name, filepath])
