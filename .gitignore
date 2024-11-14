@@ -12,3 +12,4 @@ sandbox/
 tools/inited
 data/config.yaml
 *.pyc
+venv/

@@ -97,8 +97,7 @@ class SeccompRule(Enum):
 
 
 def chmod(filepath: SandboxPath, mode: int):
-    os.chmod(filepath.full, mode)
-    logger.debug(f"chmod {oct(mode)[2:]} {filepath.sandbox}")
+    call(["chmod", oct(mode)[2:], filepath])
 
 
 class SandboxUser(Enum):
