@@ -22,7 +22,7 @@ from werkzeug.utils import secure_filename
 import judge
 from . import executing, tools, constants, createhtml, datas
 from .constants import tmp_path, preparing_problem_path, testlib, problem_path
-from .judge import SandboxPath
+from .judge import SandboxPath, SandboxUser
 from .server import sending_file
 from .tools import TempFile
 
@@ -310,7 +310,7 @@ def generate_testcase(pid: str):
                 in_file = testcase_path / f"{name}.in"
                 out_file = testcase_path / f"{name}.out"
                 log(f"generating testcase {name!r}")
-                gen_out = judge.call(file1_cmd + cmd.split(), user=judge.SandboxUser.judge)
+                gen_out = judge.call(file1_cmd + cmd.split(), user=SandboxUser.judge)
                 if gen_out.return_code:
                     log("generator RE")
                     gen_group['status'] = "生成失敗：生成器RE"
@@ -321,10 +321,10 @@ def generate_testcase(pid: str):
                     in_path = env.send_file(in_file)
                     out_path = env.path(out_file.name)
                     if problem["is_interact"]:
-                        env.judge_readable(in_path)
-                        env.judge_writeable(out_path)
+                        env.readable(in_path, user=SandboxUser.judge)
+                        env.writeable(out_path, user=SandboxUser.judge)
                         res = judge.interact_run(file2_cmd, int_cmd, tl, ml, in_path, out_path,
-                                                 interact_user=judge.SandboxUser.judge).result
+                                                 interact_user=SandboxUser.judge).result
                     else:
                         res = judge.run(file2_cmd, tl, ml, in_path, out_path)
                     if res.result != "AC":
@@ -332,7 +332,7 @@ def generate_testcase(pid: str):
                         gen_group['status'] = f"生成失敗：官解{res.result}"
                     env.get_file(out_file)
                 else:
-                    gen_out = judge.call(file2_cmd + cmd.split(), user=judge.SandboxUser.judge)
+                    gen_out = judge.call(file2_cmd + cmd.split(), user=SandboxUser.judge)
                     if gen_out.return_code:
                         log("generator RE")
                         gen_group['status'] = "生成失敗：答案生成器RE"

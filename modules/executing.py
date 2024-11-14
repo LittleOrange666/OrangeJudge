@@ -1,3 +1,4 @@
+import os
 import shutil
 from pathlib import Path
 from typing import Callable
@@ -6,7 +7,7 @@ from loguru import logger
 
 from . import constants, tools, judge
 from .constants import lang_path
-from .judge import SandboxPath
+from .judge import SandboxPath, SandboxUser
 
 
 def is_tle(result: tuple[str, str, int]) -> bool:
@@ -25,6 +26,7 @@ class Environment:
         """
         self.dirname: str = tools.random_string()
         (constants.sandbox_path / self.dirname).mkdir(parents=True, exist_ok=True)
+        judge.chmod(self.path(""), 0o777)
 
     def path(self, path: str) -> SandboxPath:
         """
@@ -110,83 +112,51 @@ class Environment:
         tools.delete(self.path(filepath.name).full)
 
     @staticmethod
-    def judge_writeable(*filenames: SandboxPath) -> None:
-        """
-        Make files writable by the judge user in the sandbox environment.
-
-        Args:
-            *filenames (SandboxPath): The SandboxPaths to make writable.
-        """
-        for filename in filenames:
-            if not filename.exists():
-                filename.full.touch()
-            filepath = filename.sandbox
-            judge.call(["chgrp", "judge", filepath])
-            judge.call(["chmod", "760", filepath])
-
-    @staticmethod
-    def writeable(*filenames: SandboxPath) -> None:
+    def writeable(*filenames: SandboxPath, user: SandboxUser | None = None) -> None:
         """
         Make files writable by all users in the sandbox environment.
 
         Args:
             *filenames (SandboxPath): The SandboxPaths to make writable.
+            user (SandboxUser | None, optional): The user to make the files writable. Defaults to None (all_user).
         """
         for filename in filenames:
             if not filename.exists():
                 filename.full.touch()
-            filepath = filename.sandbox
-            judge.call(["chmod", "766", filepath])
+            if user is None:
+                judge.chmod(filename, 0o722)
+            else:
+                user.writeable(filename)
 
     @staticmethod
-    def judge_executable(*filenames: SandboxPath) -> None:
-        """
-        Make files executable by the judge user in the sandbox environment.
-
-        Args:
-            *filenames (SandboxPath): The SandboxPaths to make executable.
-        """
-        for filename in filenames:
-            filepath = filename.sandbox
-            judge.call(["chgrp", "judge", filepath])
-            judge.call(["chmod", "750", filepath])
-
-    @staticmethod
-    def executable(*filenames: SandboxPath) -> None:
+    def executable(*filenames: SandboxPath, user: SandboxUser | None = None) -> None:
         """
         Make files executable by all users in the sandbox environment.
 
         Args:
             *filenames (SandboxPath): The SandboxPaths to make executable.
+            user (SandboxUser | None, optional): The user to make the files executable. Defaults to None (all_user).
         """
         for filename in filenames:
-            filepath = filename.sandbox
-            judge.call(["chmod", "755", filepath])
+            if user is None:
+                judge.chmod(filename, 0o755)
+            else:
+                user.executable(filename)
 
     @staticmethod
-    def readable(*filenames: SandboxPath) -> None:
+    def readable(*filenames: SandboxPath, user: SandboxUser | None = None) -> None:
         """
         Make files readable by all users in the sandbox environment.
 
         Args:
             *filenames (SandboxPath): The SandboxPaths to make readable.
+            user (SandboxUser | None, optional): The user to make the files readable. Defaults to None (all_user).
         """
         for filename in filenames:
-            filepath = filename.sandbox
-            judge.call(["chmod", "744", filepath])
-
-    @staticmethod
-    def judge_readable(*filenames: SandboxPath) -> None:
-        """
-        Make files readable by the judge user in the sandbox environment.
-
-        Args:
-            *filenames (SandboxPath): The SandboxPaths to make readable.
-        """
-        for filename in filenames:
-            filepath = filename.sandbox
-            judge.call(["chgrp", "judge", filepath])
-            judge.call(["chmod", "740", filepath])
+            if user is None:
+                judge.chmod(filename, 0o744)
+            else:
+                user.executable(filename)
 
     @staticmethod
     def protected(*filenames: SandboxPath) -> None:
@@ -197,8 +167,7 @@ class Environment:
             *filenames (SandboxPath): The SandboxPaths to protect.
         """
         for filename in filenames:
-            filepath = filename.sandbox
-            judge.call(["chmod", "700", filepath])
+            judge.chmod(filename, 0o700)
 
     def __del__(self):
         """
@@ -271,7 +240,8 @@ class Language:
                 compile_cmd = self.data["compile_cmd"][:]
                 for i in range(len(compile_cmd)):
                     compile_cmd[i] = compile_cmd[i].format(filename, new_filename, **self.kwargs)
-            out = judge.call(compile_cmd)
+            SandboxUser.compile.executable(filename)
+            out = judge.call(compile_cmd, user=SandboxUser.compile)
             if other_file is not None:
                 other_file = env.simple_path(other_file)
                 env.executable(other_file)

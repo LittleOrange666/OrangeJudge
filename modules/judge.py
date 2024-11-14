@@ -1,3 +1,4 @@
+import os
 import secrets
 from dataclasses import dataclass
 from enum import Enum
@@ -95,12 +96,31 @@ class SeccompRule(Enum):
     node = "node"
 
 
+def chmod(filepath: SandboxPath, mode: int):
+    os.chmod(filepath.full, mode)
+    logger.debug(f"chmod {oct(mode)[2:]} {filepath.sandbox}")
+
+
 class SandboxUser(Enum):
     root = 0
     judge = 1500
     compile = 1600
     running = 1700
     nobody = 65534
+
+    def readable(self, filepath: SandboxPath):
+        call(["chgrp", self.name, filepath])
+        chmod(filepath, 0o740)
+
+    def writeable(self, filepath: SandboxPath):
+        if not filepath.exists():
+            filepath.full.touch()
+        call(["chgrp", self.name, filepath])
+        chmod(filepath, 0o720)
+
+    def executable(self, filepath: SandboxPath):
+        call(["chgrp", self.name, filepath])
+        chmod(filepath, 0o750)
 
 
 def send_request(op: str, dat: dict):
@@ -129,13 +149,6 @@ def run(cmd: list[str], tl: int = 1000, ml: int = 128, in_file: SandboxPath | No
         out_file: SandboxPath | None = None,
         err_file: SandboxPath | None = None, seccomp_rule: SeccompRule | None = SeccompRule.general,
         user: SandboxUser = SandboxUser.nobody) -> Result:
-    if user != SandboxUser.root:
-        if in_file is not None:
-            call(["chmod", "744", str(in_file.sandbox)])
-        if out_file is not None:
-            call(["chmod", "766", str(out_file.sandbox)])
-        if err_file is not None:
-            call(["chmod", "766", str(err_file.sandbox)])
     dat = {
         "cmd": list(map(str, cmd)),
         "tl": tl,
@@ -201,3 +214,4 @@ def init():
     except requests.ConnectTimeout:
         logger.error("Failed to init judge token (connect timeout)")
         exit()
+    chmod(SandboxPath(".", "."), 0o777)

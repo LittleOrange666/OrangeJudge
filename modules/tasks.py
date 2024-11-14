@@ -9,6 +9,7 @@ from loguru import logger
 
 from . import executing, constants, tools, locks, datas, config, judge
 from .constants import log_path
+from .judge import SandboxUser
 
 last_judged = locks.Counter()
 
@@ -49,9 +50,13 @@ def run(lang: executing.Language, file: Path, env: executing.Environment, stdin:
         return "CE"
     exec_cmd = lang.get_execmd(filename)
     Path(stdout).touch()
+    in_file = env.send_file(stdin)
     out_file = env.send_file(stdout)
     err_file = env.path("stderr.txt")
-    res = judge.run(exec_cmd, 10 * 1000, 1000, env.send_file(stdin), out_file, err_file, seccomp_rule=lang.seccomp_rule)
+    SandboxUser.running.readable(in_file)
+    SandboxUser.running.writeable(out_file)
+    res = judge.run(exec_cmd, 10 * 1000, 1000, in_file, out_file, err_file, user=SandboxUser.running,
+                    seccomp_rule=lang.seccomp_rule)
     logger.debug(res)
     if res.result == "JE":
         return "JE: " + res.error
@@ -116,10 +121,10 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
         ml = int(problem_info["memorylimit"])
         int_exec = []
         if problem_info["is_interact"]:
-            int_file = env.send_file(p_path / problem_info["interactor"][0], env.judge_executable)
+            int_file = env.send_file(p_path / problem_info["interactor"][0], SandboxUser.judge.executable)
             int_lang = executing.langs[problem_info["interactor"][1]]
             int_exec = int_lang.get_execmd(int_file)
-        checker = env.send_file(p_path / problem_info["checker"][0], env.judge_executable)
+        checker = env.send_file(p_path / problem_info["checker"][0], SandboxUser.judge.executable)
         checker_cmd = executing.langs[problem_info["checker"][1]].get_execmd(checker)
         exec_cmd = lang.get_execmd(filename)
         testcase_path = dat.path / "testcases"
@@ -169,17 +174,21 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
                 in_path = env.send_file(in_file)
                 out_path = env.path(out_file.name)
                 if problem_info["is_interact"]:
-                    env.judge_readable(in_path)
-                    env.judge_writeable(out_path)
+                    SandboxUser.judge.readable(in_path)
+                    SandboxUser.judge.writeable(out_path)
                     interr = env.path("interr.txt")
                     all_res = judge.interact_run(exec_cmd, int_exec, tl, ml, in_path, out_path,
-                                                 interact_user=judge.SandboxUser.judge,
+                                                 user=SandboxUser.running,
+                                                 interact_user=SandboxUser.judge,
                                                  seccomp_rule=lang.seccomp_rule, interact_err_file=interr)
                     res = all_res.result
                     if all_res.interact_result.result == "RE":
                         ret = ["WA", interr.full.read_text()]
                 else:
-                    res = judge.run(exec_cmd, tl, ml, in_path, out_path, seccomp_rule=lang.seccomp_rule)
+                    SandboxUser.running.readable(in_path)
+                    SandboxUser.running.writeable(out_path)
+                    res = judge.run(exec_cmd, tl, ml, in_path, out_path, user=SandboxUser.running
+                                    , seccomp_rule=lang.seccomp_rule)
                 exit_code = str(res.exit_code)
                 if res.result == "JE":
                     ret = ["JE", res.error]
@@ -202,8 +211,8 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
                     has_output = True
                     ans_path = env.send_file(ans_file)
                     full_checker_cmd = checker_cmd + [in_path, out_path, ans_path]
-                    env.judge_readable(ans_path, in_path, out_path)
-                    checker_out = judge.call(full_checker_cmd, user=judge.SandboxUser.judge)
+                    env.readable(ans_path, in_path, out_path, user=SandboxUser.judge)
+                    checker_out = judge.call(full_checker_cmd, user=SandboxUser.judge)
                     env.protected(ans_path, in_path, out_path)
                     env.get_file(out_file)
                     tools.create_truncated(Path(out_file), Path(out_file))
