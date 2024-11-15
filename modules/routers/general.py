@@ -121,6 +121,7 @@ def submission(idx: str):
     else:
         group_results = {}
         protected = True
+        checker_protected = True
         problem_info = pdat.data
         if not current_user.has(Permission.admin) and dat.user_id != current_user.data.id and current_user.id not in \
                 problem_info[
@@ -135,6 +136,10 @@ def submission(idx: str):
             result["protected"] = protected = ((not problem_info.get('public_testcase', False) or bool(dat.period_id))
                                                and current_user.id not in problem_info["users"]
                                                and not current_user.has(Permission.admin))
+            checker_protected = ((not problem_info.get('public_checker', False) or bool(dat.period_id))
+                                 and current_user.id not in problem_info["users"]
+                                 and not current_user.has(Permission.admin))
+            result["checker_protected"] = checker_protected
             testcase_path = dat.path / "testcases"
             for i in range(len(results)):
                 if results[i]["result"] != "SKIP" and (not protected or super_access or results[i]["sample"]):
@@ -168,7 +173,8 @@ def submission(idx: str):
                               pname=problem_info["name"], result=result, enumerate=enumerate,
                               group_results=group_results, link=link, pos=tasks.get_queue_position(dat),
                               ce_msg=ce_msg, je=dat.data.get("JE", False), logid=dat.data.get("log_uuid", ""),
-                              super_access=super_access, contest=contest, cid=cid, protected=protected)
+                              super_access=super_access, contest=contest, cid=cid, protected=protected,
+                              checker_protected=checker_protected)
     return ret
 
 

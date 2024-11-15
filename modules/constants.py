@@ -1,7 +1,12 @@
+import os
 import re
+import subprocess
 from enum import Enum
 from pathlib import Path
 from re import Pattern
+
+signal_names = {str(i + 1): "SIG" + v for i, v in
+                enumerate(subprocess.run(["kill", "-l"], capture_output=True).stdout.decode())}
 
 result_class: dict[str, str] = {
     "OK": "table-success",
@@ -24,7 +29,7 @@ exit_codes: dict[str, str] = {
     "143": "產生程式中斷訊號！"
 }
 
-judge_exit_codes: dict[int, str] = {
+checker_exit_codes: dict[int, str] = {
     0: "OK",
     1: "WA",
     2: "PE",
@@ -41,7 +46,7 @@ default_problem_info: dict = {"name": "unknown", "timelimit": "1000", "memorylim
                               "files": [], "checker_source": ["default", "unknown"], "is_interact": False,
                               "groups": {"default": {"score": 100, "rule": "min", "dependency": []}},
                               "interactor_source": "unknown", "manual_samples": [],
-                              "languages": {}, "public_testcase": False, "gen_groups": [],
+                              "languages": {}, "public_testcase": False, "public_checker": False, "gen_groups": [],
                               "runner_source": {}, "runner_enabled": False, "libraries": []}
 
 email_reg: Pattern = re.compile("^[\\w\\-.]+@([\\w\\-]+\\.)+[\\w-]{2,4}$")
@@ -121,6 +126,6 @@ testlib = Path("testlib/testlib.h").absolute()
 
 sandbox_path = Path("sandbox").absolute()
 
-judger_url = "http://localhost:9132"
+judger_url = os.environ.get("JUDGER_URL", "http://localhost:9132")
 
 judge_path = Path("judge").absolute()

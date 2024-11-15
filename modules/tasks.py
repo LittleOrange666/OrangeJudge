@@ -66,7 +66,10 @@ def run(lang: executing.Language, file: Path, env: executing.Environment, stdin:
     if res.result == "RE":
         exit_code = str(res.exit_code)
         msg = constants.exit_codes.get(exit_code, exit_code)
-        return f"RE: {msg}: signal {res.signal}"
+        sig_name = str(res.signal)
+        if sig_name in constants.signal_names:
+            sig_name = f"{sig_name} ({constants.signal_names[sig_name]})"
+        return f"RE: {msg}: signal {sig_name}"
     if res.result == "MLE":
         return "MLE: Testing is limited by 1000 MB"
     env.get_file(stdout)
@@ -220,7 +223,7 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
                         score = checker_out.return_code
                         name = "OK" if score >= top_score else "PARTIAL"
                     else:
-                        name = constants.judge_exit_codes.get(checker_out.return_code, "JE")
+                        name = constants.checker_exit_codes.get(checker_out.return_code, "JE")
                         if name == "OK":
                             score = top_score
                         elif name == "POINTS":

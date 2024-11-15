@@ -552,15 +552,19 @@ def save_general_info(form: ImmutableMultiDict[str, str], dat: Problem) -> str |
     ml = form["memorylimit"]
     tl = form["timelimit"]
     show_testcase = form["show_testcase"]
+    show_checker = form["show_checker"]
     if not ml.isdigit() or not tl.isdigit():
         abort(400)
     if not (10000 >= int(tl) >= 250 and 1024 >= int(ml) >= 4):
         abort(400)
     if show_testcase not in ("yes", "no"):
         abort(400)
+    if show_checker not in ("yes", "no"):
+        abort(400)
     dat["memorylimit"] = ml
     dat["timelimit"] = tl
     dat["public_testcase"] = show_testcase == "yes"
+    dat["public_checker"] = show_checker == "yes"
     return "general_info"
 
 

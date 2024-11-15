@@ -82,6 +82,23 @@
                         </label>
                     </div>
                 </div>
+                <div class="radio-selector" data-value="{{ 'yes' if dat.get('public_checker',False) else 'no' }}">
+                    <h4>公開結果細則</h4>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="show_checker" id="show_checker1"
+                               value="yes">
+                        <label class="form-check-label" for="show_checker1">
+                            是
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="show_checker" id="show_checker2"
+                               value="no">
+                        <label class="form-check-label" for="show_checker2">
+                            否
+                        </label>
+                    </div>
+                </div>
                 <button class="btn btn-primary data-saver" id="save_general_info">儲存</button>
             </div>
             <br>

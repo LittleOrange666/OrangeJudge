@@ -2,7 +2,8 @@ import subprocess
 import sys
 from gunicorn.app.base import BaseApplication
 
-from modules import contests, constants, datas, executing, locks, login, problemsetting, server, tasks, tools, config, judge
+from modules import contests, constants, datas, executing, locks, login, problemsetting, server, tasks, tools, config, \
+    judge
 import modules.routers
 
 
@@ -27,19 +28,20 @@ def main():
     if not sys.platform.startswith("linux"):
         raise RuntimeError("The judge server only supports Linux")
     judge.init()
+    executing.init()
+    # following do nothing
+    config.init()
+    locks.init()
+    tools.init()
+    modules.routers.init()
     if not server.check_port("localhost", 6379):
         subprocess.Popen("redis-server")
-    with server.app.app_context():
-        config.init()
-        locks.init()
-        tools.init()
+    with server.app.app_context():  # following need sqlalchemy
         datas.init()
         login.init()
-        executing.init()
         tasks.init()
         contests.init()
         problemsetting.init()
-        modules.routers.init()
     options = {
         'bind': '%s:%s' % ('0.0.0.0', str(config.server.port)),
         'workers': config.server.workers,
