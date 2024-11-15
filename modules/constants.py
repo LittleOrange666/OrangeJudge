@@ -38,8 +38,6 @@ checker_exit_codes: dict[int, str] = {
     7: "POINTS"
 }
 
-lxc_name: str = "lxc-test"
-
 default_problem_info: dict = {"name": "unknown", "timelimit": "1000", "memorylimit": "256", "testcases": [],
                               "users": [],
                               "statement": {"main": "", "input": "", "output": "", "scoring": "", "interaction": ""},

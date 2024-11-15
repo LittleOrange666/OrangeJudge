@@ -1,3 +1,4 @@
+#!/bin/python3
 import os
 
 dirs = ("data", "data/problems", "data/preparing_problems", "data/submissions", "tmp", "data/logs", "data/contests")

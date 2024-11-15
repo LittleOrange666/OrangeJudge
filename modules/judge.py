@@ -1,3 +1,4 @@
+import json
 import os
 import secrets
 import multiprocessing
@@ -146,13 +147,13 @@ lazy_queue = multiprocessing.Queue()
 
 
 def lazy_call(cmd: list[str]):
-    lazy_queue.put(list(map(str, cmd)))
+    lazy_queue.put(json.dumps(list(map(str, cmd))))
 
 
 def collect_lazy_queue() -> list[list[str]]:
     ret = []
     while not lazy_queue.empty():
-        ret.append(lazy_queue.get())
+        ret.append(json.loads(lazy_queue.get()))
     return ret
 
 

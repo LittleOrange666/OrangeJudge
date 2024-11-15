@@ -2,15 +2,10 @@ secret/
 testfiles/
 wsl/
 data/
-accounts/
-data/submissions/
 .idea/
 sessions/
-verify/
 tmp/
 sandbox/
 tools/inited
-data/config.yaml
 *.pyc
 venv/
-
