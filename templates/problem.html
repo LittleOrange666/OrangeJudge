@@ -11,11 +11,11 @@
     {% else %}
         <li class="nav-item">
             <a class="nav-link active" aria-current="page"
-               href="/status?user={{ current_user.id }}&pid={{ pid }}">本題動態</a>
+               href="/status?pid={{ pid }}">本題動態</a>
         </li>
         {% if current_user.is_authenticated %}
             <li class="nav-item">
-                <a class="nav-link active" aria-current="page" href="/status?pid={{ pid }}">我的提交</a>
+                <a class="nav-link active" aria-current="page" href="/status?user={{ current_user.id }}&pid={{ pid }}">我的提交</a>
             </li>
         {% endif %}
     {% endif %}
