@@ -1,5 +1,6 @@
 import json
 import os
+import queue
 import secrets
 import multiprocessing
 from dataclasses import dataclass
@@ -143,7 +144,7 @@ def send_request(op: str, dat: dict):
     return res.json()
 
 
-lazy_queue = multiprocessing.Queue()
+lazy_queue = queue.Queue()
 
 
 def lazy_call(cmd: list[str]):
