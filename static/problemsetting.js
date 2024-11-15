@@ -86,6 +86,7 @@ $(function () {
         let memory = $("#memory_input").val();
 
         let show_testcase = $("input[type='radio'][name='show_testcase']:checked").val();
+        let show_checker = $("input[type='radio'][name='show_checker']:checked").val();
         if (!number_reg.test(time)) {
             show_modal("時間限制格式錯誤", "\"" + time + "\"不是一個合法的數字");
             return;
@@ -108,7 +109,8 @@ $(function () {
             "title": title,
             "timelimit": time,
             "memorylimit": memory,
-            "show_testcase": show_testcase
+            "show_testcase": show_testcase,
+            "show_checker": show_checker
         }, function (data, status, xhr) {
             let btn = $("#save_general_info");
             btn.prop("disabled", false);
