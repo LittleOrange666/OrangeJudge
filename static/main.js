@@ -365,7 +365,7 @@ $(".submitter").each(function () {
                 let msg = $this.data("msg-" + response.status);
                 if ($this.data("msg-type-" + response.status) === "return") msg = text;
                 if (!msg && response.status === 400) {
-                    if (text.includes("The CSRF token is invalid")) msg = "CSRFtoken失效，請刷新頁面再試一次";
+                    if (text.includes("The CSRF token")) msg = "CSRF token失效，請刷新頁面再試一次";
                     else msg = "輸入格式不正確"
                 }
                 if (!msg && response.status === 403) msg = "您似乎沒有權限執行此操作"

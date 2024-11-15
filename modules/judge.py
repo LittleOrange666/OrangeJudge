@@ -1,5 +1,6 @@
 import os
 import secrets
+import multiprocessing
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -105,7 +106,7 @@ class SeccompRule(Enum):
 
 
 def chmod(filepath: SandboxPath, mode: int):
-    call(["chmod", oct(mode)[2:], filepath])
+    lazy_call(["chmod", oct(mode)[2:], filepath])
 
 
 class SandboxUser(Enum):
@@ -116,20 +117,20 @@ class SandboxUser(Enum):
     nobody = 65534
 
     def readable(self, filepath: SandboxPath):
-        call(["chgrp", self.name, filepath])
+        lazy_call(["chgrp", self.name, filepath])
         chmod(filepath, 0o740)
 
     def writeable(self, filepath: SandboxPath):
         if not filepath.full.parent.exists():
-            filepath.full.parent.mkdir(parents=True,exist_ok=True)
+            filepath.full.parent.mkdir(parents=True, exist_ok=True)
             chmod(filepath.parent, 0o777)
         if not filepath.exists():
             filepath.full.touch()
-        call(["chgrp", self.name, filepath])
+        lazy_call(["chgrp", self.name, filepath])
         chmod(filepath, 0o760)
 
     def executable(self, filepath: SandboxPath):
-        call(["chgrp", self.name, filepath])
+        lazy_call(["chgrp", self.name, filepath])
         chmod(filepath, 0o750)
 
 
@@ -141,13 +142,29 @@ def send_request(op: str, dat: dict):
     return res.json()
 
 
+lazy_queue = multiprocessing.Queue()
+
+
+def lazy_call(cmd: list[str]):
+    lazy_queue.put(list(map(str, cmd)))
+
+
+def collect_lazy_queue() -> list[list[str]]:
+    ret = []
+    while not lazy_queue.empty():
+        ret.append(lazy_queue.get())
+    return ret
+
+
 def call(cmd: list[str], user: SandboxUser = SandboxUser.root, stdin: str = "",
-         timeout: float | None = None) -> CallResult:
+         timeout: float | None = None, cwd: str | None = None) -> CallResult:
     dat = {
         "cmd": list(map(str, cmd)),
         "user": user.name,
         "stdin": stdin,
-        "timeout": timeout
+        "timeout": timeout,
+        "cwd": cwd,
+        "cmds": collect_lazy_queue()
     }
     logger.debug(dat)
     data = send_request("call", dat)
@@ -158,7 +175,7 @@ def call(cmd: list[str], user: SandboxUser = SandboxUser.root, stdin: str = "",
 def run(cmd: list[str], tl: int = 1000, ml: int = 128, in_file: SandboxPath | None = None,
         out_file: SandboxPath | None = None,
         err_file: SandboxPath | None = None, seccomp_rule: SeccompRule | None = SeccompRule.general,
-        user: SandboxUser = SandboxUser.nobody) -> Result:
+        user: SandboxUser = SandboxUser.nobody, cwd: str | None = None) -> Result:
     dat = {
         "cmd": list(map(str, cmd)),
         "tl": tl,
@@ -167,7 +184,9 @@ def run(cmd: list[str], tl: int = 1000, ml: int = 128, in_file: SandboxPath | No
         "out_file": "/dev/null" if out_file is None else str(out_file),
         "err_file": "/dev/null" if err_file is None else str(err_file),
         "seccomp_rule_name": None if seccomp_rule is None else seccomp_rule.name,
-        "uid": user.value
+        "uid": user.value,
+        "cwd": cwd,
+        "cmds": collect_lazy_queue()
     }
     logger.debug(dat)
     data = send_request("judge", dat)
@@ -180,7 +199,8 @@ def interact_run(cmd: list[str], interact_cmd: list[str], tl: int = 1000, ml: in
                  out_file: SandboxPath | None = None,
                  err_file: SandboxPath | None = None, interact_err_file: SandboxPath | None = None,
                  seccomp_rule: SeccompRule | None = SeccompRule.general,
-                 user: SandboxUser = SandboxUser.nobody, interact_user: SandboxUser = SandboxUser.nobody):
+                 user: SandboxUser = SandboxUser.nobody, interact_user: SandboxUser = SandboxUser.nobody,
+                 cwd: str | None = None):
     dat = {
         "cmd": list(map(str, cmd)),
         "interact_cmd": list(map(str, interact_cmd)),
@@ -192,7 +212,9 @@ def interact_run(cmd: list[str], interact_cmd: list[str], tl: int = 1000, ml: in
         "interact_err_file": "/dev/null" if interact_err_file is None else str(interact_err_file),
         "seccomp_rule_name": None if seccomp_rule is None else seccomp_rule.name,
         "uid": user.value,
-        "interact_uid": interact_user.value
+        "interact_uid": interact_user.value,
+        "cwd": cwd,
+        "cmds": collect_lazy_queue()
     }
     logger.debug(dat)
     data = send_request("interact_judge", dat)

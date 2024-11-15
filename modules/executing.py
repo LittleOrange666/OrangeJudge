@@ -15,7 +15,7 @@ def is_tle(result: tuple[str, str, int]) -> bool:
 
 
 class Environment:
-    __slots__ = ("dirname",)
+    __slots__ = ("dirname", "cwd")
 
     def __init__(self):
         """
@@ -25,8 +25,9 @@ class Environment:
         and initializing command prefixes for different execution contexts.
         """
         self.dirname: str = tools.random_string()
-        (constants.sandbox_path / self.dirname).mkdir(parents=True, exist_ok=True)
-        judge.chmod(self.path(""), 0o777)
+        self.cwd: SandboxPath = self.path("")
+        self.cwd.full.mkdir(parents=True, exist_ok=True)
+        judge.chmod(self.cwd, 0o777)
 
     def path(self, path: str) -> SandboxPath:
         """
@@ -172,13 +173,33 @@ class Environment:
         for filename in filenames:
             judge.chmod(filename, 0o700)
 
+    def call(self, cmd: list[str], user: SandboxUser = SandboxUser.root, stdin: str = "",
+             timeout: float | None = None) -> judge.CallResult:
+        return judge.call(cmd, user, stdin, timeout, str(self.cwd))
+
+    def run(self, cmd: list[str], tl: int = 1000, ml: int = 128, in_file: SandboxPath | None = None,
+            out_file: SandboxPath | None = None,
+            err_file: SandboxPath | None = None, seccomp_rule: judge.SeccompRule | None = judge.SeccompRule.general,
+            user: SandboxUser = SandboxUser.nobody) -> judge.Result:
+        return judge.run(cmd, tl, ml, in_file, out_file, err_file, seccomp_rule, user, str(self.cwd))
+
+    def interact_run(self, cmd: list[str], interact_cmd: list[str], tl: int = 1000, ml: int = 128,
+                     in_file: SandboxPath | None = None,
+                     out_file: SandboxPath | None = None,
+                     err_file: SandboxPath | None = None, interact_err_file: SandboxPath | None = None,
+                     seccomp_rule: judge.SeccompRule | None = judge.SeccompRule.general,
+                     user: SandboxUser = SandboxUser.nobody, interact_user: SandboxUser = SandboxUser.nobody)\
+            -> judge.InteractResult:
+        return judge.interact_run(cmd, interact_cmd, tl, ml, in_file, out_file, err_file, interact_err_file,
+                                  seccomp_rule, user, interact_user, str(self.cwd))
+
     def __del__(self):
         """
         Clean up the environment when the object is deleted.
 
         This method removes the directory created for this environment in the sandbox.
         """
-        shutil.rmtree(constants.sandbox_path / self.dirname)
+        shutil.rmtree(self.cwd.full)
 
 
 class Language:
@@ -245,7 +266,7 @@ class Language:
                     compile_cmd[i] = compile_cmd[i].format(filename, new_filename, **self.kwargs)
             SandboxUser.compile.executable(filename)
             SandboxUser.compile.writeable(new_filename)
-            out = judge.call(compile_cmd, user=SandboxUser.compile)
+            out = env.call(compile_cmd, user=SandboxUser.compile)
             if other_file is not None:
                 other_file = env.simple_path(other_file)
                 env.executable(other_file)
@@ -261,7 +282,8 @@ class Language:
     def get_execmd(self, filename: SandboxPath) -> list[str]:
         exec_cmd = self.data["exec_cmd"][:]
         for i in range(len(exec_cmd)):
-            exec_cmd[i] = exec_cmd[i].format(filename, filename.stem, folder=filename.sandbox.parent, **self.kwargs)
+            exec_cmd[i] = exec_cmd[i].format(filename.sandbox, filename.stem, folder=filename.sandbox.parent,
+                                             **self.kwargs)
         return exec_cmd
 
     def supports_runner(self) -> bool:
@@ -274,7 +296,7 @@ class Language:
         if ce_msg:
             logger.warning(f"Base resource usage for {self.branch} failed: CE")
         exec_cmd = self.get_execmd(exec_filename)
-        res = judge.run(exec_cmd, seccomp_rule=self.seccomp_rule)
+        res = env.run(exec_cmd, seccomp_rule=self.seccomp_rule)
         if res.result != "AC":
             logger.warning(f"Base resource usage for {self.branch} failed: {res.result}")
         else:
