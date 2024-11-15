@@ -88,16 +88,16 @@ $("textarea").on("input", function () {
         }
     } else if (e.key === "Backspace") {
         if (start === end) {
-            let p = old.lastIndexOf("\n",start-1)+1;
-            let pp = p===0?-1:old.lastIndexOf("\n",p-2)+1;
+            let p = old.lastIndexOf("\n", start - 1) + 1;
+            let pp = p === 0 ? -1 : old.lastIndexOf("\n", p - 2) + 1;
             let pre = old.substring(p, start);
-            let pre2 = pp===-1?"":old.substring(pp, p);
-            if (pre === " ".repeat(pre.length)){
+            let pre2 = pp === -1 ? "" : old.substring(pp, p);
+            if (pre === " ".repeat(pre.length)) {
                 e.preventDefault();
-                let de = pre2.startsWith(pre)?pre.length+1:indent-pre.length%indent;
+                let de = pre2.startsWith(pre) ? pre.length + 1 : indent - pre.length % indent;
                 this.value = old.substring(0, start - de) + old.substring(start);
                 this.selectionStart = this.selectionEnd = start - de;
-            }else if (old.substring(start - indent, start) === indents) {
+            } else if (old.substring(start - indent, start) === indents) {
                 e.preventDefault();
                 this.value = old.substring(0, start - indent) + old.substring(start);
                 this.selectionStart = this.selectionEnd = start - indent;
@@ -113,21 +113,21 @@ $("textarea").on("input", function () {
     } else if (e.key === "Enter") {
         if (start === end) {
             e.preventDefault();
-            let p = old.lastIndexOf("\n",start-1)+1;
+            let p = old.lastIndexOf("\n", start - 1) + 1;
             let c = 0;
-            while(old.substring(p, p + indent) === indents) {
+            while (old.substring(p, p + indent) === indents) {
                 p += indent;
                 c++;
             }
             let ch = '';
-            if (start>0) ch = old.substring(start-1, start+1);
-            if (ch==="{}") {
+            if (start > 0) ch = old.substring(start - 1, start + 1);
+            if (ch === "{}") {
                 c++;
                 this.value = old.substring(0, start) + "\n" + indents.repeat(c) + "\n" + old.substring(start);
-                this.selectionStart = this.selectionEnd = start + 1 + indent*c;
-            }else{
+                this.selectionStart = this.selectionEnd = start + 1 + indent * c;
+            } else {
                 this.value = old.substring(0, start) + "\n" + indents.repeat(c) + old.substring(start);
-                this.selectionStart = this.selectionEnd = start + 1 + indent*c;
+                this.selectionStart = this.selectionEnd = start + 1 + indent * c;
             }
         }
     } else if (e.key === "(") {

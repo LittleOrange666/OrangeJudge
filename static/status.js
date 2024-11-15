@@ -13,7 +13,7 @@ $(function () {
         let fd = new FormData();
         let user = user_field.val().toLowerCase();
         let pid = pid_field.val();
-        if(target_url){
+        if (target_url) {
             target_url = new URL(target_url);
             user = target_url.searchParams.get("user") || user;
             pid = target_url.searchParams.get("pid") || pid;

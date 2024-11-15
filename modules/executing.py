@@ -1,4 +1,3 @@
-import os
 import shutil
 from pathlib import Path
 from typing import Callable
@@ -188,7 +187,7 @@ class Environment:
                      out_file: SandboxPath | None = None,
                      err_file: SandboxPath | None = None, interact_err_file: SandboxPath | None = None,
                      seccomp_rule: judge.SeccompRule | None = judge.SeccompRule.general,
-                     user: SandboxUser = SandboxUser.nobody, interact_user: SandboxUser = SandboxUser.nobody)\
+                     user: SandboxUser = SandboxUser.nobody, interact_user: SandboxUser = SandboxUser.nobody) \
             -> judge.InteractResult:
         return judge.interact_run(cmd, interact_cmd, tl, ml, in_file, out_file, err_file, interact_err_file,
                                   seccomp_rule, user, interact_user, str(self.cwd))

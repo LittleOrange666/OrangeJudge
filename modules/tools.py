@@ -11,7 +11,7 @@ from typing import Callable, Any
 from flask import abort, request
 from loguru import logger
 
-from . import locks, config, constants
+from . import locks, constants
 from .constants import tmp_path
 
 

@@ -7,7 +7,7 @@ from pathlib import Path
 
 from loguru import logger
 
-from . import executing, constants, tools, locks, datas, config, judge
+from . import executing, constants, tools, locks, datas, config
 from .constants import log_path
 from .judge import SandboxUser
 
@@ -56,7 +56,7 @@ def run(lang: executing.Language, file: Path, env: executing.Environment, stdin:
     SandboxUser.running.readable(in_file)
     SandboxUser.running.writeable(out_file)
     res = env.run(exec_cmd, 10 * 1000, 1000, in_file, out_file, err_file, user=SandboxUser.running,
-                    seccomp_rule=lang.seccomp_rule)
+                  seccomp_rule=lang.seccomp_rule)
     logger.debug(res)
     if res.result == "JE":
         return "JE: " + res.error
@@ -181,9 +181,9 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
                     SandboxUser.judge.writeable(out_path)
                     interr = env.path("interr.txt")
                     all_res = env.interact_run(exec_cmd, int_exec, tl, ml, in_path, out_path,
-                                                 user=SandboxUser.running,
-                                                 interact_user=SandboxUser.judge,
-                                                 seccomp_rule=lang.seccomp_rule, interact_err_file=interr)
+                                               user=SandboxUser.running,
+                                               interact_user=SandboxUser.judge,
+                                               seccomp_rule=lang.seccomp_rule, interact_err_file=interr)
                     res = all_res.result
                     if all_res.interact_result.result == "RE":
                         ret = ["WA", interr.full.read_text()]
@@ -191,7 +191,7 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
                     SandboxUser.running.readable(in_path)
                     SandboxUser.running.writeable(out_path)
                     res = env.run(exec_cmd, tl, ml, in_path, out_path, user=SandboxUser.running
-                                    , seccomp_rule=lang.seccomp_rule)
+                                  , seccomp_rule=lang.seccomp_rule)
                 exit_code = str(res.exit_code)
                 if res.result == "JE":
                     ret = ["JE", res.error]

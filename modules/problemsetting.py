@@ -19,7 +19,6 @@ from sqlalchemy.orm.attributes import flag_modified
 from werkzeug.datastructures import ImmutableMultiDict, MultiDict
 from werkzeug.utils import secure_filename
 
-import judge
 from . import executing, tools, constants, createhtml, datas
 from .constants import tmp_path, preparing_problem_path, testlib, problem_path
 from .judge import SandboxPath, SandboxUser
@@ -323,7 +322,7 @@ def generate_testcase(pid: str):
                         env.readable(in_path, user=SandboxUser.judge)
                         env.writeable(out_path, user=SandboxUser.judge)
                         res = env.interact_run(file2_cmd, int_cmd, tl, ml, in_path, out_path,
-                                                 interact_user=SandboxUser.judge).result
+                                               interact_user=SandboxUser.judge).result
                     else:
                         res = env.run(file2_cmd, tl, ml, in_path, out_path)
                     if res.result != "AC":
