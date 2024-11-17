@@ -347,7 +347,9 @@ $(".submitter").each(function () {
         $this.find("span").addClass("visually-hidden");
         if (response.ok) {
             if (!!$this.data("redirect")) {
-                show_modal("成功", "成功" + action_name, !$this.data("no-refresh"), text, !!$this.data("skip-success"));
+                response.text().then(function (text) {
+                    show_modal("成功", "成功" + action_name, !$this.data("no-refresh"), text, !!$this.data("skip-success"));
+                });
             } else if ($this.data("filename")) {
                 response.blob().then(function (blob) {
                     let url = window.URL.createObjectURL(blob);
