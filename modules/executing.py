@@ -81,6 +81,7 @@ class Environment:
         """
         if source is None:
             source = self.path(filepath.name)
+        judge.call(["chown", "root:root", str(source.sandbox)])
         tools.move(source.full, filepath.absolute())
 
     def simple_path(self, filepath: SandboxPath) -> SandboxPath:
