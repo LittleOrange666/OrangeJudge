@@ -7,8 +7,7 @@ from pathlib import Path
 
 from loguru import logger
 
-import judge
-from . import executing, constants, tools, locks, datas, config
+from . import executing, constants, tools, locks, datas, config, judge
 from .constants import log_path
 from .judge import SandboxUser
 
