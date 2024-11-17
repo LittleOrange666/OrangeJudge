@@ -101,7 +101,7 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
     p_path = pdat.path
     problem_info = constants.default_problem_info | pdat.data
     for fn in problem_info.get("library", []):
-        env.send_file(pdat.path / "file" / fn, SandboxUser.running.executable)
+        env.send_file(pdat.path / "file" / fn, env.executable)
     sent_source = env.send_file(source)
     if problem_info.get("runner_enabled", False):
         judge_runner = env.send_file(p_path / "file" / problem_info.get("runner_source", {}).get(dat.language))
