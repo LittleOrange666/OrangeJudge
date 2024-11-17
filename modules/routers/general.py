@@ -103,7 +103,7 @@ def submit():
 def submission(idx: str):
     dat: datas.Submission = datas.Submission.query.get_or_404(idx)
     lang = dat.language
-    source = tools.read(submission_path / idx / dat.source)
+    source = tools.read(dat.path / dat.source)
     source = highlight(source, prepares[executing.langs.get(lang, executing.langs["PlainText"]).name], HtmlFormatter())
     completed = dat.completed
     ce_msg = dat.ce_msg
@@ -134,11 +134,9 @@ def submission(idx: str):
             result["CE"] = result_data["CE"]
             results = result_data["results"]
             result["protected"] = protected = ((not problem_info.get('public_testcase', False) or bool(dat.period_id))
-                                               and current_user.id not in problem_info["users"]
-                                               and not current_user.has(Permission.admin))
+                                               and not super_access)
             checker_protected = ((not problem_info.get('public_checker', False) or bool(dat.period_id))
-                                 and current_user.id not in problem_info["users"]
-                                 and not current_user.has(Permission.admin))
+                                 and not super_access)
             result["checker_protected"] = checker_protected
             testcase_path = dat.path / "testcases"
             for i in range(len(results)):
@@ -158,6 +156,11 @@ def submission(idx: str):
                         o["class"] = constants.result_class.get(o["result"], "")
             if "total_score" in result_data:
                 result["total_score"] = result_data["total_score"]
+        cc_mode = problem_info.get("codechecker_mode", "disabled")
+        see_cc = cc_mode == "public" or cc_mode == "private" and super_access
+        cc = ""
+        if see_cc:
+            cc = tools.read(dat.path / "codechecker_result.txt")
         link = f"/problem/{pdat.pid}"
         contest = None
         cid = None
@@ -174,7 +177,7 @@ def submission(idx: str):
                               group_results=group_results, link=link, pos=tasks.get_queue_position(dat),
                               ce_msg=ce_msg, je=dat.data.get("JE", False), logid=dat.data.get("log_uuid", ""),
                               super_access=super_access, contest=contest, cid=cid, protected=protected,
-                              checker_protected=checker_protected)
+                              checker_protected=checker_protected, see_cc=see_cc, cc=cc)
     return ret
 
 

@@ -9,10 +9,6 @@ from .constants import lang_path
 from .judge import SandboxPath, SandboxUser
 
 
-def is_tle(result: tuple[str, str, int]) -> bool:
-    return result == ("TLE", "TLE", 777777)
-
-
 class Environment:
     __slots__ = ("dirname", "cwd")
 
@@ -266,6 +262,9 @@ class Language:
             SandboxUser.compile.executable(filename)
             SandboxUser.compile.writeable(new_filename)
             out = env.call(compile_cmd, user=SandboxUser.compile)
+            if judge.is_tle(out):
+                logger.warning("Compiling TLE")
+                return new_filename, "Compiling TLE"
             if other_file is not None:
                 other_file = env.simple_path(other_file)
                 env.executable(other_file)

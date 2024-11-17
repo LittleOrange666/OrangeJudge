@@ -171,11 +171,9 @@ def create_account(email: str, user_id: str, password: str | None) -> None:
 
 
 def check_user(require: Permission | None = None, users: list[str] | None = None) -> User:
-    obj = request.args if request.method == "GET" else request.form
-    username = obj.get('user', current_user.id)
-    user = get_user(username)
-    if user is None:
-        abort(404)
+    user: User = current_user
+    if not user.is_authenticated:
+        abort(403)
     if not user.has(Permission.admin):
         if require is not None and not user.has(require):
             abort(403)

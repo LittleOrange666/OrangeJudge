@@ -46,9 +46,12 @@ default_problem_info: dict = {"name": "unknown", "timelimit": "1000", "memorylim
                               "statement": {"main": "", "input": "", "output": "", "scoring": "", "interaction": ""},
                               "files": [], "checker_source": ["default", "unknown"], "is_interact": False,
                               "groups": {"default": {"score": 100, "rule": "min", "dependency": []}},
-                              "interactor_source": "unknown", "manual_samples": [],
+                              "interactor_source": "unknown", "manual_samples": [], "codechecker_source": "unknown",
+                              "codechecker_mode": "disabled",
                               "languages": {}, "public_testcase": False, "public_checker": False, "gen_groups": [],
                               "runner_source": {}, "runner_enabled": False, "libraries": []}
+
+# codechecker_mode: disabled public private
 
 email_reg: Pattern = re.compile("^[\\w\\-.]+@([\\w\\-]+\\.)+[\\w-]{2,4}$")
 

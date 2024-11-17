@@ -33,7 +33,7 @@
         <li class="nav-item" role="presentation">
             <a class="nav-link" id="versions_tab" data-bs-toggle="tab" data-bs-target="#versions" type="button"
                role="tab"
-               aria-controls="versions" aria-selected="false">版本控制</a>
+               aria-controls="versions" aria-selected="false">發布更新</a>
         </li>
         <li class="nav-item" role="presentation">
             <a class="nav-link" id="import_tab" data-bs-toggle="tab" data-bs-target="#import" type="button" role="tab"
@@ -395,6 +395,7 @@
                     <button class="btn btn-primary submitter">設定固定主程式</button>
                 </form>
             </div>
+            <br>
             <div class="container-fluid">
                 <h4>輔助檔案</h4>
                 {% for file in dat.get("library",[]) %}
@@ -428,6 +429,44 @@
                             </button>
                         </div>
                     </div>
+                </form>
+            </div>
+            <br>
+            <div class="container-fluid">
+                <h4>程式碼檢查</h4>
+                <p>目前：{{ dat.get('codechecker_source',"unknown") }}</p>
+                <form the_action="choose_codechecker" id="choose_codechecker">
+                    <div class="radio-selector" data-value="{{ dat.get('codechecker_mode','disabled') }}">
+                        <h4>程式碼檢查結果</h4>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="codechecker_mode" id="codechecker_mode1"
+                                   value="disabled">
+                            <label class="form-check-label" for="codechecker_mode1">
+                                禁用
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="codechecker_mode" id="codechecker_mode2"
+                                   value="public">
+                            <label class="form-check-label" for="codechecker_mode2">
+                                公開
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="codechecker_mode" id="codechecker_mode3"
+                                   value="private">
+                            <label class="form-check-label" for="codechecker_mode3">
+                                保密
+                            </label>
+                        </div>
+                    </div>
+                    <select class="form-select alternative_fileselect" name="my_codechecker">
+                        <option selected>選擇檔案</option>
+                        {% for file in dat["files"] %}
+                            <option value="{{ file['name'] }}">{{ file['name'] }}</option>
+                        {% endfor %}
+                    </select>
+                    <button class="btn btn-primary submitter">更換程式碼檢查器</button>
                 </form>
             </div>
         </div>
@@ -759,7 +798,7 @@
             </form>
         </div>
         <div id="versions" class="tab-pane fade">
-            <h3>版本控制</h3>
+            <h3>發布更新</h3>
             <div class="row g-3">
                 <div class="col-auto">
                     <label for="version_name_input" class="visually-hidden">描述</label>
@@ -769,7 +808,7 @@
                     <button class="btn btn-primary mb-3" id="create_version">
                     <span class="visually-hidden spinner-border spinner-border-sm" role="status"
                           aria-hidden="true"></span>
-                        建立版本
+                        發布更新
                     </button>
                 </div>
             </div>

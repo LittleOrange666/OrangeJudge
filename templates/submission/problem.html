@@ -58,6 +58,12 @@
                     </tbody>
                 </table>
             {% endif %}
+            {% if see_cc %}
+                <div class="test-case">
+                    <div>Code checker:</div>
+                    <pre>{{ cc }}</pre>
+                </div>
+            {% endif %}
             {% for i,testcase in enumerate(result["results"]) %}
                 {% if testcase["result"] != "SKIP" and (not protected or super_access or testcase["sample"]) %}
                     <div class="test-case">

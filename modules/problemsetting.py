@@ -19,6 +19,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from werkzeug.datastructures import ImmutableMultiDict, MultiDict
 from werkzeug.utils import secure_filename
 
+import judge
 from . import executing, tools, constants, createhtml, datas
 from .constants import tmp_path, preparing_problem_path, testlib, problem_path
 from .judge import SandboxPath, SandboxUser
@@ -309,6 +310,10 @@ def generate_testcase(pid: str):
                 out_file = testcase_path / f"{name}.out"
                 log(f"generating testcase {name!r}")
                 gen_out = env.call(file1_cmd + cmd.split(), user=SandboxUser.judge)
+                if judge.is_tle(gen_out):
+                    log("generator TLE")
+                    gen_group['status'] = "生成失敗：生成器TLE"
+                    break
                 if gen_out.return_code:
                     log("generator RE")
                     gen_group['status'] = "生成失敗：生成器RE"
@@ -331,8 +336,12 @@ def generate_testcase(pid: str):
                     env.get_file(out_file)
                 else:
                     gen_out = env.call(file2_cmd + cmd.split(), user=SandboxUser.judge)
+                    if judge.is_tle(gen_out):
+                        log("ans generator TLE")
+                        gen_group['status'] = "生成失敗：答案生成器TLE"
+                        break
                     if gen_out.return_code:
-                        log("generator RE")
+                        log("ans generator RE")
                         gen_group['status'] = "生成失敗：答案生成器RE"
                         log(gen_out.stderr)
                         break
@@ -364,6 +373,13 @@ def creating_version(pid: str, description: str):
         file = problem.compile_dat(("my", problem["interactor_source"]), "interactor", env)
         env.get_file(problem.path / file.inner, file)
         problem["interactor"] = [str(file.inner), problem.lang(problem["interactor_source"]).branch]
+    if problem.get("codechecker_mode", "disabled") != "disabled":
+        if "codechecker_source" not in problem:
+            log("codechecker missing")
+            end(False)
+        file = problem.compile_dat(("my", problem["codechecker_source"]), "codechecker", env)
+        env.get_file(problem.path / file.inner, file)
+        problem["codechecker"] = [str(file.inner), problem.lang(problem["codechecker_source"]).branch]
     if "gen_msg" in problem or "ex_gen_msg" in problem:
         generate_testcase(pid)
     if "versions" not in problem:
@@ -792,6 +808,20 @@ def choose_interactor(form: ImmutableMultiDict[str, str], dat: Problem) -> str |
     else:
         dat["interactor_source"] = name
         dat["is_interact"] = use
+    return "judge"
+
+
+@actions.bind
+def choose_codechecker(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Response:
+    name = secure_filename(form["my_codechecker"])
+    mode = form["codechecker_mode"]
+    if not any(o["name"] == name for o in dat["files"]):
+        mode = "disabled"
+        name = "unknown"
+    if "codechecker_mode" not in ("disabled", "public", "private"):
+        mode = "disabled"
+    dat["codechecker_mode"] = mode
+    dat["codechecker_source"] = name
     return "judge"
 
 

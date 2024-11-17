@@ -7,6 +7,7 @@ from pathlib import Path
 
 from loguru import logger
 
+import judge
 from . import executing, constants, tools, locks, datas, config
 from .constants import log_path
 from .judge import SandboxUser
@@ -100,13 +101,14 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
     p_path = pdat.path
     problem_info = constants.default_problem_info | pdat.data
     for fn in problem_info.get("library", []):
-        env.send_file(pdat.path / "file" / fn)
+        env.send_file(pdat.path / "file" / fn, SandboxUser.running.executable)
+    sent_source = env.send_file(source)
     if problem_info.get("runner_enabled", False):
         judge_runner = env.send_file(p_path / "file" / problem_info.get("runner_source", {}).get(dat.language))
         judge_runner = env.rename(judge_runner, constants.runner_source_file_name + lang.data["source_ext"])
-        filename, ce_msg = lang.compile(env.send_file(source), env, judge_runner)
+        filename, ce_msg = lang.compile(sent_source, env, judge_runner)
     else:
-        filename, ce_msg = lang.compile(env.send_file(source), env)
+        filename, ce_msg = lang.compile(sent_source, env)
     out_info = {"CE": False}
     results = []
     groups = {}
@@ -127,6 +129,13 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
             int_file = env.send_file(p_path / problem_info["interactor"][0], SandboxUser.judge.executable)
             int_lang = executing.langs[problem_info["interactor"][1]]
             int_exec = int_lang.get_execmd(int_file)
+        if problem_info.get("codechecker_mode", "disabled") != "disabled":
+            cc_file = env.send_file(p_path / problem_info["codechecker"][0], SandboxUser.judge.executable)
+            cc_lang = executing.langs[problem_info["codechecker"][1]]
+            cc_exec = cc_lang.get_execmd(cc_file)
+            res = env.call(cc_exec + [str(sent_source.sandbox), lang.branch])  # here should resolve errors
+            env.path("codechecker_result.txt").full.write_text(res.stdout)
+            (dat.path / "codechecker_result.txt").write_text(res.stdout)
         checker = env.send_file(p_path / problem_info["checker"][0], SandboxUser.judge.executable)
         checker_cmd = executing.langs[problem_info["checker"][1]].get_execmd(checker)
         exec_cmd = lang.get_execmd(filename)
@@ -219,20 +228,23 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
                     env.protected(ans_path, in_path, out_path)
                     env.get_file(out_file)
                     tools.create_truncated(Path(out_file), Path(out_file))
-                    if checker_out.stderr.startswith("partially correct"):
-                        score = checker_out.return_code
-                        name = "OK" if score >= top_score else "PARTIAL"
+                    if judge.is_tle(checker_out):
+                        ret = ["JE", "checker TLE"]
                     else:
-                        name = constants.checker_exit_codes.get(checker_out.return_code, "JE")
-                        if name == "OK":
-                            score = top_score
-                        elif name == "POINTS":
-                            st = checker_out.stderr.split(" ")
-                            if len(st) > 1 and st[1].replace(".", "", 1).isdigit():
-                                score = float(st[1])
+                        if checker_out.stderr.startswith("partially correct"):
+                            score = checker_out.return_code
                             name = "OK" if score >= top_score else "PARTIAL"
-                    score = max(score, 0)
-                    ret = [name, checker_out.stderr]
+                        else:
+                            name = constants.checker_exit_codes.get(checker_out.return_code, "JE")
+                            if name == "OK":
+                                score = top_score
+                            elif name == "POINTS":
+                                st = checker_out.stderr.split(" ")
+                                if len(st) > 1 and st[1].replace(".", "", 1).isdigit():
+                                    score = float(st[1])
+                                name = "OK" if score >= top_score else "PARTIAL"
+                        score = max(score, 0)
+                        ret = [name, checker_out.stderr]
             if ret[0] == "TLE":
                 timeusage = tl
             results.append({"time": timeusage, "mem": memusage, "result": ret[0], "info": ret[1],
@@ -276,7 +288,7 @@ def get_queue_position(dat: datas.Submission) -> int:
 
 
 def runner(idx: int):
-    logger.info("get", idx)
+    logger.info(f"get {idx}")
     try:
         for _ in range(5):
             dat: datas.Submission = datas.Submission.query.get(idx)
@@ -313,7 +325,7 @@ def init():
             idx = int(submission_queue.get())
             runner(idx)
 
-    for _ in range(config.judge.workers):
-        multiprocessing.Process(target=queue_receiver, daemon=True).start()
     for submission in datas.Submission.query.filter_by(completed=False):
         enqueue(submission.id)
+    for _ in range(config.judge.workers):
+        multiprocessing.Process(target=queue_receiver, daemon=True).start()

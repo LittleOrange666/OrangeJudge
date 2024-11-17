@@ -157,6 +157,10 @@ def collect_lazy_queue() -> list[list[str]]:
     return ret
 
 
+def is_tle(res: CallResult):
+    return res.return_code == 777777 and res.stdout == res.stderr == "TLE"
+
+
 def call(cmd: list[str], user: SandboxUser = SandboxUser.root, stdin: str = "",
          timeout: float | None = None, cwd: str | None = None) -> CallResult:
     dat = {
