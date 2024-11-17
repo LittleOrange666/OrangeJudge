@@ -161,7 +161,7 @@ def submission(idx: str):
             see_cc = cc_mode == "public" or cc_mode == "private" and super_access
         cc = ""
         if see_cc:
-            cc = tools.read(dat.path / "codechecker_result.txt")
+            cc = tools.read_default(dat.path / "codechecker_result.txt", default="INFO NOT FOUND")
         link = f"/problem/{pdat.pid}"
         contest = None
         cid = None
