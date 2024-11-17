@@ -345,32 +345,34 @@ $(".submitter").each(function () {
         console.log(response);
         if (modal) modal.hide();
         $this.find("span").addClass("visually-hidden");
-        response.text().then(function (text) {
-            if (response.ok) {
-                if (!!$this.data("redirect")) {
-                    show_modal("成功", "成功" + action_name, !$this.data("no-refresh"), text, !!$this.data("skip-success"));
-                } else if ($this.data("filename")) {
-                    response.blob().then(function (blob) {
-                        let url = window.URL.createObjectURL(blob);
-                        let a = $("<a/>").attr("href", url).attr("download", $this.data("filename"));
-                        a[0].click();
-                        window.URL.revokeObjectURL(url);
-                    });
-                } else {
-                    show_modal("成功", "成功" + action_name, !$this.data("no-refresh"), $this.data("next"), !!$this.data("skip-success"));
-                }
-            } else if (response.status === 500) {
-                show_modal("失敗", "伺服器內部錯誤，log uid=" + text);
+        if (response.ok) {
+            if (!!$this.data("redirect")) {
+                show_modal("成功", "成功" + action_name, !$this.data("no-refresh"), text, !!$this.data("skip-success"));
+            } else if ($this.data("filename")) {
+                response.blob().then(function (blob) {
+                    let url = window.URL.createObjectURL(blob);
+                    let a = $("<a/>").attr("href", url).attr("download", $this.data("filename"));
+                    a[0].click();
+                    window.URL.revokeObjectURL(url);
+                });
             } else {
-                let msg = $this.data("msg-" + response.status);
-                if ($this.data("msg-type-" + response.status) === "return") msg = text;
-                if (!msg && response.status === 400) {
-                    if (text.includes("The CSRF token")) msg = "CSRF token失效，請刷新頁面再試一次";
-                    else msg = "輸入格式不正確"
-                }
-                if (!msg && response.status === 403) msg = "您似乎沒有權限執行此操作"
-                show_modal("失敗", msg ? msg : "Error Code: " + response.status);
+                show_modal("成功", "成功" + action_name, !$this.data("no-refresh"), $this.data("next"), !!$this.data("skip-success"));
             }
-        });
+        } else {
+            response.text().then(function (text) {
+                if (response.status === 500) {
+                    show_modal("失敗", "伺服器內部錯誤，log uid=" + text);
+                } else {
+                    let msg = $this.data("msg-" + response.status);
+                    if ($this.data("msg-type-" + response.status) === "return") msg = text;
+                    if (!msg && response.status === 400) {
+                        if (text.includes("The CSRF token")) msg = "CSRF token失效，請刷新頁面再試一次";
+                        else msg = "輸入格式不正確"
+                    }
+                    if (!msg && response.status === 403) msg = "您似乎沒有權限執行此操作"
+                    show_modal("失敗", msg ? msg : "Error Code: " + response.status);
+                }
+            });
+        }
     });
 });

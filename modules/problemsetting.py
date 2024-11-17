@@ -818,7 +818,7 @@ def choose_codechecker(form: ImmutableMultiDict[str, str], dat: Problem) -> str 
     if not any(o["name"] == name for o in dat["files"]):
         mode = "disabled"
         name = "unknown"
-    if "codechecker_mode" not in ("disabled", "public", "private"):
+    if mode not in ("disabled", "public", "private"):
         mode = "disabled"
     dat["codechecker_mode"] = mode
     dat["codechecker_source"] = name
