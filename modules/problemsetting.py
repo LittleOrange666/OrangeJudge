@@ -279,7 +279,7 @@ def end(success: bool):
 def generate_testcase(pid: str):
     log(f"generating testcase")
     env = executing.Environment()
-    env.send_file(testlib)
+    env.send_file(testlib, env.executable)
     gen_list = []
     int_cmd = []
     run_cmds = {}
@@ -359,7 +359,7 @@ def generate_testcase(pid: str):
 def creating_version(pid: str, description: str):
     log(f"creating version {description!r}")
     env = executing.Environment()
-    env.send_file(testlib)
+    env.send_file(testlib, env.executable)
     if "checker_source" not in problem:
         log("checker missing")
         end(False)
