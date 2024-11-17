@@ -55,11 +55,11 @@ def create_problem():
 def my_problem_page(idx):
     idx = secure_filename(idx)
     pdat: datas.Problem = datas.Problem.query.filter_by(pid=idx).first_or_404()
+    dat = pdat.new_data
+    user = login.check_user(Permission.make_problems, dat["users"])
     o = problemsetting.check_background_action(idx)
     if o is not None:
         return render_template("pleasewaitlog.html", action=o[1], log=o[0])
-    dat = pdat.new_data
-    user = login.check_user(Permission.make_problems, dat["users"])
     p_path = preparing_problem_path / idx
     public_files: list[str] = [f.name for f in (p_path / "public_file").iterdir() if f.name != ".gitkeep"]
     default_checkers = [s for s in os.listdir("testlib/checkers") if s.endswith(".cpp")]

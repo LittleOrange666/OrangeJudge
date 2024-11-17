@@ -303,14 +303,14 @@ def runner(idx: int):
 
 
 def enqueue(idx: int) -> int:
-    submission_queue.put(idx)
+    submission_queue.put(str(idx))
     return queue_position.inc()
 
 
 def init():
     def queue_receiver():
         while True:
-            idx = submission_queue.get()
+            idx = int(submission_queue.get())
             runner(idx)
 
     for _ in range(config.judge.workers):

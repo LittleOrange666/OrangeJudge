@@ -256,8 +256,10 @@ def all_status_data():
         problem = datas.Problem.query.filter_by(pid=pid)
         problem_name = problem.first().name if problem.count() else "unknown"
         result = obj.simple_result or "unknown"
-        can_see = current_user.has(Permission.admin) or current_user.id == obj.user.username or \
-                  (obj.problem.user and obj.problem.user.username == current_user.id)
+        can_see = current_user.is_authenticated and (current_user.has(Permission.admin) or
+                                                     current_user.id == obj.user.username or
+                                                     (obj.problem.user and
+                                                      obj.problem.user.username == current_user.id))
         out.append({"idx": str(obj.id),
                     "time": obj.time.timestamp(),
                     "user_id": obj.user.username,
