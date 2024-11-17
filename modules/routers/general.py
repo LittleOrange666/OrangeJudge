@@ -129,6 +129,7 @@ def submission(idx: str):
             abort(403)
         super_access = current_user.has(Permission.admin) or current_user.id in problem_info["users"]
         result = {}
+        see_cc = False
         if completed and not dat.data.get("JE", False) and dat.result is not None:
             result_data = dat.result
             result["CE"] = result_data["CE"]
@@ -156,8 +157,8 @@ def submission(idx: str):
                         o["class"] = constants.result_class.get(o["result"], "")
             if "total_score" in result_data:
                 result["total_score"] = result_data["total_score"]
-        cc_mode = problem_info.get("codechecker_mode", "disabled")
-        see_cc = cc_mode == "public" or cc_mode == "private" and super_access
+            cc_mode = problem_info.get("codechecker_mode", "disabled")
+            see_cc = cc_mode == "public" or cc_mode == "private" and super_access
         cc = ""
         if see_cc:
             cc = tools.read(dat.path / "codechecker_result.txt")
