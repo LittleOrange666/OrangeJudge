@@ -245,6 +245,7 @@ class Language:
                     return filename, "Runner not supported"
             new_filename = env.path(self.data["exec_name"].format(filename.stem, **self.kwargs))
             other_file = None
+            SandboxUser.compile.executable(filename)
             if runner_filename is not None:
                 compile_cmd = self.data["compile_runner_cmd"][:]
                 if not self.supports_runner():
@@ -253,13 +254,13 @@ class Language:
                 for i in range(len(compile_cmd)):
                     compile_cmd[i] = compile_cmd[i].format(filename, new_filename, runner_filename, new_runner_filename,
                                                            **self.kwargs)
+                SandboxUser.compile.executable(runner_filename)
                 other_file = new_filename
                 new_filename = new_runner_filename
             else:
                 compile_cmd = self.data["compile_cmd"][:]
                 for i in range(len(compile_cmd)):
                     compile_cmd[i] = compile_cmd[i].format(filename, new_filename, **self.kwargs)
-            SandboxUser.compile.executable(filename)
             SandboxUser.compile.writeable(new_filename)
             out = env.call(compile_cmd, user=SandboxUser.compile)
             if judge.is_tle(out):
