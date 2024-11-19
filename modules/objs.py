@@ -138,6 +138,24 @@ class ContestProblem(metaclass=DataMeta):
 
 @dataclass
 class ContestData(metaclass=DataMeta):
+    """
+    A dataclass representing the data of a contest.
+
+    Attributes:
+        name (str): The name of the contest.
+        users (list[str]): A list of users participating in the contest.
+        problems (dict[str, ContestProblem]): A dictionary of problems in the contest.
+        start (int): The start time of the contest.
+        elapsed (int): The duration of the contest.
+        type (ContestType): The type of the contest (e.g., ICPC, IOI).
+        can_register (bool): Indicates if registration is allowed.
+        standing (StandingsData): The standings data of the contest.
+        pretest (PretestType): The type of pretest used in the contest.
+        practice (PracticeType): The type of practice allowed in the contest.
+        participants (list[str]): A list of participants in the contest.
+        virtual_participants (dict[str, str]): A dictionary of virtual participants.
+        penalty (int): The penalty time in minutes.
+    """
     name: str = "unknown"
     users: list[str] = field(default_factory=list)
     problems: dict[str, ContestProblem] = field(default_factory=dict)
@@ -149,5 +167,5 @@ class ContestData(metaclass=DataMeta):
     pretest: PretestType = PretestType.no
     practice: PracticeType = PracticeType.no
     participants: list[str] = field(default_factory=list)
-    virtual_participants: dict[str, str] = field(default_factory=dict)
+    virtual_participants: dict[str, int] = field(default_factory=dict)
     penalty: int = 20
