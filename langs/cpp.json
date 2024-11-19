@@ -3,8 +3,8 @@
   "require_compile": true,
   "source_ext": ".cpp",
   "exec_name": "{0}",
-  "compile_cmd": ["g++","-O2","-DEVAL","-pipe","-static","-s","{arg}", "{0}", "-o", "{1}"],
-  "compile_runner_cmd": ["g++","-O2","-DEVAL","-pipe","-static","-s","{arg}", "{0}", "{2}", "-o", "{3}"],
+  "compile_cmd": ["g++","-O2","-w","-fmax-errors=3","-lm","{arg}", "{0}", "-o", "{1}"],
+  "compile_runner_cmd": ["g++","-O2","-w","-fmax-errors=3","-lm","{arg}", "{0}", "{2}", "-o", "{3}"],
   "exec_cmd": ["{0}"],
   "branches": {
     "C++11": {
