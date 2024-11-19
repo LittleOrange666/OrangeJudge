@@ -50,8 +50,8 @@ def run(lang: executing.Language, file: Path, env: executing.Environment, stdin:
         return "CE"
     exec_cmd = lang.get_execmd(filename)
     Path(stdout).touch()
-    in_file = env.send_file(stdin)
-    out_file = env.send_file(stdout)
+    in_file = env.send_rand_file(stdin)
+    out_file = env.send_rand_file(stdout)
     err_file = env.path("stderr.txt")
     SandboxUser.running.readable(in_file)
     SandboxUser.running.writeable(out_file)
@@ -72,7 +72,7 @@ def run(lang: executing.Language, file: Path, env: executing.Environment, stdin:
         return f"RE: {msg}: signal {sig_name}"
     if res.result == "MLE":
         return "MLE: Testing is limited by 1000 MB"
-    env.get_file(stdout)
+    env.get_file(stdout, out_file)
     time_usage = max(0, res.cpu_time - lang.base_time)
     memusage = max(0, res.memory - lang.base_memory)
     return f"OK: {time_usage}ms, {memusage}B"
@@ -182,8 +182,8 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
                 ret = ["OK", "Skip by pretest policy"]
                 score = top_score
             else:
-                in_path = env.send_file(in_file)
-                out_path = env.path(out_file.name)
+                in_path = env.send_rand_file(in_file)
+                out_path = env.send_rand_file(out_file)
                 if problem_info["is_interact"]:
                     SandboxUser.judge.readable(in_path)
                     SandboxUser.judge.writeable(out_path)
@@ -220,12 +220,12 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
                     groups[gp]["time"] = max(groups[gp]["time"], timeusage)
                     groups[gp]["mem"] = max(groups[gp]["mem"], memusage)
                     has_output = True
-                    ans_path = env.send_file(ans_file)
+                    ans_path = env.send_rand_file(ans_file)
                     full_checker_cmd = checker_cmd + [in_path, out_path, ans_path]
                     env.readable(ans_path, in_path, out_path, user=SandboxUser.judge)
                     checker_out = env.call(full_checker_cmd, user=SandboxUser.judge)
                     env.protected(ans_path, in_path, out_path)
-                    env.get_file(out_file)
+                    env.get_file(out_file, out_path)
                     tools.create_truncated(Path(out_file), Path(out_file))
                     if judge.is_tle(checker_out):
                         ret = ["JE", "checker TLE"]

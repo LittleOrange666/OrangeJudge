@@ -20,5 +20,6 @@
       "arg": "-std=c++20"
     }
   },
-  "default_branch": "C++17"
+  "default_branch": "C++17",
+  "seccomp_rule": "c_cpp"
 }

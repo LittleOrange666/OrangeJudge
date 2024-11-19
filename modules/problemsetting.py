@@ -333,7 +333,7 @@ def generate_testcase(pid: str):
                     if res.result != "AC":
                         logger.info(f"solution {res.result}")
                         gen_group['status'] = f"生成失敗：官解{res.result}"
-                    env.get_file(out_file)
+                    env.get_file(out_file, out_path)
                 else:
                     gen_out = env.call(file2_cmd + cmd.split(), user=SandboxUser.judge)
                     if judge.is_tle(gen_out):

@@ -14,5 +14,6 @@
       "arg": "-std=c11"
     }
   },
-  "default_branch": "C99"
+  "default_branch": "C99",
+  "seccomp_rule": "c_cpp"
 }

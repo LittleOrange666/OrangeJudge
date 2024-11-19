@@ -36,6 +36,18 @@ class Environment:
         """
         return SandboxPath(self.dirname, path)
 
+    def rand_path(self, suffix: str = "") -> SandboxPath:
+        """
+        Create a SandboxPath object for a random path within the sandbox.
+
+        Args:
+            suffix (str): The suffix to append to the random path.
+
+        Returns:
+            SandboxPath: A SandboxPath object representing the random path within the sandbox.
+        """
+        return self.path(tools.random_string()+suffix)
+
     def send_file(self, filepath: Path, nxt: Callable[[SandboxPath], None] | None = None) -> SandboxPath:
         """
         Send a file to the sandbox environment.
@@ -47,8 +59,36 @@ class Environment:
         Returns:
             SandboxPath: A SandboxPath object representing the file sent in the sandbox.
         """
-        logger.debug("send", filepath)
+        logger.debug(f"send {filepath}")
         out = self.path(filepath.name)
+        if not filepath.is_file():
+            filepath.touch()
+        tools.copy(filepath, out.full)
+        if nxt is None:
+            self.protected(out)
+        else:
+            nxt(out)
+        return out
+
+    def send_rand_file(self, filepath: Path, nxt: Callable[[SandboxPath], None] | None = None) -> SandboxPath:
+        """
+            Send a file to a random location in the sandbox environment.
+
+            This function copies a file to a random path within the sandbox, optionally applies
+            a custom function to the new file, and returns the new SandboxPath.
+
+            Args:
+                filepath (Path): The path of the file to send to the sandbox.
+                nxt (Callable[[SandboxPath], None] | None, optional): A function to call on the
+                    created SandboxPath. If None, the file will be protected. Defaults to None.
+
+            Returns:
+                SandboxPath: A SandboxPath object representing the randomly named file in the sandbox.
+        """
+        out = self.rand_path(filepath.suffix)
+        logger.debug(f"send {filepath} to {out.sandbox}")
+        if not filepath.is_file():
+            filepath.touch()
         tools.copy(filepath, out.full)
         if nxt is None:
             self.protected(out)

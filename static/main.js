@@ -236,10 +236,18 @@ function show_modal(title, text, refresh, next_page, skip) {
         let timeout_id = window.setTimeout(function () {
             myModal.hide();
         }, 3000);
+        let close_evt = function (){
+            myModal.hide();
+        };
+        document.addEventListener("keypress", close_evt);
         $("#myModal").on("hidden.bs.modal", function () {
             if (timeout_id !== -1) {
                 window.clearTimeout(timeout_id);
                 timeout_id = -1;
+            }
+            if (close_evt){
+                document.removeEventListener("keypress", close_evt);
+                close_evt = null;
             }
         });
     }
