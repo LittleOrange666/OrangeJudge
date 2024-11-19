@@ -3,7 +3,8 @@ from pathlib import Path
 
 from flask_sqlalchemy import SQLAlchemy
 
-from . import server, locks
+from .objs import ContestData
+from . import server, locks, objs
 from .constants import problem_path, contest_path, submission_path
 
 datafile = Path.cwd() / "data" / "data.sqlite"
@@ -119,6 +120,14 @@ class Contest(db.Model):
         :return: contest_path / cid
         """
         return contest_path / self.cid
+
+    @property
+    def datas(self) -> ContestData:
+        return ContestData(**self.data)
+
+    @datas.setter
+    def datas(self, value: ContestData):
+        self.data = objs.as_dict(value)
 
 
 class Period(db.Model):

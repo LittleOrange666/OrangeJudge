@@ -2,13 +2,13 @@ import json
 import os
 import queue
 import secrets
-from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 
 import requests
 from loguru import logger
 
+from .objs import Result, InteractResult, CallResult
 from . import constants, server
 
 
@@ -69,33 +69,6 @@ class SandboxPath:
 
     def __repr__(self):
         return repr(self.sandbox)
-
-
-@dataclass
-class Result:
-    cpu_time: int  # ms
-    real_time: int  # ms
-    memory: int  # Bytes
-    signal: int
-    exit_code: int
-    error: str
-    result: str
-    error_id: int
-    result_id: int
-    judger_log: int = ""
-
-
-@dataclass
-class InteractResult:
-    result: Result
-    interact_result: Result
-
-
-@dataclass
-class CallResult:
-    stdout: str
-    stderr: str
-    return_code: int
 
 
 class SeccompRule(Enum):
@@ -224,7 +197,7 @@ def interact_run(cmd: list[str], interact_cmd: list[str], tl: int = 1000, ml: in
     logger.debug(dat)
     data = send_request("interact_judge", dat)
     logger.debug(data)
-    return InteractResult(result=Result(**data["result"]), interact_result=Result(**data["interact_result"]))
+    return InteractResult(**data)
 
 
 def init():

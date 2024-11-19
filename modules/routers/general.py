@@ -88,7 +88,7 @@ def submit():
         dat.contest = cdat
         if per_id:
             dat.period_id = per_id
-            if cdat.data["pretest"] != "no":
+            if cdat.datas.pretest != "no":
                 dat.just_pretest = True
     datas.add(dat)
     idx = str(dat.id)
@@ -169,8 +169,8 @@ def submission(idx: str):
             cdat: datas.Contest = dat.contest
             contest = cdat.name
             cid = cdat.cid
-            for k, v in cdat.data["problems"].items():
-                if v["pid"] == pdat.pid:
+            for k, v in cdat.datas.problems.items():
+                if v.pid == pdat.pid:
                     link = f"/contest/{cdat.cid}/problem/{k}"
                     break
         ret = render_template("submission/problem.html", lang=lang, source=source, completed=completed,
@@ -217,8 +217,8 @@ def problem_file(idx, filename):
     filename = secure_filename(filename)
     if "cid" in request.args:
         cdat: datas.Contest = datas.Contest.query.filter_by(cid=request.args["cid"]).first_or_404()
-        for obj in cdat.data["problems"].values():
-            if obj["pid"] == idx:
+        for obj in cdat.datas.problems.values():
+            if obj.pid == idx:
                 break
         else:
             abort(404)

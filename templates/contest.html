@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}競賽 - {{ data['name'] }}{% endblock %}
+{% block title %}競賽 - {{ data.name }}{% endblock %}
 
 {% block main %}
     <div class="row">
@@ -60,10 +60,10 @@
                     </tr>
                     </thead>
                     <tbody>
-                    {% for idx, problem in data["problems"].items() %}
+                    {% for idx, problem in data.problems.items() %}
                         <tr class="problem" data-index="{{ idx }}">
                             <th scope="row"><a href="/contest/{{ cid }}/problem/{{ idx }}">{{ idx }}</a></th>
-                            <td><a href="/contest/{{ cid }}/problem/{{ idx }}">{{ problem['name'] }}</a></td>
+                            <td><a href="/contest/{{ cid }}/problem/{{ idx }}">{{ problem.name }}</a></td>
                             {% if can_edit %}
                                 <td>
                                     <form the_action="remove_problem">
@@ -275,7 +275,7 @@
                 <div class="col-auto">
                     <select class="form-select" aria-label="題目編號" id="status_filter_pid">
                         <option value="" selected>所有</option>
-                        {% for k in data["problems"] %}
+                        {% for k in data.problems %}
                             <option value="{{ k }}">{{ k }}</option>
                         {% endfor %}
                     </select>
@@ -312,7 +312,7 @@
                     <div class="col-auto">
                         <select class="form-select" aria-label="題目編號" id="my_status_filter_pid">
                             <option value="" selected>所有</option>
-                            {% for k in data["problems"] %}
+                            {% for k in data.problems %}
                                 <option value="{{ k }}">{{ k }}</option>
                             {% endfor %}
                         </select>
@@ -380,21 +380,21 @@
                         <label for="contest_title" class="form-label">比賽名稱</label>
                         <input type="text" class="form-control" id="contest_title" name="contest_title"
                                placeholder="比賽名稱"
-                               value="{{ data['name'] }}" required pattern=".{1,120}">
+                               value="{{ data.name }}" required pattern=".{1,120}">
                     </div>
                     <h4>比賽時間</h4>
                     <div class="mb-3">
                         <label for="start_time" class="form-label">開始時間</label>
                         <input type="datetime-local" class="form-control" id="start_time" name="start_time"
-                               data-value="{{ data['start'] }}" step="60" required>
+                               data-value="{{ data.start }}" step="60" required>
                     </div>
                     <div class="mb-3">
                         <label for="elapsed_time" class="form-label">持續時間(分鐘)</label>
                         <input type="number" class="form-control" id="elapsed_time" name="elapsed_time"
                                placeholder="持續時間"
-                               value="{{ data['elapsed'] }}" required>
+                               value="{{ data.elapsed }}" required>
                     </div>
-                    <div class="radio-selector" data-value="{{ data['type'] }}">
+                    <div class="radio-selector" data-value="{{ data.type }}">
                         <h4>計分規則</h4>
                         <div class="form-check">
                             <input class="form-check-input" type="radio" name="rule_type" id="rule_type1" value="icpc">
@@ -412,9 +412,9 @@
                     <div class="mb-3">
                         <label for="penalty" class="form-label">罰時(分鐘)</label>
                         <input type="number" class="form-control" id="penalty" name="penalty" placeholder="罰時"
-                               value="{{ data['penalty'] }}" required>
+                               value="{{ data.penalty }}" required>
                     </div>
-                    <div class="radio-selector" data-value="{{ data['pretest'] }}">
+                    <div class="radio-selector" data-value="{{ data.pretest }}">
                         <h4>後測</h4>
                         <div class="form-check">
                             <input class="form-check-input" type="radio" name="pretest_type" id="pretest_type1"
@@ -438,7 +438,7 @@
                             </label>
                         </div>
                     </div>
-                    <div class="radio-selector" data-value="{{ 'yes' if data['can_register'] else 'no' }}">
+                    <div class="radio-selector" data-value="{{ 'yes' if data.can_register else 'no' }}">
                         <h4>自行報名</h4>
                         <div class="form-check">
                             <input class="form-check-input" type="radio" name="register_type" id="register_type1"
@@ -455,7 +455,7 @@
                             </label>
                         </div>
                     </div>
-                    <div class="radio-selector" data-value="{{ data['practice'] }}">
+                    <div class="radio-selector" data-value="{{ data.practice.name }}">
                         <h4>賽後練習</h4>
                         <div class="form-check">
                             <input class="form-check-input" type="radio" name="practice_type" id="practice_type1"
@@ -479,7 +479,7 @@
                             </label>
                         </div>
                     </div>
-                    <div class="radio-selector" data-value="{{ 'yes' if data['standing']['public'] else 'no' }}">
+                    <div class="radio-selector" data-value="{{ 'yes' if data.standing.public else 'no' }}">
                         <h4>記分板可見</h4>
                         <div class="form-check">
                             <input class="form-check-input" type="radio" name="show_standing" id="show_standing1"
@@ -500,13 +500,13 @@
                         <label for="freeze_time" class="form-label">封版時間(分鐘)</label>
                         <input type="number" class="form-control" id="freeze_time" name="freeze_time"
                                placeholder="封版時間"
-                               value="{{ data['standing']['start_freeze'] }}" required>
+                               value="{{ data.standing.start_freeze }}" required>
                     </div>
                     <div class="mb-3">
                         <label for="unfreeze_time" class="form-label">解封時間(分鐘)</label>
                         <input type="number" class="form-control" id="unfreeze_time" name="unfreeze_time"
                                placeholder="解封時間"
-                               value="{{ data['standing']['end_freeze'] }}" required>
+                               value="{{ data.standing.end_freeze }}" required>
                     </div>
                     <div class="row">
                         <button class="btn btn-primary submitter">儲存設定</button>
@@ -541,7 +541,7 @@
                 </tr>
                 </thead>
                 <tbody>
-                {% for user in data["participants"] %}
+                {% for user in data.participants %}
                     <tr>
                         <th scope="row">{{ loop.index }}</th>
                         <td><a href="/user/{{ user }}" target="_blank">{{ user }}</a></td>
