@@ -58,7 +58,7 @@ def contest_problem(cid, pid):
         abort(404)
     idx = info.problems[pid].pid
     pdat: datas.Problem = datas.Problem.query.filter_by(pid=idx).first_or_404()
-    dat = pdat.data
+    dat = pdat.datas
     langs = [lang for lang in executing.langs.keys() if pdat.lang_allowed(lang)]
     return render_problem(dat, idx, langs, is_contest=True, cid=cid, cname=cdat.name, pidx=pid)
 

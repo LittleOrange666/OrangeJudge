@@ -2,10 +2,11 @@ from datetime import datetime
 from pathlib import Path
 
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm.attributes import flag_modified
 
 from . import server, locks, objs
 from .constants import problem_path, contest_path, submission_path
-from .objs import ContestData
+from .objs import ContestData, ProblemInfo
 
 datafile = Path.cwd() / "data" / "data.sqlite"
 app = server.app
@@ -83,8 +84,8 @@ class Problem(db.Model):
         super().__init__(**kwargs)
 
     def lang_allowed(self, lang: str) -> bool:
-        return (self.data.get("languages", {}).get(lang, True) and
-                (not self.data.get("runner_enabled", False) or lang in self.data.get("runner_source", {})))
+        return (self.datas.languages.get(lang, True) and
+                (not self.datas.runner_enabled or lang in self.datas.runner_source.keys()))
 
     @property
     def path(self) -> Path:
@@ -93,6 +94,19 @@ class Problem(db.Model):
         :return: problem_path / pid
         """
         return problem_path / self.pid
+
+    @property
+    def datas(self) -> ProblemInfo:
+        return ProblemInfo(**self.data)
+
+    @property
+    def new_datas(self) -> ProblemInfo:
+        return ProblemInfo(**self.new_data)
+
+    @new_datas.setter
+    def new_datas(self, value: ProblemInfo):
+        self.new_data = objs.as_dict(value)
+        flag_modified(self, "new_data")
 
 
 class Contest(db.Model):
@@ -128,6 +142,7 @@ class Contest(db.Model):
     @datas.setter
     def datas(self, value: ContestData):
         self.data = objs.as_dict(value)
+        flag_modified(self, "data")
 
 
 class Period(db.Model):

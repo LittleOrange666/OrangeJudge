@@ -27,6 +27,8 @@ def _resolve(val, tp, e):
     else:
         if isinstance(val, dict):
             return tp(**val)
+        if isinstance(val, list):
+            return tp(*val)
     return val
 
 
@@ -168,6 +170,11 @@ class GenType(Enum):
     gen = "gen"
 
 
+class TestcaseRule(Enum):
+    min = "min"
+    avg = "avg"
+
+
 @dataclass
 class StandingsData(metaclass=DataMeta):
     public: bool = True
@@ -228,8 +235,28 @@ class Statement:
 @dataclass
 class TestcaseGroup:
     score: int = 100
-    rule: str = "min"
+    rule: TestcaseRule = TestcaseRule.min
     dependency: list[str] = field(default_factory=list)
+
+
+@dataclass
+class RunningTestcaseGroup:
+    score: int = 100
+    rule: TestcaseRule = TestcaseRule.min
+    dependency: list[str] = field(default_factory=list)
+    result: str = "OK"
+    time: int = 0
+    mem: int = 0
+    gainscore: int = 0
+    cnt: int = 0
+
+    def to_result(self):
+        return {
+            "result": self.result,
+            "time": self.time,
+            "mem": self.mem,
+            "score": self.gainscore
+        }
 
 
 @dataclass
@@ -240,6 +267,7 @@ class Testcase:
     uncompleted: bool = False
     sample: bool = False
     pretest: bool = False
+    gen: bool = False
 
 
 @dataclass
@@ -252,6 +280,12 @@ class ProgramFile:
 class ProgramPtr(metaclass=DataMeta):
     name: str
     type: ProgramType
+
+
+@dataclass
+class ExecPtr:
+    name: str = "unknown"
+    lang: str = "unknown"
 
 
 @dataclass
@@ -271,20 +305,30 @@ class GenGroup(metaclass=DataMeta):
 
 
 @dataclass
+class ProblemVersion:
+    time: str
+    description: str
+
+
+@dataclass
 class ProblemInfo(metaclass=DataMeta):
     name: str = "unknown"
     timelimit: str = "1000"
     memorylimit: str = "256"
     testcases: list[Testcase] = field(default_factory=list)
+    testcases_gen: list[Testcase] = field(default_factory=list)
     users: list[str] = field(default_factory=list)
     statement: Statement = field(default_factory=Statement)
     files: list[ProgramFile] = field(default_factory=list)
     checker_source: ProgramPtr = field(default_factory=lambda: ProgramPtr("unknown", ProgramType.default))
+    checker: ExecPtr = field(default_factory=ExecPtr)
     is_interact: bool = False
     groups: dict[str, TestcaseGroup] = field(default_factory=lambda: {"default": TestcaseGroup()})
     interactor_source: str = "unknown"
+    interactor: ExecPtr = field(default_factory=ExecPtr)
     manual_samples: list[ManualSample] = field(default_factory=list)
     codechecker_source: str = "unknown"
+    codechecker: ExecPtr = field(default_factory=ExecPtr)
     codechecker_mode: CodecheckerMode = CodecheckerMode.disabled
     languages: dict[str, bool] = field(default_factory=dict)
     public_testcase: bool = False
@@ -293,3 +337,5 @@ class ProblemInfo(metaclass=DataMeta):
     runner_source: dict[str, str] = field(default_factory=dict)
     runner_enabled: bool = False
     library: list[str] = field(default_factory=list)
+    versions: list[ProblemVersion] = field(default_factory=list)
+    top_score: int = 100

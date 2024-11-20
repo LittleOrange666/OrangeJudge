@@ -1134,11 +1134,11 @@ def preview(args: MultiDict[str, str], pdat: datas.Problem) -> Response:
 
 def query_versions(pdat: datas.Problem):
     out = []
-    info = pdat.data
-    for o in info.get("versions", []):
+    info = pdat.datas
+    for o in info.versions:
         out.append({
-            "date": str(int(float(o["time"]))),
-            "message": o["description"]
+            "date": str(int(float(o.time))),
+            "message": o.description
         })
     out.reverse()
     for i, o in enumerate(out):

@@ -211,7 +211,6 @@ def action(form: ImmutableMultiDict[str, str], cdat: datas.Contest):
         cid = cdat.cid
         tp = actions.call(form["action"], form, cdat, dat)
         cdat.datas = dat
-        flag_modified(cdat, "data")
         datas.add(cdat)
         if form["action"] == "change_settings":
             for the_per in cdat.periods:
