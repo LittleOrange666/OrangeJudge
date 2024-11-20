@@ -16,7 +16,8 @@ app = server.app
 def contests_list():
     public_contests = datas.Contest.query
     got_data, page_cnt, page_idx, show_pages = tools.pagination(public_contests)
-    return render_template("contests.html", contests=got_data, page_cnt=page_cnt, page_idx=page_idx,
+    contests_data = [(contest.cid, contest.name, contest.datas, contest.can_virtual()) for contest in got_data]
+    return render_template("contests.html", contests=contests_data, page_cnt=page_cnt, page_idx=page_idx,
                            show_pages=show_pages, cur_time=time.time())
 
 

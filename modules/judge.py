@@ -8,8 +8,8 @@ from pathlib import Path
 import requests
 from loguru import logger
 
-from .objs import Result, InteractResult, CallResult
 from . import constants, server
+from .objs import Result, InteractResult, CallResult
 
 
 class SandboxPath:

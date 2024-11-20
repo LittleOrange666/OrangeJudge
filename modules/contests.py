@@ -9,7 +9,7 @@ from flask_login import current_user
 from sqlalchemy.orm.attributes import flag_modified
 from werkzeug.datastructures import ImmutableMultiDict
 
-from . import tools, constants, datas, tasks, objs
+from . import tools, datas, tasks, objs
 from .constants import Permission
 
 actions = tools.Switcher()
@@ -25,9 +25,8 @@ def create_contest(name: str, user: datas.User) -> str:
     cid = str(cidx)
     start_time = datetime.now().replace(second=0, microsecond=0) + timedelta(days=1)
     start_timestamp = start_time.timestamp()
-    info = constants.default_contest_info | {"name": name, "users": [user.username], "start": start_timestamp,
-                                             "elapsed": 60}
-    dat = datas.Contest(id=cidx, cid=cid, name=name, data=info, user=user)
+    info = objs.ContestData(name=name, users=[user.username], start=int(start_timestamp), elapsed=60)
+    dat = datas.Contest(id=cidx, cid=cid, name=name, data=objs.as_dict(info), user=user)
     per = datas.Period(start_time=start_time,
                        end_time=start_time + timedelta(hours=1),
                        ended=False,

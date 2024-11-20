@@ -9,7 +9,6 @@ from werkzeug.utils import secure_filename
 
 from .. import tools, server, constants, executing, tasks, datas, contests, login, config
 from ..constants import Permission, problem_path
-from ..constants import submission_path
 from ..server import sending_file
 
 app = server.app

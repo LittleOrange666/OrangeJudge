@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Callable
 
 from loguru import logger
+
 from . import constants, tools, judge, objs
 from .constants import lang_path
 from .judge import SandboxPath, SandboxUser
@@ -45,7 +46,7 @@ class Environment:
         Returns:
             SandboxPath: A SandboxPath object representing the random path within the sandbox.
         """
-        return self.path(tools.random_string()+suffix)
+        return self.path(tools.random_string() + suffix)
 
     def send_file(self, filepath: Path, nxt: Callable[[SandboxPath], None] | None = None) -> SandboxPath:
         """

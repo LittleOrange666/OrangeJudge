@@ -12,8 +12,31 @@ def _custom_asdict_factory(data):
     return dict((k, _convert_value(v)) for k, v in data)
 
 
-def as_dict(obj):
+def as_dict(obj) -> dict:
     return asdict(obj, dict_factory=_custom_asdict_factory)
+
+
+def is_enum(obj):
+    return issubclass(obj, Enum)
+
+
+def _resolve(val, tp, e):
+    if e:
+        if isinstance(val, str):
+            return tp[val]
+    else:
+        if isinstance(val, dict):
+            return tp(**val)
+    return val
+
+
+def _resolve_r(val, tp, e, t):
+    if t == 0:
+        return _resolve(val, tp, e)
+    elif t == 1:
+        return [_resolve(v, tp, e) for v in val]
+    elif t == 2:
+        return {k: _resolve(v, tp, e) for k, v in val.items()}
 
 
 class DataMeta(type):
@@ -34,11 +57,25 @@ class DataMeta(type):
         Returns:
             The newly created class.
         """
-        print(namespace)
-        # Collect all attributes that are annotated as dataclasses
-        arr = tuple((k, v) for k, v in namespace["__annotations__"].items() if is_dataclass(v))
-        # Collect all attributes that are annotated as Enums
-        e_arr = tuple((k, v) for k, v in namespace["__annotations__"].items() if issubclass(v, Enum))
+        arr_l = []
+        # Collect all attributes that are annotated as dataclasses or Enums
+        for k, v in namespace["__annotations__"].items():
+            if is_dataclass(v):
+                arr_l.append((k, v, False, 0))
+            elif is_enum(v):
+                arr_l.append((k, v, True, 0))
+            elif hasattr(v, "__origin__"):
+                if v.__origin__ is list and len(v.__args__) == 1:
+                    if is_dataclass(v.__args__[0]):
+                        arr_l.append((k, v.__args__[0], False, 1))
+                    elif is_enum(v.__args__[0]):
+                        arr_l.append((k, v.__args__[0], True, 1))
+                elif v.__origin__ is dict and len(v.__args__) == 2:
+                    if is_dataclass(v.__args__[1]):
+                        arr_l.append((k, v.__args__[1], False, 2))
+                    elif is_enum(v.__args__[1]):
+                        arr_l.append((k, v.__args__[1], True, 2))
+        arr = tuple(arr_l)
 
         def _the__post_init__(obj):
             """
@@ -47,16 +84,8 @@ class DataMeta(type):
             Args:
                 obj: The instance of the class being initialized.
             """
-            for k, v in arr:
-                val = getattr(obj, k)
-                if isinstance(val, dict):
-                    # Initialize the attribute with the dataclass if it is a dictionary
-                    setattr(obj, k, v(**val))
-            for k, v in e_arr:
-                val = getattr(obj, k)
-                if isinstance(val, str):
-                    # Initialize the attribute with the enum if it is a string
-                    setattr(obj, k, v[val])
+            for key, value, e, t in arr:
+                setattr(obj, key, _resolve_r(getattr(obj, key), value, e, t))
 
         # Add the custom __post_init__ method to the class namespace
         namespace["__post_init__"] = _the__post_init__
@@ -123,6 +152,22 @@ class PretestType(Enum):
     no = "no"
 
 
+class CodecheckerMode(Enum):
+    disabled = "disabled"
+    public = "public"
+    private = "private"
+
+
+class ProgramType(Enum):
+    my = "my"
+    default = "default"
+
+
+class GenType(Enum):
+    sol = "sol"
+    gen = "gen"
+
+
 @dataclass
 class StandingsData(metaclass=DataMeta):
     public: bool = True
@@ -163,9 +208,88 @@ class ContestData(metaclass=DataMeta):
     elapsed: int = 0
     type: ContestType = ContestType.icpc
     can_register: bool = False
-    standing: StandingsData = StandingsData()
+    standing: StandingsData = field(default_factory=StandingsData)
     pretest: PretestType = PretestType.no
     practice: PracticeType = PracticeType.no
     participants: list[str] = field(default_factory=list)
     virtual_participants: dict[str, int] = field(default_factory=dict)
     penalty: int = 20
+
+
+@dataclass
+class Statement:
+    main: str = ""
+    input: str = ""
+    output: str = ""
+    scoring: str = ""
+    interaction: str = ""
+
+
+@dataclass
+class TestcaseGroup:
+    score: int = 100
+    rule: str = "min"
+    dependency: list[str] = field(default_factory=list)
+
+
+@dataclass
+class Testcase:
+    in_file: str
+    out_file: str
+    group: str = "default"
+    uncompleted: bool = False
+    sample: bool = False
+    pretest: bool = False
+
+
+@dataclass
+class ProgramFile:
+    name: str
+    type: str
+
+
+@dataclass
+class ProgramPtr(metaclass=DataMeta):
+    name: str
+    type: ProgramType
+
+
+@dataclass
+class ManualSample:
+    in_txt: str
+    out_txt: str
+
+
+@dataclass
+class GenGroup(metaclass=DataMeta):
+    file1: str
+    file2: str
+    type: GenType
+    group: str = "default"
+    cmds: list[str] = field(default_factory=list)
+    state: str = "未更新"
+
+
+@dataclass
+class ProblemInfo(metaclass=DataMeta):
+    name: str = "unknown"
+    timelimit: str = "1000"
+    memorylimit: str = "256"
+    testcases: list[Testcase] = field(default_factory=list)
+    users: list[str] = field(default_factory=list)
+    statement: Statement = field(default_factory=Statement)
+    files: list[ProgramFile] = field(default_factory=list)
+    checker_source: ProgramPtr = field(default_factory=lambda: ProgramPtr("unknown", ProgramType.default))
+    is_interact: bool = False
+    groups: dict[str, TestcaseGroup] = field(default_factory=lambda: {"default": TestcaseGroup()})
+    interactor_source: str = "unknown"
+    manual_samples: list[ManualSample] = field(default_factory=list)
+    codechecker_source: str = "unknown"
+    codechecker_mode: CodecheckerMode = CodecheckerMode.disabled
+    languages: dict[str, bool] = field(default_factory=dict)
+    public_testcase: bool = False
+    public_checker: bool = False
+    gen_groups: list[GenGroup] = field(default_factory=list)
+    runner_source: dict[str, str] = field(default_factory=dict)
+    runner_enabled: bool = False
+    library: list[str] = field(default_factory=list)

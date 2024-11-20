@@ -3,9 +3,9 @@ from pathlib import Path
 
 from flask_sqlalchemy import SQLAlchemy
 
-from .objs import ContestData
 from . import server, locks, objs
 from .constants import problem_path, contest_path, submission_path
+from .objs import ContestData
 
 datafile = Path.cwd() / "data" / "data.sqlite"
 app = server.app
@@ -111,7 +111,7 @@ class Contest(db.Model):
         if not self.main_period_id:
             return False
         per: Period = Period.query.get(self.main_period_id)
-        return (self.data["practice"] == "public") and per and per.is_over()
+        return (self.datas.practice == "public") and per and per.is_over()
 
     @property
     def path(self) -> Path:
