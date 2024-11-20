@@ -46,6 +46,7 @@ class Submission(db.Model):
     period_id = db.Column(db.Integer, db.ForeignKey('periods.id'), nullable=True)
     language = db.Column(db.String(20), nullable=False)
     completed = db.Column(db.Boolean, default=False)
+    running = db.Column(db.Boolean, default=False)
     ce_msg = db.Column(db.Text, nullable=True)
     data = db.Column(db.JSON)
     pid = db.Column(db.String(20), nullable=False)

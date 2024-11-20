@@ -2,7 +2,6 @@ import math
 import multiprocessing
 import time
 import traceback
-from multiprocessing import Queue
 from pathlib import Path
 
 from loguru import logger
@@ -12,8 +11,6 @@ from .constants import log_path
 from .judge import SandboxUser
 
 last_judged = locks.Counter()
-
-submission_queue = Queue()
 
 queue_position = locks.Counter()
 
@@ -293,6 +290,8 @@ def runner(idx: int):
             dat: datas.Submission = datas.Submission.query.get(idx)
             if dat is not None:
                 try:
+                    dat.running = True
+                    datas.add(dat)
                     last_judged.inc()
                     pdat: datas.Problem = dat.problem
                     if pdat.pid == "test":
@@ -313,17 +312,23 @@ def runner(idx: int):
         traceback.print_exception(e)
 
 
+def queue_receiver():
+    while True:
+        submissions = datas.Submission.query.filter_by(completed=False, running=False)
+        if submissions.count() == 0:
+            time.sleep(10)
+            continue
+        dat = submissions.first()
+        runner(dat.id)
+        time.sleep(1)
+
+
 def enqueue(idx: int) -> int:
-    submission_queue.put(str(idx))
+    logger.info(f"enqueue {idx}")
     return queue_position.inc()
 
 
 def init():
-    def queue_receiver():
-        while True:
-            idx = int(submission_queue.get())
-            runner(idx)
-
     for submission in datas.Submission.query.filter_by(completed=False):
         enqueue(submission.id)
     for _ in range(config.judge.workers):
