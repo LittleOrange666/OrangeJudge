@@ -11,7 +11,7 @@ from typing import Callable
 from xml.etree import ElementTree
 from xml.etree.ElementTree import Element
 
-from flask import Response, abort, render_template, request, redirect
+from flask import Response, abort, request, redirect
 from loguru import logger
 from pyzipper import AESZipFile
 from pyzipper.zipfile_aes import AESZipInfo
@@ -20,6 +20,7 @@ from werkzeug.datastructures import ImmutableMultiDict, MultiDict
 from werkzeug.utils import secure_filename
 
 import judge
+from .routers.general import render_problem
 from . import executing, tools, constants, createhtml, datas
 from .constants import tmp_path, preparing_problem_path, testlib, problem_path
 from .judge import SandboxPath, SandboxUser
@@ -1112,15 +1113,9 @@ def preview(args: MultiDict[str, str], pdat: datas.Problem) -> Response:
         case "statement":
             if not (path / "statement.html").exists():
                 abort(404)
-            dat = pdat.new_data
-            statement = tools.read(path / "statement.html")
-            lang_exts = json.dumps({k: v.data["source_ext"] for k, v in executing.langs.items()})
-            samples = [[tools.read(path / k / o["in"]), tools.read(path / k / o["out"])]
-                       for k in ("testcases", "testcases_gen") for o in dat.get(k, []) if o.get("sample", False)]
-            ret = render_template("problem.html", dat=dat, statement=statement,
-                                  langs=executing.langs.keys(), lang_exts=lang_exts, pid=pid,
-                                  preview=True, samples=enumerate(samples))
-            return Response(ret)
+            dat = pdat.new_datas
+            langs = [lang for lang in executing.langs.keys() if pdat.lang_allowed(lang)]
+            return render_problem(dat, pid, langs, preview=True, is_contest=False)
         case "public_file":
             return sending_file(path / "public_file" / filename)
         case "file":

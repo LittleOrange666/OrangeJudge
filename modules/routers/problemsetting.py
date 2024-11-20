@@ -105,6 +105,6 @@ def problem_preview():
     pdat: datas.Problem = datas.Problem.query.filter_by(pid=idx).first_or_404()
     if (problem_path / idx / "waiting").is_file():
         return render_template("pleasewait.html", action=tools.read(pdat.path / "waiting"))
-    dat = pdat.new_data
-    login.check_user(Permission.make_problems, dat["users"])
+    dat = pdat.new_datas
+    login.check_user(Permission.make_problems, dat.users)
     return problemsetting.preview(request.args, pdat)

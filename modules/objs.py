@@ -152,6 +152,8 @@ class PretestType(Enum):
     all = "all"
     last = "last"
     no = "no"
+    fake_all = "fake_all"
+    fake_last = "fake_last"
 
 
 class CodecheckerMode(Enum):

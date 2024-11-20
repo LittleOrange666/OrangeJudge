@@ -196,7 +196,7 @@ def problem_page(idx):
     return render_problem(dat, idx, langs, is_contest=False)
 
 
-def render_problem(dat: objs.ProblemInfo, idx: str, langs: list[str], **kwargs):
+def render_problem(dat: objs.ProblemInfo, idx: str, langs: list[str], preview: bool = False, **kwargs):
     path = problem_path / idx
     statement = tools.read(path / "statement.html")
     lang_exts = json.dumps({k: v.data["source_ext"] for k, v in executing.langs.items()})
@@ -209,7 +209,7 @@ def render_problem(dat: objs.ProblemInfo, idx: str, langs: list[str], **kwargs):
                     for o in dat.testcases_gen if o.sample])
     return render_template("problem.html", dat=dat, statement=statement,
                            langs=langs, lang_exts=lang_exts, pid=idx,
-                           preview=False, samples=enumerate(samples), **kwargs)
+                           preview=preview, samples=enumerate(samples), **kwargs)
 
 
 @app.route("/problem_file/<idx>/<filename>", methods=['GET'])
