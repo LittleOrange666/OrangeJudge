@@ -1,3 +1,4 @@
+import inspect
 from datetime import datetime
 from pathlib import Path
 
@@ -48,6 +49,7 @@ class Submission(db.Model):
     period_id = db.Column(db.Integer, db.ForeignKey('periods.id'), nullable=True)
     language = db.Column(db.String(20), nullable=False)
     completed = db.Column(db.Boolean, default=False)
+    running = db.Column(db.Boolean, default=False)
     ce_msg = db.Column(db.Text, nullable=True)
     data = db.Column(db.JSON)
     pid = db.Column(db.String(20), nullable=False)
@@ -65,6 +67,24 @@ class Submission(db.Model):
         :return: submission_path / submission_id
         """
         return submission_path / str(self.id)
+
+
+def Problem_compatibility_layer(dat):
+    keys = inspect.signature(ProblemInfo).parameters.keys()
+    my_keys = list(dat.keys())
+    for k in my_keys:
+        if k not in keys:
+            dat.pop(k)
+    for k in ("testcases", "testcases_gen"):
+        o = dat.get(k, [])
+        for v in o:
+            if "in" in v:
+                v["in_file"] = v.pop("in")
+            if "out" in v:
+                v["out_file"] = v.pop("out")
+    if "score" in dat.get("statement", {}):
+        dat["statement"].pop("score")
+    return dat
 
 
 class Problem(db.Model):
@@ -97,11 +117,11 @@ class Problem(db.Model):
 
     @property
     def datas(self) -> ProblemInfo:
-        return ProblemInfo(**self.data)
+        return ProblemInfo(**Problem_compatibility_layer(self.data))
 
     @property
     def new_datas(self) -> ProblemInfo:
-        return ProblemInfo(**self.new_data)
+        return ProblemInfo(**Problem_compatibility_layer(self.new_data))
 
     @new_datas.setter
     def new_datas(self, value: ProblemInfo):

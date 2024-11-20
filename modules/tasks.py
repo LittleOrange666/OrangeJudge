@@ -3,7 +3,6 @@ import multiprocessing
 import time
 import traceback
 from dataclasses import replace
-from multiprocessing import Queue
 from pathlib import Path
 
 from loguru import logger
@@ -13,8 +12,6 @@ from .constants import log_path
 from .judge import SandboxUser
 
 last_judged = locks.Counter()
-
-submission_queue = Queue()
 
 queue_position = locks.Counter()
 
@@ -149,8 +146,7 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
                 gainscore=top_score if v.rule == objs.TestcaseRule.min else 0
             )
         testcases = problem_info.testcases
-        if "testcases_gen" in problem_info:
-            testcases.extend([replace(o, gen=True) for o in problem_info.testcases_gen])
+        testcases.extend([replace(o, gen=True) for o in problem_info.testcases_gen])
         group_testcases = {k: [] for k in groups}
         for obj in testcases:
             group_testcases[obj.group].append(obj)
@@ -160,10 +156,9 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
         for i, testcase in enumerate(testcases):
             gp = testcase.group
             is_sample = testcase.sample
-            if "dependency" in groups[gp]:
-                for k in groups[gp].dependency:
-                    if groups[k].result != "OK" and groups[k].result != "PARTIAL":
-                        groups[gp].result = "SKIP"
+            for k in groups[gp].dependency:
+                if groups[k].result != "OK" and groups[k].result != "PARTIAL":
+                    groups[gp].result = "SKIP"
             if groups[gp].result != "OK" and groups[gp].result != "PARTIAL":
                 results.append({"time": 0, "mem": 0, "result": "SKIP", "info": "Skipped",
                                 "has_output": False})
@@ -293,6 +288,8 @@ def runner(idx: int):
             dat: datas.Submission = datas.Submission.query.get(idx)
             if dat is not None:
                 try:
+                    dat.running = True
+                    datas.add(dat)
                     last_judged.inc()
                     pdat: datas.Problem = dat.problem
                     if pdat.pid == "test":
@@ -313,18 +310,26 @@ def runner(idx: int):
         traceback.print_exception(e)
 
 
+def queue_receiver():
+    while True:
+        submissions = datas.Submission.query.filter_by(completed=False, running=False)
+        if submissions.count() == 0:
+            time.sleep(10)
+            continue
+        dat = submissions.first()
+        runner(dat.id)
+        time.sleep(1)
+
+
 def enqueue(idx: int) -> int:
-    submission_queue.put(str(idx))
+    logger.info(f"enqueue {idx}")
     return queue_position.inc()
 
 
 def init():
-    def queue_receiver():
-        while True:
-            idx = int(submission_queue.get())
-            runner(idx)
-
     for submission in datas.Submission.query.filter_by(completed=False):
+        submission.running = False
+        datas.add(submission)
         enqueue(submission.id)
     for _ in range(config.judge.workers):
-        multiprocessing.Process(target=queue_receiver, daemon=True).start()
+        multiprocessing.Process(target=queue_receiver).start()

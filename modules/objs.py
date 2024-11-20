@@ -278,8 +278,8 @@ class ProgramFile:
 
 @dataclass
 class ProgramPtr(metaclass=DataMeta):
-    name: str
     type: ProgramType
+    name: str
 
 
 @dataclass
@@ -320,7 +320,7 @@ class ProblemInfo(metaclass=DataMeta):
     users: list[str] = field(default_factory=list)
     statement: Statement = field(default_factory=Statement)
     files: list[ProgramFile] = field(default_factory=list)
-    checker_source: ProgramPtr = field(default_factory=lambda: ProgramPtr("unknown", ProgramType.default))
+    checker_source: ProgramPtr = field(default_factory=lambda: ProgramPtr(ProgramType.default, "unknown"))
     checker: ExecPtr = field(default_factory=ExecPtr)
     is_interact: bool = False
     groups: dict[str, TestcaseGroup] = field(default_factory=lambda: {"default": TestcaseGroup()})

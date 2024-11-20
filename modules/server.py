@@ -92,8 +92,11 @@ def error_503(error):
 @app.errorhandler(Exception)
 def error_500(error: Exception):
     target = tools.random_string()
-    with (log_path / f"{target}.log").open("w") as f:
+    log_file = (log_path / f"{target}.log")
+    with log_file.open("w") as f:
         traceback.print_exception(error, file=f)
+    log_content = log_file.read_text()
+    logger.warning(f"Error: {log_content}")
     if request.method == "POST":
         return target, 500
     return render_template("500.html", log_uid=target), 500
