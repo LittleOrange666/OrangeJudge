@@ -216,8 +216,8 @@ class Environment:
     def run(self, cmd: list[str], tl: int = 1000, ml: int = 128, in_file: SandboxPath | None = None,
             out_file: SandboxPath | None = None,
             err_file: SandboxPath | None = None, seccomp_rule: judge.SeccompRule | None = judge.SeccompRule.general,
-            user: SandboxUser = SandboxUser.nobody) -> objs.Result:
-        return judge.run(cmd, tl, ml, in_file, out_file, err_file, seccomp_rule, user, str(self.cwd))
+            user: SandboxUser = SandboxUser.nobody, save_seccomp_info: bool = False) -> objs.Result:
+        return judge.run(cmd, tl, ml, in_file, out_file, err_file, seccomp_rule, user, str(self.cwd), save_seccomp_info)
 
     def interact_run(self, cmd: list[str], interact_cmd: list[str], tl: int = 1000, ml: int = 128,
                      in_file: SandboxPath | None = None,

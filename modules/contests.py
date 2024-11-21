@@ -6,7 +6,6 @@ from time import sleep
 from cachetools import TTLCache, cached
 from flask import abort
 from flask_login import current_user
-from sqlalchemy.orm.attributes import flag_modified
 from werkzeug.datastructures import ImmutableMultiDict
 
 from . import tools, datas, tasks, objs

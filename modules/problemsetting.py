@@ -21,10 +21,10 @@ from werkzeug.datastructures import ImmutableMultiDict, MultiDict
 from werkzeug.utils import secure_filename
 
 import judge
-from .routers.general import render_problem
 from . import executing, tools, constants, createhtml, datas, objs
 from .constants import tmp_path, preparing_problem_path, testlib, problem_path
 from .judge import SandboxPath, SandboxUser
+from .routers.general import render_problem
 from .server import sending_file
 from .tools import TempFile
 
@@ -224,8 +224,8 @@ def create_problem(name: str, pid: str, user: datas.User) -> str:
     (path / "testcases").mkdir()
     (path / "file").mkdir()
     (path / "public_file").mkdir()
-    info = constants.default_problem_info | {"name": name, "users": [user.username]}
-    dat.data = dat.new_data = info
+    info = objs.ProblemInfo(name=name, users=[user.username])
+    dat.datas = dat.new_datas = info
     datas.add(dat)
     return pid
 
@@ -398,7 +398,7 @@ def do_import_polygon(pid: str, filename: str):
                 f = next(manual_tests)
                 fn = Path(f.filename).name
                 tools.write_binary(zip_file.read(f), path / "testcases" / fn)
-                dat.testcases.append(objs.Testcase(in_file=fn, out_file=fn+".out", group=group, uncompleted=True))
+                dat.testcases.append(objs.Testcase(in_file=fn, out_file=fn + ".out", group=group, uncompleted=True))
             else:
                 gen_cmds.append([test.get("cmd"), group])
     logger.debug(str(gen_cmds))

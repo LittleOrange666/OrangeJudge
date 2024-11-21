@@ -59,6 +59,8 @@ class DataMeta(type):
         Returns:
             The newly created class.
         """
+        if len(bases):
+            return super().__new__(cls, name, bases, namespace)
         arr_l = []
         # Collect all attributes that are annotated as dataclasses or Enums
         for k, v in namespace["__annotations__"].items():
@@ -126,7 +128,8 @@ class Result:
         result (str): The result message.
         error_id (int): The error identifier.
         result_id (int): The result identifier.
-        judger_log (int): The log from the judger, default is an empty string.
+        judger_log (str): The log from the judger, default is an empty string.
+        seccomp_info (str): The seccomp information, default is an empty string.
     """
     cpu_time: int  # ms
     real_time: int  # ms
@@ -137,7 +140,8 @@ class Result:
     result: str
     error_id: int
     result_id: int
-    judger_log: int = ""
+    judger_log: str = ""
+    seccomp_info: str = ""
 
 
 @dataclass

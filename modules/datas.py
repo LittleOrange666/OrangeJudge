@@ -139,6 +139,11 @@ class Problem(db.Model):
     def datas(self) -> ProblemInfo:
         return ProblemInfo(**Problem_compatibility_layer(self.data))
 
+    @datas.setter
+    def datas(self, value: ProblemInfo):
+        self.data = objs.as_dict(value)
+        flag_modified(self, "data")
+
     @property
     def new_datas(self) -> ProblemInfo:
         return ProblemInfo(**Problem_compatibility_layer(self.new_data))

@@ -54,22 +54,24 @@ def run(lang: executing.Language, file: Path, env: executing.Environment, stdin:
     SandboxUser.running.readable(in_file)
     SandboxUser.running.writeable(out_file)
     res = env.run(exec_cmd, 10 * 1000, 1000, in_file, out_file, err_file, user=SandboxUser.running,
-                  seccomp_rule=lang.seccomp_rule)
+                  seccomp_rule=lang.seccomp_rule, save_seccomp_info=True)
     logger.debug(res)
     if res.result == "JE":
         return "JE: " + res.error
     if res.result == "TLE":
-        return "TLE: Testing is limited by 10 seconds"
+        return "TLE: 測試執行時間超過限制(10秒)"
     tools.copy(err_file.full, Path(file).parent / "stderr.txt")
     if res.result == "RE":
         exit_code = str(res.exit_code)
         msg = constants.exit_codes.get(exit_code, exit_code)
+        if res.signal == 31:
+            return "RF: 違反了 seccomp 規則: " + res.seccomp_info
         sig_name = str(res.signal)
         if sig_name in constants.signal_names:
             sig_name = f"{sig_name} ({constants.signal_names[sig_name]})"
         return f"RE: {msg}: signal {sig_name}"
     if res.result == "MLE":
-        return "MLE: Testing is limited by 1000 MB"
+        return "MLE: 測試執行記憶體超過限制(1GB)"
     env.get_file(stdout, out_file)
     time_usage = max(0, res.cpu_time - lang.base_time)
     memusage = max(0, res.memory - lang.base_memory)
@@ -207,7 +209,9 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
                 elif exit_code == "153":
                     ret = ["OLE", "輸出過大"]
                 elif res.result == "RE":
-                    if exit_code in constants.exit_codes:
+                    if res.signal == 31:
+                        ret = ["RF", "違反了 seccomp 規則"]
+                    elif exit_code in constants.exit_codes:
                         ret = ["RE", constants.exit_codes[exit_code]]
                     else:
                         ret = ["RE", "執行期間錯誤"]
@@ -270,7 +274,7 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
     out_info.group_results = {k: v.to_result() for k, v in groups.items()}
     out_info.total_score = total_score
     out_info.protected = ((not problem_info.public_testcase or bool(dat.period_id))
-                             and dat.user.username not in problem_info.users)
+                          and dat.user.username not in problem_info.users)
     dat.results = out_info
     if simple_result == "NA":
         simple_result = "/".join(sorted(appeared_result))
@@ -319,7 +323,7 @@ def queue_receiver():
     while True:
         submissions = datas.Submission.query.filter_by(completed=False, running=False)
         if submissions.count() == 0:
-            time.sleep(10)
+            time.sleep(3)
             continue
         dat = submissions.first()
         runner(dat.id)
