@@ -107,16 +107,18 @@ def submission(idx: str):
     completed = dat.completed
     ce_msg = dat.ce_msg
     pdat: datas.Problem = dat.problem
+    submit_info = dat.datas
     if pdat.pid == "test":
         if not current_user.has(Permission.admin) and dat.user_id != current_user.data.id:
             abort(403)
-        inp = tools.read_default(dat.path / dat.data["infile"])
-        out = tools.read_default(dat.path / dat.data["outfile"])
+        info = dat.datas
+        inp = tools.read_default(dat.path / info.infile)
+        out = tools.read_default(dat.path / info.outfile)
         result = dat.simple_result or "unknown"
         err = tools.read_default(dat.path / "stderr.txt")
         ret = render_template("submission/test.html", lang=lang, source=source, inp=inp,
                               out=out, completed=completed, result=result, pos=tasks.get_queue_position(dat),
-                              ce_msg=ce_msg, je=dat.data.get("JE", False), logid=dat.data.get("log_uuid", ""), err=err)
+                              ce_msg=ce_msg, je=info.JE, logid=info.log_uuid, err=err)
     else:
         group_results = {}
         protected = True
@@ -125,13 +127,13 @@ def submission(idx: str):
         if not current_user.has(Permission.admin) and dat.user_id != current_user.data.id and current_user.id not in \
                 problem_info.users:
             abort(403)
-        super_access = current_user.has(Permission.admin) or current_user.id in problem_info["users"]
+        super_access = current_user.has(Permission.admin) or current_user.id in problem_info.users
         result = {}
         see_cc = False
-        if completed and not dat.data.get("JE", False) and dat.result is not None:
-            result_data = dat.result
-            result["CE"] = result_data["CE"]
-            results = result_data["results"]
+        if completed and not submit_info.JE:
+            result_data = dat.results
+            result["CE"] = result_data.CE
+            results = result_data.results
             result["protected"] = protected = ((not problem_info.public_testcase or bool(dat.period_id))
                                                and not super_access)
             checker_protected = ((not problem_info.public_checker or bool(dat.period_id))
@@ -139,22 +141,22 @@ def submission(idx: str):
             result["checker_protected"] = checker_protected
             testcase_path = dat.path / "testcases"
             for i in range(len(results)):
-                if results[i]["result"] != "SKIP" and (not protected or super_access or results[i]["sample"]):
-                    results[i]["in"] = tools.read(testcase_path / f"{i}.in")
-                    results[i]["out"] = tools.read(testcase_path / f"{i}.ans")
+                if results[i].result != "SKIP" and (not protected or super_access or results[i].sample):
+                    results[i].in_txt = tools.read(testcase_path / f"{i}.in")
+                    results[i].ans_txt = tools.read(testcase_path / f"{i}.ans")
                 else:
-                    results[i]["in"] = results[i]["out"] = ""
-                if results[i].get("has_output", False):
-                    results[i]["user_out"] = tools.read(testcase_path / f"{i}.out")
+                    results[i].in_txt = results[i].ans_txt = ""
+                if results[i].has_output:
+                    results[i].out_txt = tools.read(testcase_path / f"{i}.out")
             result["results"] = results
             if "group_results" in result_data:
-                gpr = result_data["group_results"]
+                gpr = result_data.group_results
                 if len(gpr) > 0 and type(next(iter(gpr.values()))) == dict:
                     group_results = gpr
                     for o in group_results.values():
-                        o["class"] = constants.result_class.get(o["result"], "")
+                        o.css_class = constants.result_class.get(o.result, "")
             if "total_score" in result_data:
-                result["total_score"] = result_data["total_score"]
+                result["total_score"] = result_data.total_score
             cc_mode = problem_info.codechecker_mode
             see_cc = cc_mode == objs.CodecheckerMode.public or cc_mode == objs.CodecheckerMode.private and super_access
         cc = ""
@@ -174,7 +176,7 @@ def submission(idx: str):
         ret = render_template("submission/problem.html", lang=lang, source=source, completed=completed,
                               pname=problem_info.name, result=result, enumerate=enumerate,
                               group_results=group_results, link=link, pos=tasks.get_queue_position(dat),
-                              ce_msg=ce_msg, je=dat.data.get("JE", False), logid=dat.data.get("log_uuid", ""),
+                              ce_msg=ce_msg, je=submit_info.JE, logid=submit_info.log_uuid,
                               super_access=super_access, contest=contest, cid=cid, protected=protected,
                               checker_protected=checker_protected, see_cc=see_cc, cc=cc)
     return ret

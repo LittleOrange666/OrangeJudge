@@ -9,7 +9,7 @@ import requests
 from loguru import logger
 
 from . import constants, server
-from .objs import Result, InteractResult, CallResult
+from .objs import InteractResult, CallResult, Result
 
 
 class SandboxPath:

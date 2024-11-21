@@ -7,7 +7,7 @@ from sqlalchemy.orm.attributes import flag_modified
 
 from . import server, locks, objs
 from .constants import problem_path, contest_path, submission_path
-from .objs import ContestData, ProblemInfo
+from .objs import ContestData, ProblemInfo, SubmissionData, SubmissionResult
 
 datafile = Path.cwd() / "data" / "data.sqlite"
 app = server.app
@@ -67,6 +67,26 @@ class Submission(db.Model):
         :return: submission_path / submission_id
         """
         return submission_path / str(self.id)
+
+    @property
+    def datas(self) -> SubmissionData:
+        dat = self.data or {}
+        return SubmissionData(**dat)
+
+    @datas.setter
+    def datas(self, value: SubmissionData):
+        self.data = objs.as_dict(value)
+        flag_modified(self, "data")
+
+    @property
+    def results(self) -> SubmissionResult:
+        res = self.result or {}
+        return SubmissionResult(**res)
+
+    @results.setter
+    def results(self, value: SubmissionResult):
+        self.result = objs.as_dict(value)
+        flag_modified(self, "result")
 
 
 def Problem_compatibility_layer(dat):

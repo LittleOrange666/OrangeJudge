@@ -82,10 +82,11 @@ def run_test(dat: datas.Submission) -> None:
     idx = str(dat.id)
     logger.info("run test", idx)
     source = dat.path / dat.source
-    in_file = dat.path / dat.data["infile"]
-    out_file = dat.path / dat.data["outfile"]
+    info = dat.datas
+    in_file = dat.path / info.infile
+    out_file = dat.path / info.outfile
     result = run(lang, source, env, in_file, out_file, dat)
-    dat.result = {}
+    dat.results = objs.SubmissionResult()
     dat.simple_result = result
     dat.completed = True
     datas.add(dat)
@@ -106,16 +107,17 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
         filename, ce_msg = lang.compile(sent_source, env, judge_runner)
     else:
         filename, ce_msg = lang.compile(sent_source, env)
-    out_info = {"CE": False}
-    results = []
+    out_info = objs.SubmissionResult()
+    results: list[objs.TestcaseResult] = []
     just_pretest: bool = dat.just_pretest
     simple_result = "pretest passed" if just_pretest else "AC"
     top_score = problem_info.top_score
     total_score = 0
     groups: dict[str, objs.RunningTestcaseGroup] = {}
+    appeared_result = set()
     if ce_msg:
         dat.ce_msg = ce_msg
-        out_info["CE"] = True
+        out_info.CE = True
         simple_result = "CE"
     else:
         tl = int(problem_info.timelimit)
@@ -160,10 +162,9 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
                 if groups[k].result != "OK" and groups[k].result != "PARTIAL":
                     groups[gp].result = "SKIP"
             if groups[gp].result != "OK" and groups[gp].result != "PARTIAL":
-                results.append({"time": 0, "mem": 0, "result": "SKIP", "info": "Skipped",
-                                "has_output": False})
+                results.append(objs.TestcaseResult(time=0, mem=0, result="SKIP", info="Skipped", has_output=False))
                 continue
-            timeusage = 0
+            time_usage = 0
             memusage = 0
             has_output = False
             score = 0
@@ -194,8 +195,8 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
                 else:
                     SandboxUser.running.readable(in_path)
                     SandboxUser.running.writeable(out_path)
-                    res = env.run(exec_cmd, tl, ml, in_path, out_path, user=SandboxUser.running
-                                  , seccomp_rule=lang.seccomp_rule)
+                    res = env.run(exec_cmd, tl, ml, in_path, out_path, user=SandboxUser.running,
+                                  seccomp_rule=lang.seccomp_rule)
                 exit_code = str(res.exit_code)
                 if res.result == "JE":
                     ret = ["JE", res.error]
@@ -211,9 +212,9 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
                     else:
                         ret = ["RE", "執行期間錯誤"]
                 elif len(ret) == 0:  # skip code below if interactor return with non-zero return code
-                    timeusage = max(0, res.cpu_time - lang.base_time)
+                    time_usage = max(0, res.cpu_time - lang.base_time)
                     memusage = math.ceil(max(0, res.memory - lang.base_memory) / 1024)
-                    groups[gp].time = max(groups[gp].time, timeusage)
+                    groups[gp].time = max(groups[gp].time, time_usage)
                     groups[gp].mem = max(groups[gp].mem, memusage)
                     has_output = True
                     ans_path = env.send_rand_file(ans_file)
@@ -241,10 +242,11 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
                         score = max(score, 0)
                         ret = [name, checker_out.stderr]
             if ret[0] == "TLE":
-                timeusage = tl
-            results.append({"time": timeusage, "mem": memusage, "result": ret[0], "info": ret[1],
-                            "has_output": has_output, "score": score, "sample": is_sample})
+                time_usage = tl
+            results.append(objs.TestcaseResult(time=time_usage, mem=memusage, result=ret[0], info=ret[1],
+                                               has_output=has_output, score=score, sample=is_sample))
             if ret[0] != "OK":
+                appeared_result.add(ret[0])
                 simple_result = "NA"
             if groups[gp].result != ret[0] and ret[0] != "OK":
                 if groups[gp].rule == objs.TestcaseRule.min:
@@ -264,14 +266,15 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
                 total_score += o.gainscore
             elif o.rule == objs.TestcaseRule.avg:
                 o.gainscore = o.score
-    out_info["results"] = results
-    out_info["group_results"] = {k: v.to_result() for k, v in groups.items()}
-    if simple_result == "NA":
-        simple_result += f" {total_score}%"
-    out_info["total_score"] = total_score
-    out_info["protected"] = ((not problem_info.public_testcase or bool(dat.period_id))
+    out_info.results = results
+    out_info.group_results = {k: v.to_result() for k, v in groups.items()}
+    out_info.total_score = total_score
+    out_info.protected = ((not problem_info.public_testcase or bool(dat.period_id))
                              and dat.user.username not in problem_info.users)
-    dat.result = out_info
+    dat.results = out_info
+    if simple_result == "NA":
+        simple_result = "/".join(sorted(appeared_result))
+        simple_result += f" {total_score}%"
     dat.simple_result = simple_result
     dat.completed = True
     datas.add(dat)
@@ -298,9 +301,11 @@ def runner(idx: int):
                         run_problem(pdat, dat)
                 except Exception as e:
                     traceback.print_exception(e)
-                    dat.data["JE"] = True
+                    info = dat.datas
+                    info.JE = True
                     log_uuid = tools.random_string()
-                    dat.data["log_uuid"] = log_uuid
+                    info.log_uuid = log_uuid
+                    dat.datas = info
                     tools.write("".join(traceback.format_exception(e)), log_path / (log_uuid + ".log"))
                     dat.completed = True
                     datas.add(dat)

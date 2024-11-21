@@ -78,19 +78,35 @@ class DataMeta(type):
                     elif is_enum(v.__args__[1]):
                         arr_l.append((k, v.__args__[1], True, 2))
         arr = tuple(arr_l)
+        if "__post_init__" in namespace:
+            _old_post_init = namespace["__post_init__"]
 
-        def _the__post_init__(obj):
-            """
-            Custom __post_init__ method to initialize nested dataclasses from dictionaries and enums from strings.
+            def _the__post_init__(obj):
+                """
+                Custom __post_init__ method to initialize nested dataclasses from dictionaries and enums from strings.
 
-            Args:
-                obj: The instance of the class being initialized.
-            """
-            for key, value, e, t in arr:
-                setattr(obj, key, _resolve_r(getattr(obj, key), value, e, t))
+                Args:
+                    obj: The instance of the class being initialized.
+                """
+                for key, value, e, t in arr:
+                    setattr(obj, key, _resolve_r(getattr(obj, key), value, e, t))
+                _old_post_init(obj)
+
+            namespace["__post_init__"] = _the__post_init__
+        else:
+            def _the__post_init__(obj):
+                """
+                Custom __post_init__ method to initialize nested dataclasses from dictionaries and enums from strings.
+
+                Args:
+                    obj: The instance of the class being initialized.
+                """
+                for key, value, e, t in arr:
+                    setattr(obj, key, _resolve_r(getattr(obj, key), value, e, t))
+
+            namespace["__post_init__"] = _the__post_init__
 
         # Add the custom __post_init__ method to the class namespace
-        namespace["__post_init__"] = _the__post_init__
         namespace["as_dict"] = as_dict
         return super().__new__(cls, name, bases, namespace)
 
@@ -242,6 +258,15 @@ class TestcaseGroup:
 
 
 @dataclass
+class GroupResult:
+    result: str
+    time: int
+    mem: int
+    gainscore: float
+    css_class: str = ""
+
+
+@dataclass
 class RunningTestcaseGroup:
     score: int = 100
     rule: TestcaseRule = TestcaseRule.min
@@ -252,13 +277,8 @@ class RunningTestcaseGroup:
     gainscore: int = 0
     cnt: int = 0
 
-    def to_result(self):
-        return {
-            "result": self.result,
-            "time": self.time,
-            "mem": self.mem,
-            "score": self.gainscore
-        }
+    def to_result(self) -> GroupResult:
+        return GroupResult(result=self.result, time=self.time, mem=self.mem, gainscore=self.gainscore)
 
 
 @dataclass
@@ -341,3 +361,34 @@ class ProblemInfo(metaclass=DataMeta):
     library: list[str] = field(default_factory=list)
     versions: list[ProblemVersion] = field(default_factory=list)
     top_score: int = 100
+
+
+@dataclass
+class SubmissionData:
+    infile: str = "in.txt"
+    outfile: str = "out.txt"
+    JE: bool = False
+    log_uuid = ""
+
+
+@dataclass
+class TestcaseResult:
+    time: int
+    mem: int
+    result: str
+    info: str
+    has_output: bool
+    score: float = 0.0
+    sample: bool = False
+    in_txt: str = ""
+    out_txt: str = ""
+    ans_txt: str = ""
+
+
+@dataclass
+class SubmissionResult(metaclass=DataMeta):
+    results: list[TestcaseResult] = field(default_factory=list)
+    group_results: dict[str, GroupResult] = field(default_factory=dict)
+    CE: bool = False
+    total_score: float = 0.0
+    protected: bool = False

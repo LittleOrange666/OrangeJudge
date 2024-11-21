@@ -298,14 +298,15 @@ def get_standing(cid: str):
         rmp[v.pid] = k
     for dat in cdat.submissions:
         dat: datas.Submission
-        if dat.completed and "group_results" in dat.result:
+        res = dat.results
+        if dat.completed:
             if dat.user_id not in mp:
                 mp[dat.user_id] = dat.user.display_name
-            scores = {k: v["gainscore"] for k, v in dat.result["group_results"].items()}
+            scores = {k: v.gainscore for k, v in res.group_results.items()}
             ret.append({"user": mp[dat.user_id],
                         "pid": rmp[dat.pid],
                         "scores": scores,
-                        "total_score": dat.result["total_score"],
+                        "total_score": res.total_score,
                         "time": dat.time.timestamp(),
                         "pretest": dat.just_pretest,
                         "per": dat.period_id})
@@ -327,11 +328,11 @@ def get_standing(cid: str):
 
 def break_result(dat: datas.Submission):
     dat.simple_result = "ignored"
-    dat.result["total_score"] = 0
-    if "group_results" in dat.result:
-        for k in dat.result["group_results"]:
-            dat.result["group_results"][k]["gainscore"] = 0
-    flag_modified(dat, "result")
+    res = dat.results
+    res.total_score = 0
+    for k in res.group_results:
+        res.group_results[k].gainscore = 0
+    dat.results = res
 
 
 def resubmit(dat: datas.Submission):
