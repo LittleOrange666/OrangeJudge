@@ -184,7 +184,7 @@ def run(cmd: list[str], tl: int = 1000, ml: int = 128, in_file: SandboxPath | No
             if target_line != -1:
                 good_lines = lines[max(0, target_line-10):target_line]
                 pat = "(R[A-Z0-9]{2}):\\s([0-9a-f]+)\\s"
-                need = ("RAX", "RDI", "RSI", "RDX", "R10", "R8", "R9")
+                need = ("RAX", "RDI", "RSI", "RDX", "R10", "R08", "R09")
                 mp = dict(re.findall(pat, "\n".join(good_lines)))
                 ret.seccomp_info = ", ".join(f"{k}=0x{mp.get(k, '0')}" for k in need)
     return ret
