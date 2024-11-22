@@ -6,7 +6,7 @@ from flask_login import LoginManager, UserMixin, current_user
 from werkzeug.utils import secure_filename
 
 from . import server, datas, config
-from .constants import Permission
+from .objs import Permission
 
 smtp = smtplib.SMTP(config.smtp.host, config.smtp.port)
 

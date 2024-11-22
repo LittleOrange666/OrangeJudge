@@ -9,7 +9,7 @@ from flask_login import current_user
 from werkzeug.datastructures import ImmutableMultiDict
 
 from . import tools, datas, tasks, objs
-from .constants import Permission
+from .objs import Permission
 
 actions = tools.Switcher()
 

@@ -278,8 +278,68 @@ class StatementType(Enum):
     latex = "latex"
 
 
+class TaskResult(Enum):
+    """
+    An enumeration representing the possible results of a task.
+
+    Attributes:
+        OK (str): Represents a successful task.
+        WA (str): Represents a wrong answer.
+        TLE (str): Represents a time limit exceeded.
+        MLE (str): Represents a memory limit exceeded.
+        RE (str): Represents a runtime error.
+        CE (str): Represents a compilation error.
+        JE (str): Represents a judge error.
+        RF (str): Represents a restricted function error.
+        FAIL (str): Represents a judge failed.
+        PARTIAL (str): Represents a partially correct task.
+        PENDING (str): Represents a pending task.
+        PE (str): Represents a presentation error.
+        POINTS (str): Represents a points task.
+        DIRT (str): Represents a dirt?.
+        OLE (str): Represents an output limit exceeded.
+        SKIP (str): Represents a skipped task.
+    """
+    OK = "OK"
+    WA = "WA"
+    TLE = "TLE"
+    MLE = "MLE"
+    RE = "RE"
+    CE = "CE"
+    JE = "JE"
+    RF = "RF"
+    FAIL = "FAIL"
+    PARTIAL = "PARTIAL"
+    PENDING = "PENDING"
+    PE = "PE"
+    POINTS = "POINTS"
+    DIRT = "DIRT"
+    OLE = "OLE"
+    SKIP = "SKIP"
+
+    def is_zero(self):
+        return self not in (TaskResult.OK, TaskResult.PARTIAL, TaskResult.POINTS, TaskResult.PENDING, TaskResult.SKIP)
+
+    def css_class(self):
+        match self:
+            case TaskResult.OK:
+                return "table-success"
+            case TaskResult.WA:
+                return "table-danger"
+            case TaskResult.MLE:
+                return "table-warning"
+            case TaskResult.TLE:
+                return "table-info"
+            case TaskResult.OLE:
+                return "table-secondary"
+            case TaskResult.RE:
+                return "table-secondary"
+            case _:
+                return "table-secondary"
+
+
 @dataclass
-class StandingsData(metaclass=DataMeta):
+class StandingsData:
     """
     A dataclass representing the standings data.
 
@@ -342,7 +402,7 @@ class ContestData(metaclass=DataMeta):
 
 
 @dataclass
-class Statement:
+class Statement(metaclass=DataMeta):
     """
     A dataclass representing the statement of a problem.
 
@@ -363,7 +423,7 @@ class Statement:
 
 
 @dataclass
-class TestcaseGroup:
+class TestcaseGroup(metaclass=DataMeta):
     """
     A dataclass representing a group of test cases.
 
@@ -378,18 +438,18 @@ class TestcaseGroup:
 
 
 @dataclass
-class GroupResult:
+class GroupResult(metaclass=DataMeta):
     """
     A dataclass representing the result of a group of test cases.
 
     Attributes:
-        result (str): The result of the group.
+        result (TaskResult): The result of the group.
         time (int): The maximum time used in the group.
         mem (int): The maximum memory used in group.
         gainscore (float): The score gained by the group.
         css_class (str): The CSS class for the group result.
     """
-    result: str
+    result: TaskResult
     time: int
     mem: int
     gainscore: float
@@ -397,7 +457,7 @@ class GroupResult:
 
 
 @dataclass
-class RunningTestcaseGroup:
+class RunningTestcaseGroup(metaclass=DataMeta):
     """
     A dataclass record a group of test cases while judging.
 
@@ -414,20 +474,24 @@ class RunningTestcaseGroup:
     score: int = 100
     rule: TestcaseRule = TestcaseRule.min
     dependency: list[str] = field(default_factory=list)
-    result: str = "OK"
+    result: TaskResult = TaskResult.OK
     time: int = 0
     mem: int = 0
     gainscore: int = 0
     cnt: int = 0
+    target_cnt: int = 0
 
     def to_result(self) -> GroupResult:
         """
-        Convert the running group to a GroupResult.
+        Convert the current `RunningTestcaseGroup` instance to a `GroupResult` instance.
 
         Returns:
-            GroupResult: The result of the group.
+            GroupResult: The result of the test case group.
         """
-        return GroupResult(result=self.result, time=self.time, mem=self.mem, gainscore=self.gainscore)
+        res = self.result
+        if self.cnt < self.target_cnt:
+            res = TaskResult.PENDING
+        return GroupResult(result=res, time=self.time, mem=self.mem, gainscore=self.gainscore)
 
 
 @dataclass
@@ -632,14 +696,14 @@ class SubmissionData:
 
 
 @dataclass
-class TestcaseResult:
+class TestcaseResult(metaclass=DataMeta):
     """
     A dataclass representing the result of a test case.
 
     Attributes:
         time (int): The time taken by the test case.
         mem (int): The memory used by the test case.
-        result (str): The result of the test case.
+        result (TaskResult): The result of the test case.
         info (str): Additional information about the test case.
         has_output (bool): Indicates if the test case has output.
         score (float): The score of the test case.
@@ -647,17 +711,19 @@ class TestcaseResult:
         in_txt (str): The input text of the test case.
         out_txt (str): The output text of the test case.
         ans_txt (str): The answer text of the test case.
+        completed (bool): Indicates if the test case is completed.
     """
-    time: int
-    mem: int
-    result: str
+    result: TaskResult
     info: str
-    has_output: bool
+    time: int = 0
+    mem: int = 0
+    has_output: bool = False
     score: float = 0.0
     sample: bool = False
     in_txt: str = ""
     out_txt: str = ""
     ans_txt: str = ""
+    completed: bool = True
 
 
 @dataclass
@@ -678,3 +744,17 @@ class SubmissionResult(metaclass=DataMeta):
     total_score: float = 0.0
     protected: bool = False
     codechecker_msg: str = ""
+
+
+class Permission(Enum):
+    """
+    This enumeration represents different levels of permissions in the OrangeJudge system.
+
+    Attributes:
+        root (str): Represents the highest level of permission. It is used for the root user.
+        admin (str): Represents the permission level of an administrator.
+        make_problems (str): Represents the permission level of a problem maker.
+    """
+    root = "最高管理者"
+    admin = "管理者"
+    make_problems = "出題者"

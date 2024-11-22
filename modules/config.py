@@ -191,8 +191,10 @@ class ServerConfig(ConfigCategory):
 
 class JudgeConfig(ConfigCategory):
     workers = ConfigProperty[int]("評測系統並行數量", int, 1)
+    period = ConfigProperty[int]("評測系統掃描週期", int, 3)
     limit = ConfigProperty[str]("提交頻率限制", str, "1 per 10 second")
     file_size = ConfigProperty[int]("檔案大小限制(KB)", int, 100)
+    save_period = ConfigProperty[int]("評測系統儲存週期", int, 3)
 
     def __init__(self, data: dict):
         super().__init__(data, "judge", "評測系統設定")

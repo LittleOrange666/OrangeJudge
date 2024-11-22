@@ -7,7 +7,8 @@ from flask_login import login_required
 from werkzeug.utils import secure_filename
 
 from .. import tools, server, login, executing, problemsetting, datas, config, objs
-from ..constants import Permission, preparing_problem_path, problem_path
+from ..constants import preparing_problem_path, problem_path
+from ..objs import Permission
 
 app = server.app
 

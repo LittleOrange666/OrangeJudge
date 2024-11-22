@@ -1,8 +1,8 @@
 import os
 import re
-from enum import Enum
 from pathlib import Path
 from re import Pattern
+from .objs import TaskResult
 
 signal_names = {'1': 'SIGHUP', '2': 'SIGINT', '3': 'SIGQUIT', '4': 'SIGILL', '5': 'SIGTRAP', '6': 'SIGABRT',
                 '7': 'SIGBUS', '8': 'SIGFPE', '9': 'SIGKILL', '10': 'SIGUSR1', '11': 'SIGSEGV', '12': 'SIGUSR2',
@@ -10,15 +10,6 @@ signal_names = {'1': 'SIGHUP', '2': 'SIGINT', '3': 'SIGQUIT', '4': 'SIGILL', '5'
                 '19': 'SIGSTOP', '20': 'SIGTSTP', '21': 'SIGTTIN', '22': 'SIGTTOU', '23': 'SIGURG', '24': 'SIGXCPU',
                 '25': 'SIGXFSZ', '26': 'SIGVTALRM', '27': 'SIGPROF', '28': 'SIGWINCH', '29': 'SIGIO', '30': 'SIGPWR',
                 '31': 'SIGSYS'}
-
-result_class: dict[str, str] = {
-    "OK": "table-success",
-    "WA": "table-danger",
-    "MLE": "table-warning",
-    "TLE": "table-info",
-    "OLE": "table-secondary",
-    "RE": "table-secondary"
-}
 
 exit_codes: dict[str, str] = {
     "1": "您的程式被監控系統中斷，可能是程式無法正常結束所導致",
@@ -32,26 +23,14 @@ exit_codes: dict[str, str] = {
     "143": "產生程式中斷訊號！"
 }
 
-checker_exit_codes: dict[int, str] = {
-    0: "OK",
-    1: "WA",
-    2: "PE",
-    3: "FAIL",
-    4: "DIRT",
-    7: "POINTS"
+checker_exit_codes: dict[int, TaskResult] = {
+    0: TaskResult.OK,
+    1: TaskResult.WA,
+    2: TaskResult.PE,
+    3: TaskResult.FAIL,
+    4: TaskResult.DIRT,
+    7: TaskResult.POINTS
 }
-
-default_problem_info: dict = {"name": "unknown", "timelimit": "1000", "memorylimit": "256", "testcases": [],
-                              "users": [],
-                              "statement": {"main": "", "input": "", "output": "", "scoring": "", "interaction": ""},
-                              "files": [], "checker_source": ["default", "unknown"], "is_interact": False,
-                              "groups": {"default": {"score": 100, "rule": "min", "dependency": []}},
-                              "interactor_source": "unknown", "manual_samples": [], "codechecker_source": "unknown",
-                              "codechecker_mode": "disabled",
-                              "languages": {}, "public_testcase": False, "public_checker": False, "gen_groups": [],
-                              "runner_source": {}, "runner_enabled": False, "library": []}
-
-# codechecker_mode: disabled public private
 
 email_reg: Pattern = re.compile("^[\\w\\-.]+@([\\w\\-]+\\.)+[\\w-]{2,4}$")
 
@@ -80,21 +59,6 @@ latex_begin = """\\documentclass[]{article}
 \\begin{document}
 """
 latex_end = "\n\\end{document}"
-
-
-class Permission(Enum):
-    """
-    This enumeration represents different levels of permissions in the OrangeJudge system.
-
-    Attributes:
-        root (str): Represents the highest level of permission. It is used for the root user.
-        admin (str): Represents the permission level of an administrator.
-        make_problems (str): Represents the permission level of a problem maker.
-    """
-    root = "最高管理者"
-    admin = "管理者"
-    make_problems = "出題者"
-
 
 danger_html_tags = ("script", "style")
 

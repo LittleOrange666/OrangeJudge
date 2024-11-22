@@ -6,7 +6,8 @@ from flask_login import login_required, current_user, login_user, logout_user
 from werkzeug.utils import secure_filename
 
 from .. import tools, server, login, constants, datas, locks, config
-from ..constants import Permission, log_path
+from ..constants import log_path
+from ..objs import Permission
 
 app = server.app
 

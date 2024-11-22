@@ -7,7 +7,7 @@ from sqlalchemy.orm.attributes import flag_modified
 
 from .general import render_problem
 from .. import server, login, contests, datas, tools, executing
-from ..constants import Permission
+from ..objs import Permission
 
 app = server.app
 

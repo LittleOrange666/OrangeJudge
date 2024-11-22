@@ -22,6 +22,28 @@
         <div>Source:</div>
         {{ source|safe }}
     </div>
+    <table class="table table-hover">
+        <thead>
+        <tr class="table-light">
+            <th scope="col">index</th>
+            <th scope="col">result</th>
+            <th scope="col">Time(ms)</th>
+            <th scope="col">Memory(KB)</th>
+            <th scope="col">Score</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for i,testcase in enumerate(results) %}
+            <tr class="{{ testcase.result.css_class() }}">
+                <th scope="row">{{ i }}</th>
+                <td>{{ testcase.result.value }}</td>
+                <td>{{ testcase.time }}</td>
+                <td>{{ testcase.mem }}</td>
+                <td>{{ testcase.score }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
     {% if completed and not je %}
         {% if result["CE"] %}
             <div class="test-case">
@@ -47,9 +69,9 @@
                     </thead>
                     <tbody>
                     {% for name, gp_result in group_results.items() %}
-                        <tr class="{{ gp_result.css_class }}">
+                        <tr class="{{ gp_result.result.css_class() }}">
                             <th scope="row">{{ name }}</th>
-                            <td>{{ gp_result.result }}</td>
+                            <td>{{ gp_result.result.value }}</td>
                             <td>{{ gp_result.time }}</td>
                             <td>{{ gp_result.mem }}</td>
                             <td>{{ gp_result.gainscore }}</td>
@@ -64,8 +86,8 @@
                     <pre>{{ cc }}</pre>
                 </div>
             {% endif %}
-            {% for i,testcase in enumerate(result["results"]) %}
-                {% if testcase.result != "SKIP" and (not protected or super_access or testcase.sample) %}
+            {% for i,testcase in enumerate(results) %}
+                {% if testcase.result.name != "SKIP" and (not protected or super_access or testcase.sample) %}
                     <div class="test-case">
                         <div>Input {{ i + 1 }}:</div>
                         <pre>{{ testcase.in_txt }}</pre>
@@ -82,8 +104,8 @@
                     </div>
                 {% endif %}
                 <div class="test-case">
-                    <div>Result {{ i + 1 }}: {{ testcase.result }}</div>
-                    {% if testcase.result != "SKIP" and (not checker_protected or super_access or testcase.sample) %}
+                    <div>Result {{ i + 1 }}: {{ testcase.result.value }}</div>
+                    {% if testcase.result.name != "SKIP" and (not checker_protected or super_access or testcase.sample) %}
                         <pre>{{ testcase.info }}</pre>
                     {% endif %}
                 </div>

@@ -78,51 +78,6 @@ $(function () {
         });
     });
     // general info
-    /*$("#save_general_info").click(function () {
-        $("#save_general_info").prop("disabled", true);
-        $("#create_version").prop("disabled", true);
-        let title = $("#title_input").val();
-        let time = $("#time_input").val();
-        let memory = $("#memory_input").val();
-
-        let show_testcase = $("input[type='radio'][name='show_testcase']:checked").val();
-        let show_checker = $("input[type='radio'][name='show_checker']:checked").val();
-        if (!number_reg.test(time)) {
-            show_modal("時間限制格式錯誤", "\"" + time + "\"不是一個合法的數字");
-            return;
-        }
-        if (Number(time) < 250 || Number(time) > 10000) {
-            show_modal("時間限制格式錯誤", "時間限制需在250至10000之間");
-            return;
-        }
-        if (!number_reg.test(memory)) {
-            show_modal("空間限制格式錯誤", "\"" + memory + "\"不是一個合法的數字");
-            return;
-        }
-        if (Number(memory) < 4 || Number(memory) > 1024) {
-            show_modal("空間限制格式錯誤", "空間限制需在4至1024之間");
-            return;
-        }
-        post("/problemsetting_action", {
-            "action": "save_general_info",
-            "pid": pid,
-            "title": title,
-            "timelimit": time,
-            "memorylimit": memory,
-            "show_testcase": show_testcase,
-            "show_checker": show_checker
-        }, function (data, status, xhr) {
-            let btn = $("#save_general_info");
-            btn.prop("disabled", false);
-            if (status === "success") {
-                show_modal("成功", "儲存成功");
-                btn.trigger("saved_data");
-            } else {
-                show_modal("失敗", "Error Code: " + xhr.status);
-                $("#create_version").prop("disabled", false);
-            }
-        });
-    });*/
     // statement
     $("#save_statement").click(function () {
         $("#save_statement").prop("disabled", true);

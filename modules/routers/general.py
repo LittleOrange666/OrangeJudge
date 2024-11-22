@@ -8,7 +8,8 @@ from pygments.formatters import HtmlFormatter
 from werkzeug.utils import secure_filename
 
 from .. import tools, server, constants, executing, tasks, datas, contests, login, config, objs
-from ..constants import Permission, problem_path
+from ..constants import problem_path
+from ..objs import Permission
 from ..server import sending_file
 
 app = server.app
@@ -130,16 +131,16 @@ def submission(idx: str):
         super_access = current_user.has(Permission.admin) or current_user.id in problem_info.users
         result = {}
         see_cc = False
+        testcase_path = dat.path / "testcases"
+        result_data = dat.results
+        results = result_data.results
         if completed and not submit_info.JE:
-            result_data = dat.results
             result["CE"] = result_data.CE
-            results = result_data.results
             result["protected"] = protected = ((not problem_info.public_testcase or bool(dat.period_id))
                                                and not super_access)
             checker_protected = ((not problem_info.public_checker or bool(dat.period_id))
                                  and not super_access)
             result["checker_protected"] = checker_protected
-            testcase_path = dat.path / "testcases"
             for i in range(len(results)):
                 if results[i].result != "SKIP" and (not protected or super_access or results[i].sample):
                     results[i].in_txt = tools.read(testcase_path / f"{i}.in")
@@ -148,12 +149,9 @@ def submission(idx: str):
                     results[i].in_txt = results[i].ans_txt = ""
                 if results[i].has_output:
                     results[i].out_txt = tools.read(testcase_path / f"{i}.out")
-            result["results"] = results
             gpr = result_data.group_results
-            if len(gpr) > 0 and type(next(iter(gpr.values()))) == dict:
+            if len(gpr) > 0 and type(next(iter(gpr.values()))) is objs.GroupResult:
                 group_results = gpr
-                for o in group_results.values():
-                    o.css_class = constants.result_class.get(o.result, "")
             result["total_score"] = result_data.total_score
             cc_mode = problem_info.codechecker_mode
             see_cc = cc_mode == objs.CodecheckerMode.public or cc_mode == objs.CodecheckerMode.private and super_access
@@ -176,7 +174,7 @@ def submission(idx: str):
                               group_results=group_results, link=link, pos=tasks.get_queue_position(dat),
                               ce_msg=ce_msg, je=submit_info.JE, logid=submit_info.log_uuid,
                               super_access=super_access, contest=contest, cid=cid, protected=protected,
-                              checker_protected=checker_protected, see_cc=see_cc, cc=cc)
+                              checker_protected=checker_protected, see_cc=see_cc, cc=cc, results=results)
     return ret
 
 
