@@ -1,7 +1,6 @@
 ## 已知問題
 + 許多Internal server error 沒有反饋給前端
 + 許多空白&斜線的處理不知道是不是OK的
-+ 可偷用python
 + (出題)許多修改不應重新整理
 + 登入狀態丟失?
 + create version 未檢查checker是否能正確check測資
@@ -15,7 +14,6 @@
 + 缺乏Dos防護 (重要)
 + 許多地方缺乏長度限制，包括但不限於：檔名、檔案大小、各種名稱、密碼...
 + 應該限制各項操作的時限
-+ server 不應使用root user
 
 ## 未實裝特性
 + problem set
@@ -24,11 +22,9 @@
 + background action log (不完整)
 + better editer(自動縮排&空格縮排)
 + 出題小組 (虛擬使用者?)
-+ code checker
 + import from Codeforces Polygon (部分完成, 可用但後續修改困難) (附加檔案未匯入)
 + API
 + 資料用ajax拿
-+ seccomp
 + judge error log (不完整)
 + tutorial
 + language limit and specify ML, TL

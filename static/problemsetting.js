@@ -26,10 +26,10 @@ $(function () {
         div.text("注意!此處有變更尚未儲存!");
         let parent = div.parent();
         let eles = parent.find(".form-control");
+        let checks = parent.find(".form-check-input");
         eles.each(function () {
             $(this).data("old_value", $(this).val());
         });
-        let checks = parent.find(".form-check-input");
         checks.each(function () {
             $(this).data("old_value", $(this).prop("checked"));
         });
@@ -78,7 +78,7 @@ $(function () {
         });
     });
     // general info
-    $("#save_general_info").click(function () {
+    /*$("#save_general_info").click(function () {
         $("#save_general_info").prop("disabled", true);
         $("#create_version").prop("disabled", true);
         let title = $("#title_input").val();
@@ -122,7 +122,7 @@ $(function () {
                 $("#create_version").prop("disabled", false);
             }
         });
-    });
+    });*/
     // statement
     $("#save_statement").click(function () {
         $("#save_statement").prop("disabled", true);

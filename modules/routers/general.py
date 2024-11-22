@@ -7,9 +7,8 @@ from pygments import highlight, lexers
 from pygments.formatters import HtmlFormatter
 from werkzeug.utils import secure_filename
 
-from .. import tools, server, constants, executing, tasks, datas, contests, login, config
+from .. import tools, server, constants, executing, tasks, datas, contests, login, config, objs
 from ..constants import Permission, problem_path
-from ..constants import submission_path
 from ..server import sending_file
 
 app = server.app
@@ -88,7 +87,7 @@ def submit():
         dat.contest = cdat
         if per_id:
             dat.period_id = per_id
-            if cdat.data["pretest"] != "no":
+            if cdat.datas.pretest != "no":
                 dat.just_pretest = True
     datas.add(dat)
     idx = str(dat.id)
@@ -108,57 +107,56 @@ def submission(idx: str):
     completed = dat.completed
     ce_msg = dat.ce_msg
     pdat: datas.Problem = dat.problem
+    submit_info = dat.datas
     if pdat.pid == "test":
         if not current_user.has(Permission.admin) and dat.user_id != current_user.data.id:
             abort(403)
-        inp = tools.read_default(dat.path / dat.data["infile"])
-        out = tools.read_default(dat.path / dat.data["outfile"])
+        info = dat.datas
+        inp = tools.read_default(dat.path / info.infile)
+        out = tools.read_default(dat.path / info.outfile)
         result = dat.simple_result or "unknown"
         err = tools.read_default(dat.path / "stderr.txt")
         ret = render_template("submission/test.html", lang=lang, source=source, inp=inp,
                               out=out, completed=completed, result=result, pos=tasks.get_queue_position(dat),
-                              ce_msg=ce_msg, je=dat.data.get("JE", False), logid=dat.data.get("log_uuid", ""), err=err)
+                              ce_msg=ce_msg, je=info.JE, logid=info.log_uuid, err=err)
     else:
         group_results = {}
         protected = True
         checker_protected = True
-        problem_info = pdat.data
+        problem_info = pdat.datas
         if not current_user.has(Permission.admin) and dat.user_id != current_user.data.id and current_user.id not in \
-                problem_info[
-                    "users"]:
+                problem_info.users:
             abort(403)
-        super_access = current_user.has(Permission.admin) or current_user.id in problem_info["users"]
+        super_access = current_user.has(Permission.admin) or current_user.id in problem_info.users
         result = {}
         see_cc = False
-        if completed and not dat.data.get("JE", False) and dat.result is not None:
-            result_data = dat.result
-            result["CE"] = result_data["CE"]
-            results = result_data["results"]
-            result["protected"] = protected = ((not problem_info.get('public_testcase', False) or bool(dat.period_id))
+        if completed and not submit_info.JE:
+            result_data = dat.results
+            result["CE"] = result_data.CE
+            results = result_data.results
+            result["protected"] = protected = ((not problem_info.public_testcase or bool(dat.period_id))
                                                and not super_access)
-            checker_protected = ((not problem_info.get('public_checker', False) or bool(dat.period_id))
+            checker_protected = ((not problem_info.public_checker or bool(dat.period_id))
                                  and not super_access)
             result["checker_protected"] = checker_protected
             testcase_path = dat.path / "testcases"
             for i in range(len(results)):
-                if results[i]["result"] != "SKIP" and (not protected or super_access or results[i]["sample"]):
-                    results[i]["in"] = tools.read(testcase_path / f"{i}.in")
-                    results[i]["out"] = tools.read(testcase_path / f"{i}.ans")
+                if results[i].result != "SKIP" and (not protected or super_access or results[i].sample):
+                    results[i].in_txt = tools.read(testcase_path / f"{i}.in")
+                    results[i].ans_txt = tools.read(testcase_path / f"{i}.ans")
                 else:
-                    results[i]["in"] = results[i]["out"] = ""
-                if results[i].get("has_output", False):
-                    results[i]["user_out"] = tools.read(testcase_path / f"{i}.out")
+                    results[i].in_txt = results[i].ans_txt = ""
+                if results[i].has_output:
+                    results[i].out_txt = tools.read(testcase_path / f"{i}.out")
             result["results"] = results
-            if "group_results" in result_data:
-                gpr = result_data["group_results"]
-                if len(gpr) > 0 and type(next(iter(gpr.values()))) == dict:
-                    group_results = gpr
-                    for o in group_results.values():
-                        o["class"] = constants.result_class.get(o["result"], "")
-            if "total_score" in result_data:
-                result["total_score"] = result_data["total_score"]
-            cc_mode = problem_info.get("codechecker_mode", "disabled")
-            see_cc = cc_mode == "public" or cc_mode == "private" and super_access
+            gpr = result_data.group_results
+            if len(gpr) > 0 and type(next(iter(gpr.values()))) == dict:
+                group_results = gpr
+                for o in group_results.values():
+                    o.css_class = constants.result_class.get(o.result, "")
+            result["total_score"] = result_data.total_score
+            cc_mode = problem_info.codechecker_mode
+            see_cc = cc_mode == objs.CodecheckerMode.public or cc_mode == objs.CodecheckerMode.private and super_access
         cc = ""
         if see_cc:
             cc = tools.read_default(dat.path / "codechecker_result.txt", default="INFO NOT FOUND")
@@ -169,14 +167,14 @@ def submission(idx: str):
             cdat: datas.Contest = dat.contest
             contest = cdat.name
             cid = cdat.cid
-            for k, v in cdat.data["problems"].items():
-                if v["pid"] == pdat.pid:
+            for k, v in cdat.datas.problems.items():
+                if v.pid == pdat.pid:
                     link = f"/contest/{cdat.cid}/problem/{k}"
                     break
         ret = render_template("submission/problem.html", lang=lang, source=source, completed=completed,
-                              pname=problem_info["name"], result=result, enumerate=enumerate,
+                              pname=problem_info.name, result=result, enumerate=enumerate,
                               group_results=group_results, link=link, pos=tasks.get_queue_position(dat),
-                              ce_msg=ce_msg, je=dat.data.get("JE", False), logid=dat.data.get("log_uuid", ""),
+                              ce_msg=ce_msg, je=submit_info.JE, logid=submit_info.log_uuid,
                               super_access=super_access, contest=contest, cid=cid, protected=protected,
                               checker_protected=checker_protected, see_cc=see_cc, cc=cc)
     return ret
@@ -188,26 +186,30 @@ def problem_page(idx):
         return redirect("/test")
     pdat: datas.Problem = datas.Problem.query.filter_by(pid=idx).first_or_404()
     idx = secure_filename(idx)
-    dat = pdat.data
+    dat = pdat.datas
     if not pdat.is_public:
         if not current_user.is_authenticated:
             abort(403)
-        if not current_user.has(Permission.admin) and current_user.id not in dat.get("users", []):
+        if not current_user.has(Permission.admin) and current_user.id not in dat.users:
             abort(403)
     langs = [lang for lang in executing.langs.keys() if pdat.lang_allowed(lang)]
     return render_problem(dat, idx, langs, is_contest=False)
 
 
-def render_problem(dat, idx: str, langs: list[str], **kwargs):
+def render_problem(dat: objs.ProblemInfo, idx: str, langs: list[str], preview: bool = False, **kwargs):
     path = problem_path / idx
     statement = tools.read(path / "statement.html")
     lang_exts = json.dumps({k: v.data["source_ext"] for k, v in executing.langs.items()})
-    samples = dat.get("manual_samples", []) + [[tools.read(path / k / o["in"]), tools.read(path / k / o["out"])]
-                                               for k in ("testcases", "testcases_gen") for o in dat.get(k, []) if
-                                               o.get("sample", False)]
+    samples = dat.manual_samples
+    samples.extend([objs.ManualSample(tools.read(path / "testcases" / o.in_file),
+                                      tools.read(path / "testcases" / o.out_file))
+                    for o in dat.testcases if o.sample])
+    samples.extend([objs.ManualSample(tools.read(path / "testcases_gen" / o.in_file),
+                                      tools.read(path / "testcases_gen" / o.out_file))
+                    for o in dat.testcases_gen if o.sample])
     return render_template("problem.html", dat=dat, statement=statement,
                            langs=langs, lang_exts=lang_exts, pid=idx,
-                           preview=False, samples=enumerate(samples), **kwargs)
+                           preview=preview, samples=enumerate(samples), **kwargs)
 
 
 @app.route("/problem_file/<idx>/<filename>", methods=['GET'])
@@ -217,19 +219,19 @@ def problem_file(idx, filename):
     filename = secure_filename(filename)
     if "cid" in request.args:
         cdat: datas.Contest = datas.Contest.query.filter_by(cid=request.args["cid"]).first_or_404()
-        for obj in cdat.data["problems"].values():
-            if obj["pid"] == idx:
+        for obj in cdat.datas.problems.values():
+            if obj.pid == idx:
                 break
         else:
             abort(404)
         contests.check_access(cdat)
     else:
         pdat: datas.Problem = datas.Problem.query.filter_by(pid=idx).first_or_404()
-        dat = pdat.data
+        dat = pdat.datas
         if not pdat.is_public:
             if not current_user.is_authenticated:
                 abort(403)
-            if not current_user.has(Permission.admin) and current_user.id not in dat["users"]:
+            if not current_user.has(Permission.admin) and current_user.id not in dat.users:
                 abort(403)
     target = problem_path / idx / "public_file" / filename
     return sending_file(target)

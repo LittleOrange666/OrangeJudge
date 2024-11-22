@@ -1,15 +1,17 @@
 import json
 import os
 import queue
+import re
 import secrets
-from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 
 import requests
 from loguru import logger
+import subprocess
 
 from . import constants, server
+from .objs import InteractResult, CallResult, Result
 
 
 class SandboxPath:
@@ -69,33 +71,6 @@ class SandboxPath:
 
     def __repr__(self):
         return repr(self.sandbox)
-
-
-@dataclass
-class Result:
-    cpu_time: int  # ms
-    real_time: int  # ms
-    memory: int  # Bytes
-    signal: int
-    exit_code: int
-    error: str
-    result: str
-    error_id: int
-    result_id: int
-    judger_log: int = ""
-
-
-@dataclass
-class InteractResult:
-    result: Result
-    interact_result: Result
-
-
-@dataclass
-class CallResult:
-    stdout: str
-    stderr: str
-    return_code: int
 
 
 class SeccompRule(Enum):
@@ -180,7 +155,7 @@ def call(cmd: list[str], user: SandboxUser = SandboxUser.root, stdin: str = "",
 def run(cmd: list[str], tl: int = 1000, ml: int = 128, in_file: SandboxPath | None = None,
         out_file: SandboxPath | None = None,
         err_file: SandboxPath | None = None, seccomp_rule: SeccompRule | None = SeccompRule.general,
-        user: SandboxUser = SandboxUser.nobody, cwd: str | None = None) -> Result:
+        user: SandboxUser = SandboxUser.nobody, cwd: str | None = None, save_seccomp_info: bool = False) -> Result:
     dat = {
         "cmd": list(map(str, cmd)),
         "tl": tl,
@@ -196,7 +171,23 @@ def run(cmd: list[str], tl: int = 1000, ml: int = 128, in_file: SandboxPath | No
     logger.debug(dat)
     data = send_request("judge", dat)
     logger.debug(data)
-    return Result(**data)
+    ret = Result(**data)
+    if ret.signal == 31 and save_seccomp_info:
+        if os.path.exists("/var/log/dmesg"):
+            txt = subprocess.check_output(["dmesg"]).decode("utf-8")
+            lines = [line[line.find("] ")+2:] for line in txt.split("\n") if "] " in line]
+            target_line = -1
+            for i in range(len(lines)-1,-1,-1):
+                if "signal: 31" in lines[i]:
+                    target_line = i
+                    break
+            if target_line != -1:
+                good_lines = lines[max(0, target_line-10):target_line]
+                pat = "(R[A-Z0-9]{2}):\\s([0-9a-f]+)\\s"
+                need = ("RAX", "RDI", "RSI", "RDX", "R10", "R8", "R9")
+                mp = dict(re.findall(pat, "\n".join(good_lines)))
+                ret.seccomp_info = ", ".join(f"{k}=0x{mp.get(k, '0')}" for k in need)
+    return ret
 
 
 def interact_run(cmd: list[str], interact_cmd: list[str], tl: int = 1000, ml: int = 128,
@@ -224,7 +215,7 @@ def interact_run(cmd: list[str], interact_cmd: list[str], tl: int = 1000, ml: in
     logger.debug(dat)
     data = send_request("interact_judge", dat)
     logger.debug(data)
-    return InteractResult(result=Result(**data["result"]), interact_result=Result(**data["interact_result"]))
+    return InteractResult(**data)
 
 
 def init():

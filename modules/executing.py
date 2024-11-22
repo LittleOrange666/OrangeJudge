@@ -4,7 +4,7 @@ from typing import Callable
 
 from loguru import logger
 
-from . import constants, tools, judge
+from . import constants, tools, judge, objs
 from .constants import lang_path
 from .judge import SandboxPath, SandboxUser
 
@@ -46,7 +46,7 @@ class Environment:
         Returns:
             SandboxPath: A SandboxPath object representing the random path within the sandbox.
         """
-        return self.path(tools.random_string()+suffix)
+        return self.path(tools.random_string() + suffix)
 
     def send_file(self, filepath: Path, nxt: Callable[[SandboxPath], None] | None = None) -> SandboxPath:
         """
@@ -210,14 +210,14 @@ class Environment:
             judge.chmod(filename, 0o700)
 
     def call(self, cmd: list[str], user: SandboxUser = SandboxUser.root, stdin: str = "",
-             timeout: float | None = None) -> judge.CallResult:
+             timeout: float | None = None) -> objs.CallResult:
         return judge.call(cmd, user, stdin, timeout, str(self.cwd))
 
     def run(self, cmd: list[str], tl: int = 1000, ml: int = 128, in_file: SandboxPath | None = None,
             out_file: SandboxPath | None = None,
             err_file: SandboxPath | None = None, seccomp_rule: judge.SeccompRule | None = judge.SeccompRule.general,
-            user: SandboxUser = SandboxUser.nobody) -> judge.Result:
-        return judge.run(cmd, tl, ml, in_file, out_file, err_file, seccomp_rule, user, str(self.cwd))
+            user: SandboxUser = SandboxUser.nobody, save_seccomp_info: bool = False) -> objs.Result:
+        return judge.run(cmd, tl, ml, in_file, out_file, err_file, seccomp_rule, user, str(self.cwd), save_seccomp_info)
 
     def interact_run(self, cmd: list[str], interact_cmd: list[str], tl: int = 1000, ml: int = 128,
                      in_file: SandboxPath | None = None,
@@ -225,7 +225,7 @@ class Environment:
                      err_file: SandboxPath | None = None, interact_err_file: SandboxPath | None = None,
                      seccomp_rule: judge.SeccompRule | None = judge.SeccompRule.general,
                      user: SandboxUser = SandboxUser.nobody, interact_user: SandboxUser = SandboxUser.nobody) \
-            -> judge.InteractResult:
+            -> objs.InteractResult:
         return judge.interact_run(cmd, interact_cmd, tl, ml, in_file, out_file, err_file, interact_err_file,
                                   seccomp_rule, user, interact_user, str(self.cwd))
 

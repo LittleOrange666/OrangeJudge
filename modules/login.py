@@ -1,7 +1,7 @@
 import hashlib
 import smtplib
 
-from flask import request, abort
+from flask import abort
 from flask_login import LoginManager, UserMixin, current_user
 from werkzeug.utils import secure_filename
 

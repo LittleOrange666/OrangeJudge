@@ -16,7 +16,8 @@ app = server.app
 def contests_list():
     public_contests = datas.Contest.query
     got_data, page_cnt, page_idx, show_pages = tools.pagination(public_contests)
-    return render_template("contests.html", contests=got_data, page_cnt=page_cnt, page_idx=page_idx,
+    contests_data = [(contest.cid, contest.name, contest.datas, contest.can_virtual()) for contest in got_data]
+    return render_template("contests.html", contests=contests_data, page_cnt=page_cnt, page_idx=page_idx,
                            show_pages=show_pages, cur_time=time.time())
 
 
@@ -35,7 +36,7 @@ def create_contest():
 def contest_page(idx):
     dat: datas.Contest = datas.Contest.query.filter_by(cid=idx).first_or_404()
     status, target, can_see = contests.check_status(dat)
-    info = dat.data
+    info = dat.datas
     can_edit = contests.check_super_access(dat)
     can_see = can_see or can_edit
     announcements = reversed(dat.announcements.filter_by(public=True).all())
@@ -52,12 +53,12 @@ def contest_page(idx):
 def contest_problem(cid, pid):
     cdat: datas.Contest = datas.Contest.query.filter_by(cid=cid).first_or_404()
     contests.check_access(cdat)
-    info = cdat.data
-    if pid not in info["problems"]:
+    info = cdat.datas
+    if pid not in info.problems:
         abort(404)
-    idx = info["problems"][pid]["pid"]
+    idx = info.problems[pid].pid
     pdat: datas.Problem = datas.Problem.query.filter_by(pid=idx).first_or_404()
-    dat = pdat.data
+    dat = pdat.datas
     langs = [lang for lang in executing.langs.keys() if pdat.lang_allowed(lang)]
     return render_problem(dat, idx, langs, is_contest=True, cid=cid, cname=cdat.name, pidx=pid)
 
@@ -65,14 +66,15 @@ def contest_problem(cid, pid):
 @app.route("/contest/<cid>/status/<page_str>", methods=["POST"])
 def contest_status(cid, page_str):
     dat: datas.Contest = datas.Contest.query.filter_by(cid=cid).first_or_404()
+    info = dat.datas
     status = dat.submissions
     if "user" in request.form and len(request.form["user"]):
         user: datas.User = datas.User.query.filter_by(username=request.form["user"]).first_or_404()
         status = status.filter_by(user=user)
     if "pid" in request.form and len(request.form["pid"]):
-        if request.form["pid"] not in dat.data["problems"]:
+        if request.form["pid"] not in info.problems:
             abort(404)
-        status = status.filter_by(pid=dat.data["problems"][request.form["pid"]])
+        status = status.filter_by(pid=info.problems[request.form["pid"]].pid)
     got_data, page_cnt, page_idx, show_pages = tools.pagination(status, True, page_str)
     out = []
     for obj in got_data:
@@ -80,10 +82,10 @@ def contest_status(cid, page_str):
         pid = obj.pid
         problem = "?"
         problem_name = "?"
-        for k, v in dat.data["problems"].items():
-            if v["pid"] == pid:
+        for k, v in info.problems.items():
+            if v.pid == pid:
                 problem = k
-                problem_name = v["name"]
+                problem_name = v.name
         result = obj.simple_result or "unknown"
         can_see = current_user.has(Permission.admin) or current_user.id == obj.user.username
         out.append({"idx": str(obj.id),
@@ -114,11 +116,13 @@ def contest_action():
 def contest_register(cid):
     dat: datas.Contest = datas.Contest.query.filter_by(cid=cid).first_or_404()
     per: datas.Period = datas.Period.query.get_or_404(dat.main_period_id)
-    if not dat.data["can_register"] or per.is_over():
+    info = dat.datas
+    if not info.can_register or per.is_over():
         abort(403)
-    if current_user.id in dat.data["participants"]:
+    if current_user.id in info.participants:
         abort(409)
-    dat.data["participants"].append(current_user.id)
+    info.participants.append(current_user.id)
+    dat.datas = info
     flag_modified(dat, "data")
     datas.add(dat)
     return "OK", 200
@@ -128,11 +132,13 @@ def contest_register(cid):
 @login_required
 def contest_unregister(cid):
     dat: datas.Contest = datas.Contest.query.filter_by(cid=cid).first_or_404()
-    if not dat.data["can_register"]:
+    info = dat.datas
+    if not info.can_register:
         abort(403)
-    if current_user.id not in dat.data["participants"]:
+    if current_user.id not in info.participants:
         abort(409)
-    dat.data["participants"].remove(current_user.id)
+    info.participants.remove(current_user.id)
+    dat.datas = info
     flag_modified(dat, "data")
     datas.add(dat)
     return "OK", 200
@@ -142,9 +148,10 @@ def contest_unregister(cid):
 @login_required
 def virtual_register(cid):
     dat: datas.Contest = datas.Contest.query.filter_by(cid=cid).first_or_404()
+    info = dat.datas
     if not dat.can_virtual():
         abort(403)
-    if current_user.id in dat.data["virtual_participants"]:
+    if current_user.id in info.virtual_participants:
         abort(409)
     if request.method == "GET":
         return render_template("virtual_register.html", cid=cid, name=dat.name)
@@ -155,12 +162,12 @@ def virtual_register(cid):
             idx = per.first().id
         else:
             nw_per = datas.Period(start_time=start_time,
-                                  end_time=start_time + timedelta(minutes=dat.data["elapsed"]),
+                                  end_time=start_time + timedelta(minutes=info.elapsed),
                                   contest=dat,
                                   is_virtual=True)
             datas.add(nw_per)
             idx = nw_per.id
-        dat.data["virtual_participants"][current_user.id] = idx
+        info.virtual_participants[current_user.id] = idx
         flag_modified(dat, "data")
         datas.add(dat)
         return "OK", 200
@@ -169,10 +176,11 @@ def virtual_register(cid):
 @app.route("/contest/<cid>/standing", methods=['POST'])
 def contest_standing(cid):
     cdat: datas.Contest = datas.Contest.query.filter_by(cid=cid).first_or_404()
-    dt = time.time() - cdat.data["start"]
-    dt = dt / 60 - cdat.data["elapsed"]
-    can_see = (cdat.data["standing"]["public"] and
-               (dt <= -cdat.data["standing"]["start_freeze"] or dt >= cdat.data["standing"]["end_freeze"]))
+    info = cdat.datas
+    dt = time.time() - info.start
+    dt = dt / 60 - info.elapsed
+    can_see = (info.standing.public and
+               (dt <= -info.standing.start_freeze or dt >= info.standing.end_freeze))
     if not can_see and not contests.check_super_access(cdat):
         abort(403)
     dat = contests.get_standing(cid)

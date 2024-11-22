@@ -49,7 +49,7 @@ default_problem_info: dict = {"name": "unknown", "timelimit": "1000", "memorylim
                               "interactor_source": "unknown", "manual_samples": [], "codechecker_source": "unknown",
                               "codechecker_mode": "disabled",
                               "languages": {}, "public_testcase": False, "public_checker": False, "gen_groups": [],
-                              "runner_source": {}, "runner_enabled": False, "libraries": []}
+                              "runner_source": {}, "runner_enabled": False, "library": []}
 
 # codechecker_mode: disabled public private
 
@@ -95,14 +95,6 @@ class Permission(Enum):
     admin = "管理者"
     make_problems = "出題者"
 
-
-default_contest_info: dict = {"name": "unknown", "users": [], "problems": {}, "start": 0, "elapsed": 0, "type": "icpc",
-                              "can_register": False, "standing": {"public": True, "start_freeze": 0, "end_freeze": 0},
-                              "pretest": "no", "practice": "no", "participants": [], "virtual_participants": {},
-                              "penalty": 20}
-# pretest: no all last
-# practice: no private public
-# type icpc ioi ioic cf
 
 danger_html_tags = ("script", "style")
 

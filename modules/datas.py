@@ -1,10 +1,13 @@
+import inspect
 from datetime import datetime
 from pathlib import Path
 
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm.attributes import flag_modified
 
-from . import server, locks
+from . import server, locks, objs
 from .constants import problem_path, contest_path, submission_path
+from .objs import ContestData, ProblemInfo, SubmissionData, SubmissionResult
 
 datafile = Path.cwd() / "data" / "data.sqlite"
 app = server.app
@@ -65,6 +68,44 @@ class Submission(db.Model):
         """
         return submission_path / str(self.id)
 
+    @property
+    def datas(self) -> SubmissionData:
+        dat = self.data or {}
+        return SubmissionData(**dat)
+
+    @datas.setter
+    def datas(self, value: SubmissionData):
+        self.data = objs.as_dict(value)
+        flag_modified(self, "data")
+
+    @property
+    def results(self) -> SubmissionResult:
+        res = self.result or {}
+        return SubmissionResult(**res)
+
+    @results.setter
+    def results(self, value: SubmissionResult):
+        self.result = objs.as_dict(value)
+        flag_modified(self, "result")
+
+
+def Problem_compatibility_layer(dat):
+    keys = inspect.signature(ProblemInfo).parameters.keys()
+    my_keys = list(dat.keys())
+    for k in my_keys:
+        if k not in keys:
+            dat.pop(k)
+    for k in ("testcases", "testcases_gen"):
+        o = dat.get(k, [])
+        for v in o:
+            if "in" in v:
+                v["in_file"] = v.pop("in")
+            if "out" in v:
+                v["out_file"] = v.pop("out")
+    if "score" in dat.get("statement", {}):
+        dat["statement"].pop("score")
+    return dat
+
 
 class Problem(db.Model):
     __tablename__ = 'problems'
@@ -83,8 +124,8 @@ class Problem(db.Model):
         super().__init__(**kwargs)
 
     def lang_allowed(self, lang: str) -> bool:
-        return (self.data.get("languages", {}).get(lang, True) and
-                (not self.data.get("runner_enabled", False) or lang in self.data.get("runner_source", {})))
+        return (self.datas.languages.get(lang, True) and
+                (not self.datas.runner_enabled or lang in self.datas.runner_source.keys()))
 
     @property
     def path(self) -> Path:
@@ -93,6 +134,24 @@ class Problem(db.Model):
         :return: problem_path / pid
         """
         return problem_path / self.pid
+
+    @property
+    def datas(self) -> ProblemInfo:
+        return ProblemInfo(**self.data)
+
+    @datas.setter
+    def datas(self, value: ProblemInfo):
+        self.data = objs.as_dict(value)
+        flag_modified(self, "data")
+
+    @property
+    def new_datas(self) -> ProblemInfo:
+        return ProblemInfo(**self.new_data)
+
+    @new_datas.setter
+    def new_datas(self, value: ProblemInfo):
+        self.new_data = objs.as_dict(value)
+        flag_modified(self, "new_data")
 
 
 class Contest(db.Model):
@@ -111,7 +170,7 @@ class Contest(db.Model):
         if not self.main_period_id:
             return False
         per: Period = Period.query.get(self.main_period_id)
-        return (self.data["practice"] == "public") and per and per.is_over()
+        return (self.datas.practice == "public") and per and per.is_over()
 
     @property
     def path(self) -> Path:
@@ -120,6 +179,15 @@ class Contest(db.Model):
         :return: contest_path / cid
         """
         return contest_path / self.cid
+
+    @property
+    def datas(self) -> ContestData:
+        return ContestData(**self.data)
+
+    @datas.setter
+    def datas(self, value: ContestData):
+        self.data = objs.as_dict(value)
+        flag_modified(self, "data")
 
 
 class Period(db.Model):
@@ -166,6 +234,22 @@ def init():
     if Problem.query.filter_by(pid="test").count() == 0:
         test_problem = Problem(pid="test", name="", data={}, new_data={}, user_id=1)
         add(test_problem)
+    # compatibility resolution
+    need_compatibility_resolution = False
+    if need_compatibility_resolution:
+        for problem in Problem.query.all():
+            problem: Problem
+            dat = problem.data
+            dat = objs.as_dict(objs.ProblemInfo(**Problem_compatibility_layer(dat)))
+            problem.data = dat
+            flag_modified(problem, "data")
+            if problem.new_data is not None:
+                dat = problem.new_data
+                dat = objs.as_dict(objs.ProblemInfo(**Problem_compatibility_layer(dat)))
+            problem.new_data = dat
+            flag_modified(problem, "new_data")
+            db.session.add(problem)
+        db.session.commit()
 
 
 lock_counter = locks.Counter()

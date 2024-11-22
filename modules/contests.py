@@ -6,10 +6,9 @@ from time import sleep
 from cachetools import TTLCache, cached
 from flask import abort
 from flask_login import current_user
-from sqlalchemy.orm.attributes import flag_modified
 from werkzeug.datastructures import ImmutableMultiDict
 
-from . import tools, constants, datas, tasks
+from . import tools, datas, tasks, objs
 from .constants import Permission
 
 actions = tools.Switcher()
@@ -25,9 +24,8 @@ def create_contest(name: str, user: datas.User) -> str:
     cid = str(cidx)
     start_time = datetime.now().replace(second=0, microsecond=0) + timedelta(days=1)
     start_timestamp = start_time.timestamp()
-    info = constants.default_contest_info | {"name": name, "users": [user.username], "start": start_timestamp,
-                                             "elapsed": 60}
-    dat = datas.Contest(id=cidx, cid=cid, name=name, data=info, user=user)
+    info = objs.ContestData(name=name, users=[user.username], start=int(start_timestamp), elapsed=60)
+    dat = datas.Contest(id=cidx, cid=cid, name=name, data=objs.as_dict(info), user=user)
     per = datas.Period(start_time=start_time,
                        end_time=start_time + timedelta(hours=1),
                        ended=False,
@@ -51,48 +49,48 @@ def calidx(idx: int) -> str:
 
 
 @actions.bind
-def add_problem(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: dict) -> str:
+def add_problem(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: objs.ContestData) -> str:
     pid = form["pid"]
     pdat: datas.Problem = datas.Problem.query.filter_by(pid=pid).first_or_404()
-    for idx, obj in dat["problems"].items():
-        if obj["pid"] == pid:
+    for idx, obj in dat.problems.items():
+        if obj.pid == pid:
             abort(409)
     idx = 0
-    while calidx(idx) in dat["problems"]:
+    while calidx(idx) in dat.problems:
         idx += 1
-    dat["problems"][calidx(idx)] = {"pid": pid, "name": pdat.name}
+    dat.problems[calidx(idx)] = objs.ContestProblem(pid=pid, name=pdat.name)
     return "index_page"
 
 
 @actions.bind
-def remove_problem(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: dict) -> str:
+def remove_problem(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: objs.ContestData) -> str:
     idx = form["idx"]
-    if idx not in dat["problems"]:
+    if idx not in dat.problems:
         abort(409)
-    del dat["problems"][idx]
+    del dat.problems[idx]
     return "index_page"
 
 
 @actions.bind
-def add_participant(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: dict) -> str:
+def add_participant(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: objs.ContestData) -> str:
     user: datas.User = datas.User.query.filter_by(username=form["username"].lower()).first_or_404()
-    if user.username in dat["participants"]:
+    if user.username in dat.participants:
         abort(409)
-    dat["participants"].append(user.username)
+    dat.participants.append(user.username)
     return "participants"
 
 
 @actions.bind
-def remove_participant(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: dict) -> str:
+def remove_participant(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: objs.ContestData) -> str:
     user: datas.User = datas.User.query.filter_by(username=form["username"].lower()).first_or_404()
-    if user.username not in dat["participants"]:
+    if user.username not in dat.participants:
         abort(409)
-    dat["participants"].remove(user.username)
+    dat.participants.remove(user.username)
     return "participants"
 
 
 @actions.bind
-def change_settings(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: dict) -> str:
+def change_settings(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: objs.ContestData) -> str:
     contest_title = form["contest_title"]
     if len(contest_title) < 1 or len(contest_title) > 120:
         abort(400)
@@ -131,35 +129,34 @@ def change_settings(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat
     per: datas.Period = datas.Period.query.get(cdat.main_period_id)
     per.start_time = datetime.fromtimestamp(start_time)
     cdat.name = contest_title
-    dat["name"] = contest_title
-    dat["start"] = start_time
-    dat["elapsed"] = elapsed_time
-    dat["type"] = rule_type
-    dat["pretest"] = pretest_type
-    dat["practice"] = practice_type
-    dat["can_register"] = (register_type == "yes")
-    dat['standing']['public'] = (show_standing == "yes")
-    dat['standing']['start_freeze'] = freeze_time
-    dat['standing']['end_freeze'] = unfreeze_time
-    dat['penalty'] = penalty
+    dat.name = contest_title
+    dat.start = start_time
+    dat.elapsed = elapsed_time
+    dat.type = rule_type
+    dat.pretest = pretest_type
+    dat.practice = practice_type
+    dat.can_register = (register_type == "yes")
+    dat.standing = objs.StandingsData(public=(show_standing == "yes"), start_freeze=freeze_time,
+                                      end_freeze=unfreeze_time)
+    dat.penalty = penalty
     return "edit"
 
 
 @actions.bind
-def save_order(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: dict) -> str:
+def save_order(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: objs.ContestData) -> str:
     order = form["order"].split(",")
-    if set(order) != set(dat["problems"]):
+    if set(order) != set(dat.problems.keys()):
         abort(400)
     nw_dict = {}
     arr = sorted(order)
     for k1, k2 in zip(arr, order):
-        nw_dict[k1] = dat["problems"][k2]
-    dat["problems"] = nw_dict
+        nw_dict[k1] = dat.problems[k2]
+    dat.problems = nw_dict
     return "index_page"
 
 
 @actions.bind
-def send_announcement(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: dict) -> str:
+def send_announcement(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: objs.ContestData) -> str:
     if len(form["title"]) > 80:
         abort(400)
     if len(form["content"]) > 1000:
@@ -176,7 +173,7 @@ def send_announcement(form: ImmutableMultiDict[str, str], cdat: datas.Contest, d
 
 
 @actions.bind
-def remove_announcement(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: dict) -> str:
+def remove_announcement(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: objs.ContestData) -> str:
     idx = tools.to_int(form["id"])
     obj: datas.Announcement = datas.Announcement.query.get_or_404(idx)
     if obj.contest != cdat:
@@ -186,7 +183,7 @@ def remove_announcement(form: ImmutableMultiDict[str, str], cdat: datas.Contest,
 
 
 @actions.bind
-def save_question(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: dict) -> str:
+def save_question(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: objs.ContestData) -> str:
     idx = tools.to_int(form["id"])
     obj: datas.Announcement = datas.Announcement.query.get_or_404(idx)
     if obj.contest != cdat:
@@ -209,74 +206,77 @@ def action_not_found(*args):
 
 def action(form: ImmutableMultiDict[str, str], cdat: datas.Contest):
     with datas.DelayCommit():
-        dat = cdat.data
+        dat = cdat.datas
         cid = cdat.cid
         tp = actions.call(form["action"], form, cdat, dat)
-        flag_modified(cdat, "data")
+        cdat.datas = dat
         datas.add(cdat)
         if form["action"] == "change_settings":
             for the_per in cdat.periods:
                 the_per: datas.Period
-                the_per.end_time = the_per.start_time + timedelta(minutes=dat["elapsed"])
+                the_per.end_time = the_per.start_time + timedelta(minutes=dat.elapsed)
             datas.add(*cdat.periods)
     return f"/contest/{cid}#{tp}"
 
 
 def check_super_access(dat: datas.Contest) -> bool:
     return current_user.is_authenticated and (
-            current_user.has(Permission.admin) or current_user.id in dat.data["users"])
+            current_user.has(Permission.admin) or current_user.id in dat.datas.users)
 
 
 def check_access(dat: datas.Contest):
     per: datas.Period = datas.Period.query.get(dat.main_period_id)
+    info = dat.datas
     if per is None:
         abort(409)
     if check_super_access(dat):
         return
     if current_user.is_authenticated:
-        if current_user.id in dat.data["participants"]:
+        if current_user.id in info.participants:
             if per.is_running():
                 return
-            if per.is_over() and dat.data["practice"] != "no":
+            if per.is_over() and info.practice != objs.PracticeType.no:
                 return
-    if dat.data["practice"] == "public" and per.is_over():
+    if info.practice == objs.PracticeType.public and per.is_over():
         return
     abort(403)
 
 
 def check_status(dat: datas.Contest) -> tuple[str, int, bool]:
     per: datas.Period = datas.Period.query.get_or_404(dat.main_period_id)
+    info = dat.datas
     if current_user.is_authenticated:
-        if current_user.id in dat.data["virtual_participants"]:
-            vir_per: datas.Period = datas.Period.query.get(dat.data["virtual_participants"][current_user.id])
+        if current_user.id in info.virtual_participants:
+            vir_per: datas.Period = datas.Period.query.get(info.virtual_participants[current_user.id])
             if vir_per is None:
                 abort(409)
             if not vir_per.is_started():
                 return "waiting_virtual", vir_per.start_time.timestamp(), False
             if vir_per.is_running():
                 return "running_virtual", vir_per.end_time.timestamp(), True
-        if current_user.id in dat.data["participants"]:
+        if current_user.id in info.participants:
             if not per.is_started():
                 return "waiting", per.start_time.timestamp(), False
             if per.is_running():
                 return "running", per.end_time.timestamp(), True
-            if per.is_over() and dat.data["practice"] != "no":
+            if per.is_over() and info.practice != objs.PracticeType.no:
                 return "practice", 0, True
         if check_super_access(dat):
             return "testing", 0, True
-        if per.is_over() and dat.data["practice"] == "public":
+        if per.is_over() and info.practice == objs.PracticeType.public:
             return "practice", 0, True
-    if dat.data["practice"] == "public" and per.is_over():
+    if info.practice == objs.PracticeType.public and per.is_over():
         return "guest", 0, True
     return "guest", 0, False
 
 
 def check_period(dat: datas.Contest) -> int:
     main_per: datas.Period = datas.Period.query.get_or_404(dat.main_period_id)
-    if current_user.id in dat.data["participants"] and main_per.is_running():
+    info = dat.datas
+    if current_user.id in info.participants and main_per.is_running():
         return dat.main_period_id
-    if current_user.id in dat.data["virtual_participants"]:
-        per_id = dat.data["virtual_participants"][current_user.id]
+    if current_user.id in info.virtual_participants:
+        per_id = info.virtual_participants[current_user.id]
         cur_per: datas.Period = datas.Period.query.get_or_404(per_id)
         if cur_per.is_running():
             return per_id
@@ -292,18 +292,20 @@ def get_standing(cid: str):
     ret = []
     mp = {}
     rmp = {}
-    for k, v in cdat.data["problems"].items():
-        rmp[v["pid"]] = k
+    info = cdat.datas
+    for k, v in info.problems.items():
+        rmp[v.pid] = k
     for dat in cdat.submissions:
         dat: datas.Submission
-        if dat.completed and "group_results" in dat.result:
+        res = dat.results
+        if dat.completed:
             if dat.user_id not in mp:
                 mp[dat.user_id] = dat.user.display_name
-            scores = {k: v["gainscore"] for k, v in dat.result["group_results"].items()}
+            scores = {k: v.gainscore for k, v in res.group_results.items()}
             ret.append({"user": mp[dat.user_id],
                         "pid": rmp[dat.pid],
                         "scores": scores,
-                        "total_score": dat.result["total_score"],
+                        "total_score": res.total_score,
                         "time": dat.time.timestamp(),
                         "pretest": dat.just_pretest,
                         "per": dat.period_id})
@@ -314,22 +316,22 @@ def get_standing(cid: str):
                      "judging": per.judging,
                      "idx": per.id})
     return {"submissions": ret,
-            "rule": cdat.data["type"],
-            "pids": list(cdat.data["problems"].keys()),
-            "penalty": cdat.data["penalty"],
+            "rule": info.type,
+            "pids": list(info.problems.keys()),
+            "penalty": info.penalty,
             "pers": pers,
             "main_per": cdat.main_period_id,
-            "participants": cdat.data["participants"],
-            "virtual_participants": cdat.data["virtual_participants"]}
+            "participants": info.participants,
+            "virtual_participants": info.virtual_participants}
 
 
 def break_result(dat: datas.Submission):
     dat.simple_result = "ignored"
-    dat.result["total_score"] = 0
-    if "group_results" in dat.result:
-        for k in dat.result["group_results"]:
-            dat.result["group_results"][k]["gainscore"] = 0
-    flag_modified(dat, "result")
+    res = dat.results
+    res.total_score = 0
+    for k in res.group_results:
+        res.group_results[k].gainscore = 0
+    dat.results = res
 
 
 def resubmit(dat: datas.Submission):
@@ -347,8 +349,8 @@ def contest_worker():
                     dat.running = False
                     dat.ended = True
                     cdat: datas.Contest = dat.contest
-                    pretest = cdat.data["pretest"]
-                    if pretest != "no":
+                    pretest = cdat.datas.pretest
+                    if pretest != objs.PretestType.no:
                         submissions = dat.submissions.filter_by(just_pretest=True).all()
                         dic: dict[tuple[int, str], datas.Submission] = {}
                         datas.add(*submissions)
@@ -358,11 +360,11 @@ def contest_worker():
                             key = (submission.user_id, submission.pid)
                             if submission.simple_result.lower() not in ("jc", "ce"):
                                 break_result(submission)
-                                if pretest == "all":
+                                if pretest == objs.PretestType.all:
                                     resubmit(submission)
                                 elif submission.simple_result.lower() == 'pretest passed':
                                     dic[key] = submission
-                        if pretest == "last":
+                        if pretest == objs.PretestType.last:
                             for v in dic.values():
                                 resubmit(v)
                         datas.add(*submissions)
