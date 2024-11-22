@@ -45,61 +45,63 @@
             <h3>基本訊息</h3>
             <div class="edit-detector"></div>
             <div class="container-fluid">
-                <div class="mb-3">
-                    <label for="title_input" class="form-label">題目名稱</label>
-                    <input type="text" class="form-control" id="title_input" value="{{ dat.name }}">
-                </div>
-                <div class="mb-3">
-                    <label for="time_input" class="form-label">時間限制</label>
-                    <div class="input-group mb-3">
-                        <input type="number" min="250" max="10000" class="form-control" id="time_input"
-                               value="{{ dat.timelimit }}">
-                        <span class="input-group-text">ms</span>
+                <form the_action="save_general_info">
+                    <div class="mb-3">
+                        <label for="title_input" class="form-label">題目名稱</label>
+                        <input type="text" class="form-control" id="title_input" value="{{ dat.name }}" name="title">
                     </div>
-                </div>
-                <div class="mb-3">
-                    <label for="memory_input" class="form-label">記憶體限制</label>
-                    <div class="input-group mb-3">
-                        <input type="number" min="4" max="1024" class="form-control" id="memory_input"
-                               value="{{ dat.memorylimit }}">
-                        <span class="input-group-text">MB</span>
+                    <div class="mb-3">
+                        <label for="time_input" class="form-label">時間限制</label>
+                        <div class="input-group mb-3">
+                            <input type="number" min="250" max="10000" class="form-control" id="time_input"
+                                   value="{{ dat.timelimit }}" name="timelimit">
+                            <span class="input-group-text">ms</span>
+                        </div>
                     </div>
-                </div>
-                <div class="radio-selector" data-value="{{ 'yes' if dat.public_testcase else 'no' }}">
-                    <h4>公開測資</h4>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="show_testcase" id="show_testcase1"
-                               value="yes">
-                        <label class="form-check-label" for="show_testcase1">
-                            是
-                        </label>
+                    <div class="mb-3">
+                        <label for="memory_input" class="form-label">記憶體限制</label>
+                        <div class="input-group mb-3">
+                            <input type="number" min="4" max="1024" class="form-control" id="memory_input"
+                                   value="{{ dat.memorylimit }}" name="memorylimit">
+                            <span class="input-group-text">MB</span>
+                        </div>
                     </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="show_testcase" id="show_testcase2"
-                               value="no">
-                        <label class="form-check-label" for="show_testcase2">
-                            否
-                        </label>
+                    <div class="radio-selector" data-value="{{ 'yes' if dat.public_testcase else 'no' }}">
+                        <h4>公開測資</h4>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="show_testcase" id="show_testcase1"
+                                   value="yes">
+                            <label class="form-check-label" for="show_testcase1">
+                                是
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="show_testcase" id="show_testcase2"
+                                   value="no">
+                            <label class="form-check-label" for="show_testcase2">
+                                否
+                            </label>
+                        </div>
                     </div>
-                </div>
-                <div class="radio-selector" data-value="{{ 'yes' if dat.public_checkerelse 'no' }}">
-                    <h4>公開結果細則</h4>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="show_checker" id="show_checker1"
-                               value="yes">
-                        <label class="form-check-label" for="show_checker1">
-                            是
-                        </label>
+                    <div class="radio-selector" data-value="{{ 'yes' if dat.public_checker else 'no' }}">
+                        <h4>公開結果細則</h4>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="show_checker" id="show_checker1"
+                                   value="yes">
+                            <label class="form-check-label" for="show_checker1">
+                                是
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="show_checker" id="show_checker2"
+                                   value="no">
+                            <label class="form-check-label" for="show_checker2">
+                                否
+                            </label>
+                        </div>
                     </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="show_checker" id="show_checker2"
-                               value="no">
-                        <label class="form-check-label" for="show_checker2">
-                            否
-                        </label>
-                    </div>
-                </div>
-                <button class="btn btn-primary data-saver" id="save_general_info">儲存</button>
+                    <button class="btn btn-primary data-saver submitter" id="save_general_info">儲存</button>
+                </form>
             </div>
             <br>
             <h3>題目權限</h3>
@@ -137,7 +139,7 @@
                         </label>
                     </div>
                 {% endfor %}
-                <button class="btn btn-primary data-saver submitter">儲存</button>
+                <button class="btn btn-primary data-saver submitter" data-no-refresh="true">儲存</button>
             </form>
         </div>
         <div id="statement" class="tab-pane fade">
@@ -313,35 +315,37 @@
                 <h4>評分</h4>
                 <p>目前：{{ dat.checker_source.name }}{{ "(內建)" if dat.checker_source.type.name=="default" else "" }}</p>
                 <form the_action="choose_checker" id="choose_checker">
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="checker_type" id="checker_type1"
-                               value="default"
-                               checked>
-                        <label class="form-check-label" for="checker_type1">
-                            內建評分程式
-                        </label>
+                    <div class="radio-selector" data-value="{{ dat.checker_source.type.name }}">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="checker_type" id="checker_type1"
+                                   value="default"
+                                   checked>
+                            <label class="form-check-label" for="checker_type1">
+                                內建評分程式
+                            </label>
+                        </div>
+                        <select class="form-select alternative_fileselect" name="default_checker"
+                                data-value="{{ dat.checker_source.name }}">
+                            <option selected>選擇檔案</option>
+                            {% for checker in default_checkers %}
+                                <option value="{{ checker }}">{{ checker }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="checker_type" id="checker_type2" value="my">
+                            <label class="form-check-label" for="checker_type2">
+                                自訂評分程式
+                            </label>
+                        </div>
+                        <select class="form-select alternative_fileselect" name="my_checker"
+                                data-value="{{ dat.checker_source.name }}">
+                            <option selected>選擇檔案</option>
+                            {% for file in dat.files %}
+                                <option value="{{ file.name }}">{{ file.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <button class="btn btn-primary submitter">更換評分程式</button>
                     </div>
-                    <select class="form-select alternative_fileselect" name="default_checker"
-                            data-value="{{ dat.checker_source.name }}">
-                        <option selected>選擇檔案</option>
-                        {% for checker in default_checkers %}
-                            <option value="{{ checker }}">{{ checker }}</option>
-                        {% endfor %}
-                    </select>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="checker_type" id="checker_type2" value="my">
-                        <label class="form-check-label" for="checker_type2">
-                            自訂評分程式
-                        </label>
-                    </div>
-                    <select class="form-select alternative_fileselect" name="my_checker"
-                            data-value="{{ dat.checker_source.name }}">
-                        <option selected>選擇檔案</option>
-                        {% for file in dat.files %}
-                            <option value="{{ file.name }}">{{ file.name }}</option>
-                        {% endfor %}
-                    </select>
-                    <button class="btn btn-primary submitter">更換評分程式</button>
                 </form>
             </div>
             <br>
@@ -396,7 +400,7 @@
                             </div>
                         </div>
                     {% endfor %}
-                    <button class="btn btn-primary submitter">設定固定主程式</button>
+                    <button class="btn btn-primary submitter">儲存固定主程式設定</button>
                 </form>
             </div>
             <br>
@@ -437,9 +441,16 @@
             </div>
             <br>
             <div class="container-fluid">
-                <h4>程式碼檢查</h4>
+                <h4>程式碼檢查器</h4>
                 <p>目前：{{ dat.codechecker_source }}</p>
                 <form the_action="choose_codechecker" id="choose_codechecker">
+                    <select class="form-select alternative_fileselect" name="my_codechecker"
+                                    data-value="{{ dat.codechecker_source }}">
+                        <option selected>選擇檔案</option>
+                        {% for file in dat.files %}
+                            <option value="{{ file.name }}">{{ file.name }}</option>
+                        {% endfor %}
+                    </select>
                     <div class="radio-selector" data-value="{{ dat.codechecker_mode.value }}">
                         <h4>程式碼檢查結果</h4>
                         <div class="form-check">
@@ -464,14 +475,7 @@
                             </label>
                         </div>
                     </div>
-                    <select class="form-select alternative_fileselect" name="my_codechecker"
-                                    data-value="{{ dat.codechecker_source }}">
-                        <option selected>選擇檔案</option>
-                        {% for file in dat.files %}
-                            <option value="{{ file.name }}">{{ file.name }}</option>
-                        {% endfor %}
-                    </select>
-                    <button class="btn btn-primary submitter">更換程式碼檢查器</button>
+                    <button class="btn btn-primary submitter">儲存程式碼檢查器設定</button>
                 </form>
             </div>
         </div>

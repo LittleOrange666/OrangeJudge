@@ -259,7 +259,7 @@ $("input[data-checked]").each(function () {
 });
 $("div.radio-selector[data-value]").each(function () {
     let val = $(this).data("value");
-    $(this).find("input[value=" + val + "]").prop("checked", true);
+    $(this).find("input[value=" + val + "][type='radio']").prop("checked", true);
 });
 $("*[data-disabled]").each(function () {
     if ($(this).data("disabled") === "True") {
@@ -331,25 +331,49 @@ $(".submitter").each(function () {
     let $this = $(this);
     let action_name = $this.text().trim();
     let ok = true;
+    let missings = [];
     $this.parents("form").find("input,select,textarea").each(function () {
-        if ($(this).prop("required") && !$(this).val()) ok = false;
+        if ($(this).prop("required") && !$(this).val()) {
+            let id = $(this).attr("id");
+            let label = $("label[for=" + id + "]");
+            let name = label.length ? label.text() : $(this).attr("name");
+            missings.push('"'+name+'"');
+            ok = false;
+        }
     });
     if (!ok) {
-        show_modal("錯誤", "部分資訊未填寫");
+        show_modal("錯誤", missings.join(", ") + " 未填寫");
         return;
     }
+    let bads = [];
     $this.parents("form").find("input,select,textarea").each(function () {
-        if ($(this).prop("required") && $(this).prop("pattern") && !$(this).val().match(RegExp($(this).prop("pattern")))) ok = false;
+        if(!$(this).prop("required")) return;
+        let bad_pattern = $(this).prop("pattern") && !$(this).val().match(RegExp($(this).prop("pattern")));
+        let bad_number = $(this).prop("type") === "number" &&
+            (isNaN(+$(this).val()) || +$(this).val() < $(this).prop("min") || +$(this).val() > $(this).prop("max"));
+        let id = $(this).attr("id");
+        let label = $("label[for=" + id + "]");
+        let name = label.length ? label.text() : $(this).attr("name");
+        if (bad_pattern) {
+            let info = $(this).data("format") || "格式不正確";
+            bads.push('"'+name+'" '+info);
+            ok = false;
+        }
+        if (bad_number) {
+            let info = $(this).data("format") || "應界於 "+$(this).prop("min")+" 與 "+$(this).prop("max")+" 之間";
+            bads.push('"'+name+'" '+info);
+            ok = false;
+        }
     });
     if (!ok || $this.parents("form")[0].onsubmit && !$this.parents("form")[0].onsubmit()) {
-        show_modal("錯誤", "輸入格式不正確");
+        show_modal("錯誤", bads.join("\n"));
         return;
     }
     $this.find("span").removeClass("visually-hidden");
     let modals = $this.parents(".modal");
     let modal = null;
     if (modals.length) modal = bootstrap.Modal.getOrCreateInstance(modals[0]);
-    console.log(modal)
+    $this.trigger("saved_data");
     fetching($this.parents("form").first()).then(function (response) {
         console.log(response);
         if (modal) modal.hide();

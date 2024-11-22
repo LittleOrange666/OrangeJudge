@@ -137,7 +137,7 @@ class Problem(db.Model):
 
     @property
     def datas(self) -> ProblemInfo:
-        return ProblemInfo(**Problem_compatibility_layer(self.data))
+        return ProblemInfo(**self.data)
 
     @datas.setter
     def datas(self, value: ProblemInfo):
@@ -146,7 +146,7 @@ class Problem(db.Model):
 
     @property
     def new_datas(self) -> ProblemInfo:
-        return ProblemInfo(**Problem_compatibility_layer(self.new_data))
+        return ProblemInfo(**self.new_data)
 
     @new_datas.setter
     def new_datas(self, value: ProblemInfo):
@@ -234,6 +234,22 @@ def init():
     if Problem.query.filter_by(pid="test").count() == 0:
         test_problem = Problem(pid="test", name="", data={}, new_data={}, user_id=1)
         add(test_problem)
+    # compatibility resolution
+    need_compatibility_resolution = False
+    if need_compatibility_resolution:
+        for problem in Problem.query.all():
+            problem: Problem
+            dat = problem.data
+            dat = objs.as_dict(objs.ProblemInfo(**Problem_compatibility_layer(dat)))
+            problem.data = dat
+            flag_modified(problem, "data")
+            if problem.new_data is not None:
+                dat = problem.new_data
+                dat = objs.as_dict(objs.ProblemInfo(**Problem_compatibility_layer(dat)))
+            problem.new_data = dat
+            flag_modified(problem, "new_data")
+            db.session.add(problem)
+        db.session.commit()
 
 
 lock_counter = locks.Counter()

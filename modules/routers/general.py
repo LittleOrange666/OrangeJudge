@@ -149,14 +149,12 @@ def submission(idx: str):
                 if results[i].has_output:
                     results[i].out_txt = tools.read(testcase_path / f"{i}.out")
             result["results"] = results
-            if "group_results" in result_data:
-                gpr = result_data.group_results
-                if len(gpr) > 0 and type(next(iter(gpr.values()))) == dict:
-                    group_results = gpr
-                    for o in group_results.values():
-                        o.css_class = constants.result_class.get(o.result, "")
-            if "total_score" in result_data:
-                result["total_score"] = result_data.total_score
+            gpr = result_data.group_results
+            if len(gpr) > 0 and type(next(iter(gpr.values()))) == dict:
+                group_results = gpr
+                for o in group_results.values():
+                    o.css_class = constants.result_class.get(o.result, "")
+            result["total_score"] = result_data.total_score
             cc_mode = problem_info.codechecker_mode
             see_cc = cc_mode == objs.CodecheckerMode.public or cc_mode == objs.CodecheckerMode.private and super_access
         cc = ""

@@ -86,3 +86,7 @@ textarea {
     width: 20%;
     max-width: 20%;
 }
+
+#myModalText {
+    white-space: pre-line;
+}

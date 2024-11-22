@@ -6,8 +6,7 @@ from flask import abort, render_template, request
 from flask_login import login_required
 from werkzeug.utils import secure_filename
 
-import objs
-from .. import tools, server, login, constants, executing, problemsetting, datas, config
+from .. import tools, server, login, executing, problemsetting, datas, config, objs
 from ..constants import Permission, preparing_problem_path, problem_path
 
 app = server.app

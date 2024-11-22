@@ -20,8 +20,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from werkzeug.datastructures import ImmutableMultiDict, MultiDict
 from werkzeug.utils import secure_filename
 
-import judge
-from . import executing, tools, constants, createhtml, datas, objs
+from . import executing, tools, constants, createhtml, datas, objs, judge
 from .constants import tmp_path, preparing_problem_path, testlib, problem_path
 from .judge import SandboxPath, SandboxUser
 from .routers.general import render_problem
