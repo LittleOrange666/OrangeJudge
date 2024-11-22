@@ -117,6 +117,7 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
     total_score = 0
     groups: dict[str, objs.RunningTestcaseGroup] = {}
     appeared_result = set()
+    codechecker_msg = ""
     if ce_msg:
         dat.ce_msg = ce_msg
         out_info.CE = True
@@ -129,6 +130,7 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
             int_file = env.send_file(p_path / problem_info.interactor.name, SandboxUser.judge.executable)
             int_lang = executing.langs[problem_info.interactor.lang]
             int_exec = int_lang.get_execmd(int_file)
+        codechecker_score = top_score
         if problem_info.codechecker_mode != objs.CodecheckerMode.disabled:
             cc_file = env.send_file(p_path / problem_info.codechecker.name, SandboxUser.judge.executable)
             cc_lang = executing.langs[problem_info.codechecker.lang]
@@ -136,6 +138,17 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
             res = env.call(cc_exec + [str(sent_source.sandbox), lang.branch])  # here should resolve errors
             env.path("codechecker_result.txt").full.write_text(res.stdout)
             (dat.path / "codechecker_result.txt").write_text(res.stdout)
+            codechecker_msg = res.stderr
+            if res.stderr.startswith("partially correct"):
+                codechecker_score = res.return_code
+            else:
+                name = constants.checker_exit_codes.get(res.return_code, "JE")
+                if name == "OK":
+                    codechecker_score = top_score
+                elif name == "POINTS":
+                    st = res.stderr.split(" ")
+                    if len(st) > 1 and st[1].replace(".", "", 1).isdigit():
+                        codechecker_score = float(st[1])
         checker = env.send_file(p_path / problem_info.checker.name, SandboxUser.judge.executable)
         checker_cmd = executing.langs[problem_info.checker.lang].get_execmd(checker)
         exec_cmd = lang.get_execmd(filename)
@@ -245,6 +258,8 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
                                 name = "OK" if score >= top_score else "PARTIAL"
                         score = max(score, 0)
                         ret = [name, checker_out.stderr]
+            if codechecker_score < top_score:
+                score = score*codechecker_score/top_score
             if ret[0] == "TLE":
                 time_usage = tl
             results.append(objs.TestcaseResult(time=time_usage, mem=memusage, result=ret[0], info=ret[1],
@@ -275,6 +290,7 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
     out_info.total_score = total_score
     out_info.protected = ((not problem_info.public_testcase or bool(dat.period_id))
                           and dat.user.username not in problem_info.users)
+    out_info.codechecker_msg = codechecker_msg
     dat.results = out_info
     if simple_result == "NA":
         simple_result = "/".join(sorted(appeared_result))

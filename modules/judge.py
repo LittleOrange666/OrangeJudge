@@ -115,7 +115,6 @@ def send_request(op: str, dat: dict):
         "token": server.app.config["JUDGE_TOKEN"]
     }
     res = requests.post(constants.judger_url + "/" + op, json=dat, headers=headers)
-    print(res.text)
     return res.json()
 
 

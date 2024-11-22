@@ -192,7 +192,8 @@ $(".countdown-timer").each(function () {
 });
 $("select[data-value]").each(function () {
     let val = $(this).data("value");
-    $(this).val(val).change();
+    let vals = $(this).find('option').toArray().map(item => item.value)
+    if(vals.includes(val)) $(this).val(val).change();
 });
 $(".time-string").each(function () {
     let t = Math.floor(+$(this).text());

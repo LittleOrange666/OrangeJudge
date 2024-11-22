@@ -677,3 +677,4 @@ class SubmissionResult(metaclass=DataMeta):
     CE: bool = False
     total_score: float = 0.0
     protected: bool = False
+    codechecker_msg: str = ""

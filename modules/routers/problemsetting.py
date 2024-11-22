@@ -6,6 +6,7 @@ from flask import abort, render_template, request
 from flask_login import login_required
 from werkzeug.utils import secure_filename
 
+import objs
 from .. import tools, server, login, constants, executing, problemsetting, datas, config
 from ..constants import Permission, preparing_problem_path, problem_path
 
@@ -55,8 +56,8 @@ def create_problem():
 def my_problem_page(idx):
     idx = secure_filename(idx)
     pdat: datas.Problem = datas.Problem.query.filter_by(pid=idx).first_or_404()
-    dat = pdat.new_data
-    user = login.check_user(Permission.make_problems, dat["users"])
+    dat = pdat.new_datas
+    user = login.check_user(Permission.make_problems, dat.users)
     o = problemsetting.check_background_action(idx)
     if o is not None:
         return render_template("pleasewaitlog.html", action=o[1], log=o[0])
@@ -64,18 +65,15 @@ def my_problem_page(idx):
     public_files: list[str] = [f.name for f in (p_path / "public_file").iterdir() if f.name != ".gitkeep"]
     default_checkers = [s for s in os.listdir("testlib/checkers") if s.endswith(".cpp")]
     default_interactors = [s for s in os.listdir("testlib/interactors") if s.endswith(".cpp")]
-    if "groups" not in dat or "default" not in dat["groups"]:
-        if "groups" not in dat:
-            dat["groups"] = {}
-        if "default" not in dat["groups"]:
-            dat["groups"]["default"] = {}
+    if "default" not in dat.groups:
+        dat.groups["default"] = objs.TestcaseGroup()
     action_path = p_path / "actions"
     action_files: Iterable[Path] = action_path.iterdir() if action_path.is_dir() else []
     actions = []
     for f in action_files:
         if f.suffix == ".json":
             actions.append(f.stem)
-    return render_template("problemsetting.html", dat=constants.default_problem_info | dat, pid=idx,
+    return render_template("problemsetting.html", dat=dat, pid=idx,
                            versions=problemsetting.query_versions(pdat), enumerate=enumerate,
                            public_files=public_files, default_checkers=default_checkers,
                            langs=executing.langs.keys(), default_interactors=default_interactors,
