@@ -2,6 +2,7 @@ services:
     judge_server:
         image: judge_server
         read_only: true
+        restart: always
         cap_drop:
             - SETPCAP
             - MKNOD
