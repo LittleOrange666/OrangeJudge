@@ -3,6 +3,8 @@ import os
 import signal
 import subprocess
 import sys
+import threading
+import time
 
 main_cmd = "python3 main.py"
 
@@ -40,22 +42,33 @@ def main():
         print()
         sys.exit(0)
 
+    def checking():
+        while True:
+            if running and process.poll() is not None:
+                print("Server crashed, restarting...")
+                start()
+            time.sleep(3)
+
     signal.signal(signal.SIGINT, say_good_bye)
     signal.signal(signal.SIGTERM, say_good_bye)
+    threading.Thread(target=checking, daemon=True).start()
     while True:
         if running:
             cmd = input(ask1)
             match cmd:
                 case "1":
                     print("Killing...")
-                    stop()
                     running = False
+                    stop()
                 case "2":
                     print("Restarting...")
+                    running = False
                     stop()
                     start()
+                    running = True
                 case "3":
                     print("Quiting...")
+                    running = False
                     stop()
                     sys.exit(0)
                 case _:

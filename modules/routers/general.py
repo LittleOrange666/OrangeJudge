@@ -40,6 +40,8 @@ def test():
 @server.limiter.limit(config.judge.limit)
 @login_required
 def test_submit():
+    if datas.Submission.query.filter_by(user=current_user.data, completed=False).count() >= config.judge.pending_limit:
+        return "Too many uncompleted submissions", 409
     lang = request.form["lang"]
     code = request.form["code"].replace("\n\n", "\n")
     inp = request.form["input"]
@@ -66,6 +68,8 @@ def test_submit():
 @server.limiter.limit(config.judge.limit)
 @login_required
 def submit():
+    if datas.Submission.query.filter_by(user=current_user.data, completed=False).count() >= config.judge.pending_limit:
+        return "Too many uncompleted submissions", 409
     lang = request.form["lang"]
     code = request.form["code"].replace("\n\n", "\n")
     if len(code) > config.judge.file_size * 1024:

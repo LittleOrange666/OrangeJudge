@@ -193,6 +193,7 @@ class JudgeConfig(ConfigCategory):
     workers = ConfigProperty[int]("評測系統並行數量", int, 1)
     period = ConfigProperty[int]("評測系統掃描週期", int, 3)
     limit = ConfigProperty[str]("提交頻率限制", str, "1 per 10 second")
+    pending_limit = ConfigProperty[str]("等待中提交數量限制", int, 1)
     file_size = ConfigProperty[int]("檔案大小限制(KB)", int, 100)
     save_period = ConfigProperty[int]("評測系統儲存週期", int, 3)
 
