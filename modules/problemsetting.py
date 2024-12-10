@@ -696,7 +696,13 @@ def upload_file(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Respo
         if (dat.path / "file" / fn).exists():
             abort(409)
         file.save(dat.path / "file" / fn)
-        dat.files.append(objs.ProgramFile(name=fn, type="C++17"))
+        ext = Path(fn).suffix
+        tp = "C++17"
+        for lang in executing.langs.values():
+            if ext == lang.data["source_ext"]:
+                tp = lang.data["default_branch"]
+                break
+        dat.files.append(objs.ProgramFile(name=fn, type=tp))
     return "files"
 
 

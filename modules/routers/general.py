@@ -92,7 +92,7 @@ def submit():
         dat.contest = cdat
         if per_id:
             dat.period_id = per_id
-            if cdat.datas.pretest != "no":
+            if cdat.datas.pretest != objs.PretestType.no:
                 dat.just_pretest = True
     datas.add(dat)
     idx = str(dat.id)

@@ -1,0 +1,13 @@
+{
+  "name": "Rust",
+  "require_compile": true,
+  "source_ext": ".rs",
+  "exec_name": "{0}",
+  "compile_cmd": ["rustc", "{0}", "-o", "{1}"],
+  "exec_cmd": ["{0}"],
+  "branches": {
+    "Rust": {
+    }
+  },
+  "default_branch": "Rust"
+}
