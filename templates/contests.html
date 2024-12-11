@@ -28,7 +28,7 @@
         </tr>
         </thead>
         <tbody>
-        {% for cid, dat, can_vir in contests %}
+        {% for cid, name, dat, can_vir in contests %}
             <tr>
                 <th scope="row"><a href="/contest/{{ cid }}">{{ name }}</a></th>
                 <td class="date-string">{{ dat.start }}</td>
@@ -48,7 +48,7 @@
                                 {% endif %}
                             </div>
                         {% endif %}
-                        {% if current_user.is_authenticated and contest.can_virtual() and current_user.id not in
+                        {% if current_user.is_authenticated and can_vir and current_user.id not in
                 dat.virtual_participants %}
                             <div class="col-auto">
                                 <a class="btn btn-secondary" href="/contest/{{ cid }}/virtual">模擬註冊</a>

@@ -1,3 +1,4 @@
+import os
 from enum import Enum
 from pathlib import Path
 from typing import Generic, TypeVar, Type
@@ -118,17 +119,26 @@ class ConfigProperty(Generic[T]):
         """
         if key not in parent.data:
             parent.data[key] = self._default
+        env_name = "CONFIG_" + parent.key.upper() + "_" + key.upper()
+        description = env_name if env_name in os.environ else f'{parent.key}.{key}'
+        val = parent.data[key]
         if issubclass(self._type, Enum):
-            if not isinstance(parent.data[key], str):
-                raise ConfigError(f"'{parent.key}.{key}' is not a string")
-            elif parent.data[key] not in self._type._member_names_:
-                raise ConfigError(
-                    f"'{parent.key}.{key}' ('{parent.data[key]}') is not a valid {self._type.__name__}")
-            self._value: T = self._type[parent.data[key]]
+            if env_name in os.environ:
+                val = os.environ[env_name]
+            if not isinstance(val, str):
+                raise ConfigError(f"'{description}' is not a string")
+            elif val not in self._type._member_names_:
+                raise ConfigError(f"'{description}' ('{val}') is not a valid {self._type.__name__}")
+            self._value: T = self._type[val]
         else:
-            if not isinstance(parent.data[key], self._type):
-                raise ConfigError(f"'{parent.key}.{key}' is not a {self._type.__name__}")
-            self._value: T = parent.data[key]
+            if env_name in os.environ:
+                try:
+                    val = self._type(os.environ[env_name])
+                except ValueError:
+                    raise ConfigError(f"'{env_name}' is not a valid {self._type.__name__}")
+            if not isinstance(val, self._type):
+                raise ConfigError(f"'{description}' is not a {self._type.__name__}")
+            self._value: T = val
         self._key = key
         self._parent = parent
         self._type = self._type

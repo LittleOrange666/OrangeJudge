@@ -20,6 +20,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from werkzeug.datastructures import ImmutableMultiDict, MultiDict
 from werkzeug.utils import secure_filename
 
+from .objs import ProgramType
 from . import executing, tools, constants, createhtml, datas, objs, judge
 from .constants import tmp_path, preparing_problem_path, testlib, problem_path
 from .judge import SandboxPath, SandboxUser
@@ -767,7 +768,7 @@ def choose_checker(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Re
     filepath = (Path("testlib/checkers") if tp == "default" else dat.path / "file") / name
     if not filepath.is_file():
         abort(400)
-    dat.checker_source = [tp, name]
+    dat.checker_source = objs.ProgramPtr(type=ProgramType[tp], name=name)
     return "judge"
 
 
@@ -794,7 +795,7 @@ def choose_codechecker(form: ImmutableMultiDict[str, str], dat: Problem) -> str 
         name = "unknown"
     if mode not in ("disabled", "public", "private"):
         mode = "disabled"
-    dat.codechecker_mode = mode
+    dat.codechecker_mode = objs.CodecheckerMode[mode]
     dat.codechecker_source = name
     return "judge"
 
@@ -921,7 +922,7 @@ def save_groups(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Respo
         abort(400)
     for i, k in enumerate(dat.groups):
         dat.groups[k].score = d[k]
-        dat.groups[k].rule = dr[k]
+        dat.groups[k].rule = objs.TestcaseRule[dr[k]]
         dat.groups[k].dependency = [names[j] for j in dep[i]]
     tmp = []
     for k, v in dat.groups.items():
