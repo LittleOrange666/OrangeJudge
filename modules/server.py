@@ -3,6 +3,7 @@ import socket
 import traceback
 from pathlib import Path
 
+import redis
 from flask import Flask, render_template, request, Response, abort, send_file
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -18,9 +19,11 @@ if config.debug.single_secret:
     app.config['SECRET_KEY'] = '2lGU53x5P7HujHeoqk5X-IDrK1sSj4RQBeGU84CMpkGJ'
 else:
     app.config['SECRET_KEY'] = secrets.token_urlsafe(33)
-app.config['SESSION_TYPE'] = "filesystem"
-app.config["SESSION_FILE_DIR"] = "sessions"
+app.config['SESSION_TYPE'] = "redis"
 app.config["SESSION_COOKIE_NAME"] = "OrangeJudgeSession"
+app.config['SESSION_USE_SIGNER'] = True
+app.config['SESSION_REDIS'] = redis.StrictRedis()
+app.config['SESSION_KEY_PREFIX'] = 'session:'
 app.config['SESSION_PERMANENT'] = True
 app.config["PERMANENT_SESSION_LIFETIME"] = 200000
 Session(app)
@@ -32,7 +35,8 @@ limiter = Limiter(
     default_limits=config.server.limits,
     storage_uri="redis://localhost:6379",
     storage_options={"socket_connect_timeout": 30},
-    strategy="fixed-window"
+    strategy="fixed-window",
+    key_prefix="limiter:"
 )
 
 

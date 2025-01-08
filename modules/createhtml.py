@@ -1,6 +1,7 @@
 import os
 import re
 import shutil
+import html as html_
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Callable
@@ -93,6 +94,7 @@ parse = Codehightlighter()
 
 
 def run_markdown(source: str) -> str:
+    source = html_.escape(source)
     # 處理參數
     args: dict[str, str] = {"title": "LittleOrange's page"}
     if source.startswith("---"):
