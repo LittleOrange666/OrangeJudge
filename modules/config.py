@@ -1,10 +1,12 @@
-import os
-from enum import Enum
+from copy import deepcopy
+from dataclasses import fields, dataclass, field
 from pathlib import Path
-from typing import Generic, TypeVar, Type
+from typing import TypeVar, Type
 
 import yaml
 from loguru import logger
+
+from .objs import as_dict
 
 T = TypeVar('T')
 
@@ -17,48 +19,41 @@ config_file = Path("data/config.yaml").absolute()
 
 if config_file.is_file():
     with config_file.open() as f:
-        config = yaml.load(f, yaml.loader.SafeLoader)
+        config_data = yaml.load(f, yaml.loader.SafeLoader)
 else:
-    config = {}
+    config_data = {}
 
-logger.info("config=" + str(config))
+logger.info("config=" + str(config_data))
 
 
 def save_config():
     with config_file.open("w") as file:
-        yaml.dump(config, file)
+        yaml.dump(as_dict(config), file)
 
 
 class ConfigCategory:
     """
-    A class representing a category of configuration settings.
-
-    This class is responsible for managing a specific section of the configuration,
-    identified by a key. It initializes the configuration data, validates its structure,
-    and sets up any ConfigProperty instances defined in the class.
+    Base class for configuration categories. It initializes the configuration
+    category with the provided data, key, and name. It also validates the data
+    and sets the attributes based on the fields defined in the subclass.
 
     Attributes:
-        key (str): The key identifying this category in the configuration.
-        name (str): A human-readable name for this category.
-        data (dict): The configuration data for this category.
-        source (dict): The entire configuration data structure.
-
-    Raises:
-        ConfigError: If the data for the given key is not a dictionary.
+        key (str): The key for the configuration category.
+        name (str): The name of the configuration category.
+        source (dict): The source data for the configuration.
     """
-    __slots__ = ("key", "name", "data", "source")
 
     def __init__(self, data: dict, key: str, name: str):
         """
-        Initialize a new ConfigCategory instance.
+        Initializes the ConfigCategory with the provided data, key, and name.
 
         Args:
-            data (dict): The entire configuration data structure.
-            key (str): The key identifying this category in the configuration.
-            name (str): A human-readable name for this category.
+            data (dict): The configuration data.
+            key (str): The key for the configuration category.
+            name (str): The name of the configuration category.
 
         Raises:
-            ConfigError: If the data for the given key is not a dictionary.
+            ConfigError: If the key is not a dictionary in the data.
         """
         self.key = key
         self.name = name
@@ -66,171 +61,178 @@ class ConfigCategory:
             data[key] = {}
         if not isinstance(data[key], dict):
             raise ConfigError(f"'{key}' is not a dict")
-        self.data = data[key]
+        my_data = data[key]
         self.source = data
-        for k, v in self.__class__.__dict__.items():
-            if isinstance(v, ConfigProperty):
-                v.init(self, k)
+        for field in fields(self):
+            val = my_data.get(field.name, field.default)
+            tp = field.type
+            if hasattr(tp, "__origin__"):
+                tp = tp.__origin__
+            if isinstance(val, tp):
+                setattr(self, field.name, val)
+            else:
+                raise ConfigError(f"'{key}.{field.name}' is not a {field.type.__name__}")
 
 
-class ConfigProperty(Generic[T]):
+def ConfigProperty(name: str, _type: Type[T], _default_val: T):
+    def factory():
+        return deepcopy(_default_val)
+
+    return field(default_factory=factory, metadata={"name": name, "type": _type})
+
+
+@dataclass
+class SmtpConfig(ConfigCategory):
     """
-    A generic class representing a configuration property.
-
-    This class is designed to manage individual configuration properties,
-    providing type checking, default values, and automatic saving of changes.
+    Configuration class for SMTP settings.
 
     Attributes:
-        __slots__ (tuple): Defines the allowed attributes for memory optimization.
+        host (str): The SMTP server address.
+        port (int): The port number for the SMTP server.
+        user (str): The username for the SMTP server.
+        password (str): The password for the SMTP server.
+        enabled (bool): Whether the SMTP is enabled.
+        limit (str): The rate limit for verification codes.
     """
-
-    __slots__ = ("_value", "_name", "_key", "_type", "_parent", "_default")
-
-    def __init__(self, name: str, _type: Type[T], _default: T):
-        """
-        Initialize a new ConfigProperty instance.
-
-        Args:
-            name (str): A human-readable name for the property.
-            _type (Type[T]): The expected type of the property value.
-            _default (T): The default value for the property.
-        """
-        self._key = None
-        self._name = name
-        self._type = _type
-        self._default = _default
-        self._value = None
-        self._parent = None
-
-    def init(self, parent: ConfigCategory, key: str):
-        """
-        Initialize the property with its parent category and key.
-
-        This method sets up the property, validates its type, and handles
-        Enum types specially. It also ensures the property exists in the
-        parent's data, creating it with the default value if necessary.
-
-        Args:
-            parent (ConfigCategory): The parent configuration category.
-            key (str): The key identifying this property in the parent's data.
-
-        Raises:
-            ConfigError: If the property value doesn't match the expected type.
-        """
-        if key not in parent.data:
-            parent.data[key] = self._default
-        env_name = "CONFIG_" + parent.key.upper() + "_" + key.upper()
-        description = env_name if env_name in os.environ else f'{parent.key}.{key}'
-        val = parent.data[key]
-        if issubclass(self._type, Enum):
-            if env_name in os.environ:
-                val = os.environ[env_name]
-            if not isinstance(val, str):
-                raise ConfigError(f"'{description}' is not a string")
-            elif val not in self._type._member_names_:
-                raise ConfigError(f"'{description}' ('{val}') is not a valid {self._type.__name__}")
-            self._value: T = self._type[val]
-        else:
-            if env_name in os.environ:
-                try:
-                    val = self._type(os.environ[env_name])
-                except ValueError:
-                    raise ConfigError(f"'{env_name}' is not a valid {self._type.__name__}")
-            if not isinstance(val, self._type):
-                raise ConfigError(f"'{description}' is not a {self._type.__name__}")
-            self._value: T = val
-        self._key = key
-        self._parent = parent
-        self._type = self._type
-
-    def __get__(self, instance: ConfigCategory, cls: type) -> T:
-        """
-        Getter method for the property value.
-
-        Args:
-            instance (ConfigCategory): The instance that this property belongs to.
-            cls (type): The class that this property is defined on.
-
-        Returns:
-            T: The current value of the property.
-        """
-        return self._value
-
-    def __set__(self, instance: ConfigCategory, new_val: T):
-        """
-        Setter method for the property value.
-
-        This method updates the property value, updates the parent's data,
-        and saves the configuration changes.
-
-        Args:
-            instance (ConfigCategory): The instance that this property belongs to.
-            new_val (T): The new value to set for the property.
-        """
-        self._value = new_val
-        if issubclass(self._type, Enum):
-            self._parent.data[self._key] = new_val.name
-        else:
-            self._parent.data[self._key] = new_val
-        save_config()
-
-
-class SmtpConfig(ConfigCategory):
-    host = ConfigProperty[str]("SMTP伺服器", str, "smtp.gmail.com")
-    port = ConfigProperty[int]("SMTP伺服器連接埠", int, 587)
-    user = ConfigProperty[str]("SMTP使用者名稱(email)", str, "user@gmail.com")
-    password = ConfigProperty[str]("SMTP使用者密碼", str, "password")
-    enabled = ConfigProperty[bool]("SMTP是否啟用", bool, False)
-    limit = ConfigProperty[str]("驗證碼頻率限制", str, "1 per 20 second")
+    host: str = ConfigProperty("SMTP伺服器", str, "smtp.gmail.com")
+    port: int = ConfigProperty("SMTP伺服器連接埠", int, 587)
+    user: str = ConfigProperty("SMTP使用者名稱(email)", str, "user@gmail.com")
+    password: str = ConfigProperty("SMTP使用者密碼", str, "password")
+    enabled: bool = ConfigProperty("SMTP是否啟用", bool, False)
+    limit: str = ConfigProperty("驗證碼頻率限制", str, "1 per 20 second")
 
     def __init__(self, data: dict):
+        """
+        Initializes the SmtpConfig with the provided data.
+
+        Args:
+            data (dict): The configuration data.
+        """
         super().__init__(data, "smtp", "SMTP設定")
 
 
+@dataclass
 class ServerConfig(ConfigCategory):
-    port = ConfigProperty[int]("此伺服器的連接埠", int, 8080)
-    workers = ConfigProperty[int]("WSGI並行數量", int, 4)
-    timeout = ConfigProperty[int]("WSGI超時時間", int, 120)
-    limits = ConfigProperty[list[str]]("請求頻率限制列表", list,
-                                       ["30 per 30 second", "3 per 1 second"])
-    file_limit = ConfigProperty[str]("檔案下載頻率限制", str, "30 per 5 second")
+    """
+    Configuration class for server settings.
+
+    Attributes:
+        port (int): The port number for the server.
+        workers (int): The number of WSGI workers.
+        timeout (int): The WSGI timeout duration.
+        limits (list[str]): The list of request rate limits.
+        file_limit (str): The rate limit for file downloads.
+    """
+    port: int = ConfigProperty("此伺服器的連接埠", int, 8080)
+    workers: int = ConfigProperty("WSGI並行數量", int, 4)
+    timeout: int = ConfigProperty("WSGI超時時間", int, 120)
+    limits: list[str] = ConfigProperty("請求頻率限制列表", list, ["30 per 30 second", "3 per 1 second"])
+    file_limit: str = ConfigProperty("檔案下載頻率限制", str, "30 per 5 second")
 
     def __init__(self, data: dict):
+        """
+        Initializes the ServerConfig with the provided data.
+
+        Args:
+            data (dict): The configuration data.
+        """
         super().__init__(data, "server", "伺服器設定")
 
 
+@dataclass
 class JudgeConfig(ConfigCategory):
-    workers = ConfigProperty[int]("評測系統並行數量", int, 1)
-    period = ConfigProperty[int]("評測系統掃描週期", int, 3)
-    limit = ConfigProperty[str]("提交頻率限制", str, "1 per 10 second")
-    pending_limit = ConfigProperty[str]("等待中提交數量限制", int, 1)
-    file_size = ConfigProperty[int]("檔案大小限制(KB)", int, 100)
-    save_period = ConfigProperty[int]("評測系統儲存週期", int, 3)
+    """
+    Configuration class for judge system settings.
+
+    Attributes:
+        workers (int): The number of concurrent workers.
+        period (int): The scan period for the judge system.
+        limit (str): The submission rate limit.
+        pending_limit (int): The limit for pending submissions.
+        file_size (int): The file size limit in KB.
+        save_period (int): The save period for the judge system.
+    """
+    workers: int = ConfigProperty("評測系統並行數量", int, 1)
+    period: int = ConfigProperty("評測系統掃描週期(s)", int, 3)
+    limit: str = ConfigProperty("提交頻率限制", str, "1 per 10 second")
+    pending_limit: int = ConfigProperty("等待中提交數量限制", int, 1)
+    file_size: int = ConfigProperty("檔案大小限制(KB)", int, 100)
+    save_period: int = ConfigProperty("評測系統儲存週期(每完成幾筆測資更新狀態)", int, 3)
 
     def __init__(self, data: dict):
+        """
+        Initializes the JudgeConfig with the provided data.
+
+        Args:
+            data (dict): The configuration data.
+        """
         super().__init__(data, "judge", "評測系統設定")
 
 
+@dataclass
 class DebugConfig(ConfigCategory):
-    disable_csrf = ConfigProperty[bool]("關閉CSRF保護", bool, False)
-    single_secret = ConfigProperty[bool]("使用固定的SECRET_KEY", bool, False)
+    """
+    Configuration class for debug settings.
+
+    Attributes:
+        disable_csrf (bool): Whether to disable CSRF protection.
+        single_secret (bool): Whether to use a fixed SECRET_KEY.
+    """
+    disable_csrf: bool = ConfigProperty("關閉CSRF保護", bool, False)
+    single_secret: bool = ConfigProperty("使用固定的SECRET_KEY", bool, False)
 
     def __init__(self, data: dict):
+        """
+        Initializes the DebugConfig with the provided data.
+
+        Args:
+            data (dict): The configuration data.
+        """
         super().__init__(data, "debug", "除錯設定")
 
 
+@dataclass
 class AccountConfig(ConfigCategory):
-    signup = ConfigProperty[bool]("是否開放註冊", bool, True)
+    """
+    Configuration class for account settings.
+
+    Attributes:
+        signup (bool): Whether to allow user registration.
+    """
+    signup: bool = ConfigProperty("是否開放註冊", bool, True)
 
     def __init__(self, data: dict):
+        """
+        Initializes the AccountConfig with the provided data.
+
+        Args:
+            data (dict): The configuration data.
+        """
         super().__init__(data, "account", "帳號系統設定")
 
 
-smtp = SmtpConfig(config)
-server = ServerConfig(config)
-judge = JudgeConfig(config)
-debug = DebugConfig(config)
-account = AccountConfig(config)
+@dataclass
+class Config:
+    smtp: SmtpConfig
+    server: ServerConfig
+    judge: JudgeConfig
+    debug: DebugConfig
+    account: AccountConfig
+
+    def __init__(self, data: dict):
+        self.smtp = SmtpConfig(data)
+        self.server = ServerConfig(data)
+        self.judge = JudgeConfig(data)
+        self.debug = DebugConfig(data)
+        self.account = AccountConfig(data)
+
+
+config = Config(config_data)
+smtp = config.smtp
+server = config.server
+judge = config.judge
+debug = config.debug
+account = config.account
 save_config()
 
 

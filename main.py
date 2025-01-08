@@ -43,7 +43,7 @@ def main():
         contests.init()
         problemsetting.init()
     options = {
-        'bind': '%s:%s' % ('0.0.0.0', str(config.server.port)),
+        'bind': '%s:%s' % ('[::]', str(config.server.port)),
         'workers': config.server.workers,
         'timeout': config.server.timeout,
     }

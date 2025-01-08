@@ -42,10 +42,19 @@ def main():
         print()
         sys.exit(0)
 
+    last_restart = 0.0
+
     def checking():
+        nonlocal last_restart, running
         while True:
             if running and process.poll() is not None:
+                if time.time() - last_restart < 60:
+                    running = False
+                    print("Server crashed, restarting too fast, exiting...")
+                    os.kill(os.getpid(), signal.SIGTERM)
+                    sys.exit(0)
                 print("Server crashed, restarting...")
+                last_restart = time.time()
                 start()
             time.sleep(3)
 
