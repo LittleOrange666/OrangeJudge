@@ -6,28 +6,25 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update -y
 
-RUN apt-get install sudo -y
-RUN apt-get install python3 -y
-RUN apt-get install python3-pip -y
-RUN apt-get install redis -y
+RUN apt-get install -y sudo python3 python3-pip redis
 
-RUN useradd orangejudge -u 1500
+RUN apt-get install -y gosu
 
-COPY main.py /app
+COPY testlib /app/testlib
 
-COPY tools/requirements.txt /app
+COPY langs /app/langs
 
-COPY testlib /app
+COPY static /app/static
 
-COPY langs /app
+COPY templates /app/templates
 
-COPY judge /app
+COPY modules /app/modules
 
-COPY static /app
+COPY judge /app/judge
 
-COPY templates /app
+COPY main.py tools/requirements.txt tools/entrypoint.sh /app/
 
-COPY modules /app
+RUN useradd orangejudge -u 1500 -m
 
 RUN chown -R orangejudge:orangejudge /app
 
