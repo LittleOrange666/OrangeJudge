@@ -1,5 +1,7 @@
+import os
 from copy import deepcopy
 from dataclasses import fields, dataclass, field
+from enum import Enum
 from pathlib import Path
 from typing import TypeVar, Type
 
@@ -65,12 +67,19 @@ class ConfigCategory:
         self.source = data
         for field in fields(self):
             val = my_data.get(field.name, field.default)
+            env_name = "CONFIG_" + key.upper() + "_" + field.name.upper()
+            if env_name in os.environ:
+                val = os.environ[env_name]
             tp = field.type
             if hasattr(tp, "__origin__"):
                 tp = tp.__origin__
-            if isinstance(val, tp):
+            try:
+                if issubclass(tp, Enum):
+                    val = tp[val]
+                else:
+                    val = tp(val)
                 setattr(self, field.name, val)
-            else:
+            except ValueError | TypeError:
                 raise ConfigError(f"'{key}.{field.name}' is not a {field.type.__name__}")
 
 
