@@ -1,6 +1,6 @@
 services:
     judge_server:
-        image: judge_server
+        image: littleorange666/judge_server:1.1.1
         read_only: true
         restart: always
         cap_drop:
