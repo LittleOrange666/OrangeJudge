@@ -18,13 +18,17 @@ docker-compose up -d
 
 應該就會好了
 
-網頁開在8080 port，可以改docker-compos.yml來改
+網頁開在8080 port，可以改docker-compose.yml來改
 
 目前只有http，之後有空再處裡https的問題
+
+沙盒伺服器會在9132 port開一個測試用的接口，可以改docker-compose.yml來關掉
 
 要注意初次執行會建立帳密都是root的管理者帳號，記得改密碼
 
 然後資料會被存在 \[跑上面那個指令的資料夾\]/data
+
+部分系統設置在 data/config.yaml，要重啟才生效
 
 剩下請自行通靈
 
