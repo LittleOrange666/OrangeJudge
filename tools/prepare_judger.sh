@@ -6,4 +6,4 @@ chmod +x ./build.sh
 ./build.sh
 cd ../OrangeJudge
 mkdir sandbox
-docker-compose up -d
+docker-compose -f docker-compose-judgeronly.yml up -d
