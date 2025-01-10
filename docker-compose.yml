@@ -5,7 +5,7 @@ services:
         volumes:
             - $PWD/data/redis:/data
     judge_server:
-        image: littleorange666/judge_server:latest
+        image: littleorange666/judge_server:1.1.1
         read_only: true
         restart: always
         cap_drop:
@@ -24,7 +24,7 @@ services:
         ports:
             - "0.0.0.0:9132:8000"
     judge_backend:
-        image: littleorange666/orange_judge:latest
+        image: littleorange666/orange_judge:1.0.0
         read_only: true
         restart: always
         depends_on:
