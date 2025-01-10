@@ -66,7 +66,7 @@ class ConfigCategory:
         my_data = data[key]
         self.source = data
         for field in fields(self):
-            val = my_data.get(field.name, field.default)
+            val = my_data.get(field.name, field.default_factory())
             env_name = "CONFIG_" + key.upper() + "_" + field.name.upper()
             if env_name in os.environ:
                 val = os.environ[env_name]
@@ -79,7 +79,7 @@ class ConfigCategory:
                 else:
                     val = tp(val)
                 setattr(self, field.name, val)
-            except ValueError | TypeError:
+            except (ValueError, TypeError):
                 raise ConfigError(f"'{key}.{field.name}' is not a {field.type.__name__}")
 
 

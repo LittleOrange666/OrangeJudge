@@ -24,7 +24,7 @@ services:
         ports:
             - "0.0.0.0:9132:8000"
     judge_backend:
-        image: littleorange666/orange_judge:1.0.0
+        image: littleorange666/orange_judge:1.0.1
         read_only: true
         restart: always
         depends_on:
@@ -38,6 +38,7 @@ services:
             - SETFCAP
             - FSETID
         tmpfs:
+            - /app/tmp
             - /tmp
         volumes:
             - sandbox:/app/sandbox
