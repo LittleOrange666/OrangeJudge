@@ -12,7 +12,7 @@
 
 可以用
 ```bash
-wget https://github.com/LittleOrange666/OrangeJudge/blob/main/docker-compose.yml
+wget https://raw.githubusercontent.com/LittleOrange666/OrangeJudge/refs/heads/main/docker-compose.yml
 ```
 來一鍵下載
 
