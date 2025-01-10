@@ -10,6 +10,12 @@
 
 下載docker-compos.yml
 
+可以用
+```bash
+wget https://github.com/LittleOrange666/OrangeJudge/blob/main/docker-compose.yml
+```
+來一鍵下載
+
 接著執行
 
 ```bash
