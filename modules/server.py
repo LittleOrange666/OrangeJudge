@@ -8,6 +8,7 @@ import redis
 from flask import Flask, render_template, request, Response, abort, send_file
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask_login import current_user
 from flask_session import Session
 from flask_wtf import CSRFProtect
 from loguru import logger
@@ -29,8 +30,9 @@ app.config['SESSION_KEY_PREFIX'] = 'session:'
 app.config['SESSION_PERMANENT'] = True
 app.config["PERMANENT_SESSION_LIFETIME"] = 200000
 Session(app)
+csrf: CSRFProtect | None = None
 if not config.debug.disable_csrf:
-    CSRFProtect(app)
+    csrf = CSRFProtect(app)
 limiter = Limiter(
     get_remote_address,
     app=app,
@@ -40,6 +42,10 @@ limiter = Limiter(
     strategy="fixed-window",
     key_prefix="limiter:"
 )
+if config.server.admin_fast:
+    @limiter.request_filter
+    def admin_fast():
+        return current_user.is_authenticated and current_user.has("admin")
 
 
 @app.errorhandler(400)
@@ -128,3 +134,10 @@ def sending_file(file: Path) -> Response:
     if not file.is_file():
         abort(404)
     return send_file(file.absolute())
+
+
+def csrf_exempt(f):
+    if csrf is None:
+        return f
+    else:
+        return csrf.exempt(f)

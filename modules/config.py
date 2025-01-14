@@ -85,7 +85,7 @@ class ConfigCategory:
 
 def ConfigProperty(name: str, _type: Type[T], _default_val: T):
     def factory():
-        return deepcopy(_default_val)
+        return _type(deepcopy(_default_val))
 
     return field(default_factory=factory, metadata={"name": name, "type": _type})
 
@@ -135,8 +135,9 @@ class ServerConfig(ConfigCategory):
     port: int = ConfigProperty("此伺服器的連接埠", int, 8080)
     workers: int = ConfigProperty("WSGI並行數量", int, 4)
     timeout: int = ConfigProperty("WSGI超時時間", int, 120)
-    limits: list[str] = ConfigProperty("請求頻率限制列表", list, ["30 per 30 second", "3 per 1 second"])
+    limits: list[str] = ConfigProperty("請求頻率限制列表", list, ("30 per 30 second", "3 per 1 second"))
     file_limit: str = ConfigProperty("檔案下載頻率限制", str, "30 per 5 second")
+    admin_fast: bool = ConfigProperty("管理員可無視請求頻率限制", bool, False)
 
     def __init__(self, data: dict):
         """

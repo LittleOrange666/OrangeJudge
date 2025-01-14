@@ -16,6 +16,8 @@ app = server.app
 
 prepares = {k: lexers.get_lexer_by_name(k) for lexer in lexers.get_all_lexers() for k in lexer[1]}
 
+submit_limit = server.limiter.shared_limit(config.judge.limit, "submit_limit")
+
 
 @app.route("/", methods=["GET"])
 def index():
@@ -37,7 +39,7 @@ def test():
 
 
 @app.route('/test_submit', methods=['POST'])
-@server.limiter.limit(config.judge.limit)
+@submit_limit
 @login_required
 def test_submit():
     if datas.Submission.query.filter_by(user=current_user.data, completed=False).count() >= config.judge.pending_limit:
@@ -65,7 +67,7 @@ def test_submit():
 
 
 @app.route("/submit", methods=['POST'])
-@server.limiter.limit(config.judge.limit)
+@submit_limit
 @login_required
 def submit():
     if datas.Submission.query.filter_by(user=current_user.data, completed=False).count() >= config.judge.pending_limit:
