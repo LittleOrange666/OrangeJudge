@@ -10,8 +10,11 @@
         </li>
         <li class="nav-item" role="presentation">
             <a class="nav-link" id="password_tab" data-bs-toggle="tab" data-bs-target="#password" type="button"
-               role="tab"
-               aria-controls="password" aria-selected="false">變更密碼</a>
+               role="tab" aria-controls="password" aria-selected="false">變更密碼</a>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link" id="api_tab" data-bs-toggle="tab" data-bs-target="#api"
+               type="button" role="tab" aria-controls="api" aria-selected="true">API</a>
         </li>
     </ul>
     <div class="tab-content">
@@ -60,6 +63,34 @@
                 <button class="btn btn-primary submitter" data-msg-403="舊密碼不正確">變更密碼</button>
             </form>
         </div>
+        <div id="api" class="tab-pane fade show active">
+            <h3>API</h3>
+            <div>目前{{'有' if data.api_key else '沒有'}}API key</div>
+            <button class="btn btn-primary" id="gen_key">重新生成</button>
+            <div class="row">
+                <div class="col-12">
+                    API key:
+                </div>
+                <div class="col-12">
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" id="api_key" value="UNKNOWN"
+                               placeholder="API key" disabled>
+                        <button class="btn btn-outline-secondary" type="button" id="copy_key">複製</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
     <script src="/static/tab_memory.js"></script>
+{% endblock %}
+
+{% block script %}
+    $("#gen_key").click(async function () {
+        let res = await posting("/gen_key", {});
+        let key = await res.text();
+        $("#api_key").val(key);
+    });
+    $("#copy_key").click(function (){
+        copy_text($("#api_key").val());
+    });
 {% endblock %}

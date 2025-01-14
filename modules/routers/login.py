@@ -146,6 +146,16 @@ def settings():
     return "", 200
 
 
+@app.route("/gen_key", methods=["POST"])
+@login_required
+def gen_key():
+    data: datas.User = current_user.data
+    key = login.gen_key()
+    data.api_key = login.try_hash(key)
+    current_user.save()
+    return key, 200
+
+
 @app.route("/forget_password", methods=["GET", "POST"])
 def forget_password():
     if not config.smtp.enabled:

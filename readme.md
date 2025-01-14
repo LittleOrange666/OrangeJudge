@@ -39,3 +39,27 @@ docker-compose up -d
 剩下請自行通靈
 
 本judge不保證能在 非 x86_64,x64,AMD64 架構主機上運行
+
+## 手動安裝
+
+若有修改程式之需求(Ex. 增加可用語言)，可以把這個repo跟[OrangeJudge_Judger](https://github.com/LittleOrange666/OrangeJudge_Judger) clone下來
+
+改好之後分別執行
+
+```bash
+docker build -t orange_judge .
+```
+
+```bash
+docker build -t judge_server .
+```
+
+然後改docker-compose.yml裡面的image名稱
+
+再執行
+
+```bash
+docker-compose up -d
+```
+
+就好了

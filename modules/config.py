@@ -1,14 +1,12 @@
-import os
 from copy import deepcopy
 from dataclasses import fields, dataclass, field
-from enum import Enum
 from pathlib import Path
 from typing import TypeVar, Type
 
 import yaml
 from loguru import logger
 
-from .objs import as_dict
+from .objs import as_dict, DataMeta
 
 T = TypeVar('T')
 
@@ -33,56 +31,6 @@ def save_config():
         yaml.dump(as_dict(config), file)
 
 
-class ConfigCategory:
-    """
-    Base class for configuration categories. It initializes the configuration
-    category with the provided data, key, and name. It also validates the data
-    and sets the attributes based on the fields defined in the subclass.
-
-    Attributes:
-        key (str): The key for the configuration category.
-        name (str): The name of the configuration category.
-        source (dict): The source data for the configuration.
-    """
-
-    def __init__(self, data: dict, key: str, name: str):
-        """
-        Initializes the ConfigCategory with the provided data, key, and name.
-
-        Args:
-            data (dict): The configuration data.
-            key (str): The key for the configuration category.
-            name (str): The name of the configuration category.
-
-        Raises:
-            ConfigError: If the key is not a dictionary in the data.
-        """
-        self.key = key
-        self.name = name
-        if key not in data:
-            data[key] = {}
-        if not isinstance(data[key], dict):
-            raise ConfigError(f"'{key}' is not a dict")
-        my_data = data[key]
-        self.source = data
-        for field in fields(self):
-            val = my_data.get(field.name, field.default_factory())
-            env_name = "CONFIG_" + key.upper() + "_" + field.name.upper()
-            if env_name in os.environ:
-                val = os.environ[env_name]
-            tp = field.type
-            if hasattr(tp, "__origin__"):
-                tp = tp.__origin__
-            try:
-                if issubclass(tp, Enum):
-                    val = tp[val]
-                else:
-                    val = tp(val)
-                setattr(self, field.name, val)
-            except (ValueError, TypeError):
-                raise ConfigError(f"'{key}.{field.name}' is not a {field.type.__name__}")
-
-
 def ConfigProperty(name: str, _type: Type[T], _default_val: T):
     def factory():
         return _type(deepcopy(_default_val))
@@ -90,8 +38,14 @@ def ConfigProperty(name: str, _type: Type[T], _default_val: T):
     return field(default_factory=factory, metadata={"name": name, "type": _type})
 
 
+def ConfigCategory(name: str, _type: Type[T]):
+    def factory():
+        return _type()
+    return field(default_factory=factory, metadata={"name": name, "type": _type})
+
+
 @dataclass
-class SmtpConfig(ConfigCategory):
+class SmtpConfig(metaclass=DataMeta):
     """
     Configuration class for SMTP settings.
 
@@ -110,18 +64,9 @@ class SmtpConfig(ConfigCategory):
     enabled: bool = ConfigProperty("SMTP是否啟用", bool, False)
     limit: str = ConfigProperty("驗證碼頻率限制", str, "1 per 20 second")
 
-    def __init__(self, data: dict):
-        """
-        Initializes the SmtpConfig with the provided data.
-
-        Args:
-            data (dict): The configuration data.
-        """
-        super().__init__(data, "smtp", "SMTP設定")
-
 
 @dataclass
-class ServerConfig(ConfigCategory):
+class ServerConfig(metaclass=DataMeta):
     """
     Configuration class for server settings.
 
@@ -139,18 +84,9 @@ class ServerConfig(ConfigCategory):
     file_limit: str = ConfigProperty("檔案下載頻率限制", str, "30 per 5 second")
     admin_fast: bool = ConfigProperty("管理員可無視請求頻率限制", bool, False)
 
-    def __init__(self, data: dict):
-        """
-        Initializes the ServerConfig with the provided data.
-
-        Args:
-            data (dict): The configuration data.
-        """
-        super().__init__(data, "server", "伺服器設定")
-
 
 @dataclass
-class JudgeConfig(ConfigCategory):
+class JudgeConfig(metaclass=DataMeta):
     """
     Configuration class for judge system settings.
 
@@ -169,18 +105,9 @@ class JudgeConfig(ConfigCategory):
     file_size: int = ConfigProperty("檔案大小限制(KB)", int, 100)
     save_period: int = ConfigProperty("評測系統儲存週期(每完成幾筆測資更新狀態)", int, 3)
 
-    def __init__(self, data: dict):
-        """
-        Initializes the JudgeConfig with the provided data.
-
-        Args:
-            data (dict): The configuration data.
-        """
-        super().__init__(data, "judge", "評測系統設定")
-
 
 @dataclass
-class DebugConfig(ConfigCategory):
+class DebugConfig(metaclass=DataMeta):
     """
     Configuration class for debug settings.
 
@@ -191,18 +118,9 @@ class DebugConfig(ConfigCategory):
     disable_csrf: bool = ConfigProperty("關閉CSRF保護", bool, False)
     single_secret: bool = ConfigProperty("使用固定的SECRET_KEY", bool, False)
 
-    def __init__(self, data: dict):
-        """
-        Initializes the DebugConfig with the provided data.
-
-        Args:
-            data (dict): The configuration data.
-        """
-        super().__init__(data, "debug", "除錯設定")
-
 
 @dataclass
-class AccountConfig(ConfigCategory):
+class AccountConfig(metaclass=DataMeta):
     """
     Configuration class for account settings.
 
@@ -211,33 +129,27 @@ class AccountConfig(ConfigCategory):
     """
     signup: bool = ConfigProperty("是否開放註冊", bool, True)
 
-    def __init__(self, data: dict):
-        """
-        Initializes the AccountConfig with the provided data.
-
-        Args:
-            data (dict): The configuration data.
-        """
-        super().__init__(data, "account", "帳號系統設定")
-
 
 @dataclass
-class Config:
-    smtp: SmtpConfig
-    server: ServerConfig
-    judge: JudgeConfig
-    debug: DebugConfig
-    account: AccountConfig
+class Config(metaclass=DataMeta):
+    """
+    Configuration class that aggregates all configuration categories.
 
-    def __init__(self, data: dict):
-        self.smtp = SmtpConfig(data)
-        self.server = ServerConfig(data)
-        self.judge = JudgeConfig(data)
-        self.debug = DebugConfig(data)
-        self.account = AccountConfig(data)
+    Attributes:
+        smtp (SmtpConfig): The SMTP configuration settings.
+        server (ServerConfig): The server configuration settings.
+        judge (JudgeConfig): The judge system configuration settings.
+        debug (DebugConfig): The debug configuration settings.
+        account (AccountConfig): The account system configuration settings.
+    """
+    smtp: SmtpConfig = ConfigCategory("SMTP設定", SmtpConfig)
+    server: ServerConfig = ConfigCategory("伺服器設定", ServerConfig)
+    judge: JudgeConfig = ConfigCategory("評測系統設定", JudgeConfig)
+    debug: DebugConfig = ConfigCategory("除錯設定", DebugConfig)
+    account: AccountConfig = ConfigCategory("帳號系統設定", AccountConfig)
 
 
-config = Config(config_data)
+config = Config(**config_data)
 smtp = config.smtp
 server = config.server
 judge = config.judge
@@ -248,3 +160,12 @@ save_config()
 
 def init():
     pass
+
+
+def get_fields():
+    categories = fields(config)
+    ret = []
+    for category in categories:
+        for slot in fields(category.type):
+            ret.append((category.name + "." + slot.name,category.metadata["name"], slot.metadata["name"], slot.type))
+    return ret

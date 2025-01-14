@@ -4,6 +4,13 @@ const copyer = document.createElement("textarea");
 document.body.appendChild(copyer);
 $(copyer).hide();
 
+function copy_text(text) {
+    copyer.value = text;
+    copyer.select();
+    copyer.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(copyer.value);
+}
+
 function add_copy() {
     let p = $(this);
     let text = p.text();
@@ -11,10 +18,7 @@ function add_copy() {
     p.append(copy);
     p.css("position", "relative");
     copy.click(function () {
-        copyer.value = text;
-        copyer.select();
-        copyer.setSelectionRange(0, 99999);
-        navigator.clipboard.writeText(copyer.value);
+        copy_text(text);
     });
 }
 
@@ -323,10 +327,30 @@ function post(url, data, callback) {
     });
 }
 
+function objectToFormData(obj, formData = new FormData(), parentKey = null) {
+    for (const [key, value] of Object.entries(obj)) {
+        const fieldKey = parentKey ? `${parentKey}[${key}]` : key;
+        if (value instanceof Object && !(value instanceof File)) {
+            objectToFormData(value, formData, fieldKey);
+        } else {
+            formData.append(fieldKey, value);
+        }
+    }
+    return formData;
+}
+
+function posting(url, data) {
+    return fetch(url, {
+        method: "POST",
+        headers: {"x-csrf-token": $("#csrf_token").val()},
+        body: objectToFormData(data)
+    });
+}
+
 $(".submitter").each(function () {
     let spin = $('<span class="visually-hidden spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
     $(this).prepend(spin);
-}).click(function (e) {
+}).click(async function (e) {
     e.preventDefault();
     let $this = $(this);
     let action_name = $this.text().trim();
@@ -374,40 +398,39 @@ $(".submitter").each(function () {
     let modal = null;
     if (modals.length) modal = bootstrap.Modal.getOrCreateInstance(modals[0]);
     $this.trigger("saved_data");
-    fetching($this.parents("form").first()).then(function (response) {
-        console.log(response);
-        if (modal) modal.hide();
-        $this.find("span").addClass("visually-hidden");
-        if (response.ok) {
-            if (!!$this.data("redirect")) {
-                response.text().then(function (text) {
-                    show_modal("成功", "成功" + action_name, !$this.data("no-refresh"), text, !!$this.data("skip-success"));
-                });
-            } else if ($this.data("filename")) {
-                response.blob().then(function (blob) {
-                    let url = window.URL.createObjectURL(blob);
-                    let a = $("<a/>").attr("href", url).attr("download", $this.data("filename"));
-                    a[0].click();
-                    window.URL.revokeObjectURL(url);
-                });
-            } else {
-                show_modal("成功", "成功" + action_name, !$this.data("no-refresh"), $this.data("next"), !!$this.data("skip-success"));
-            }
+    let response = await fetching($this.parents("form").first());
+    console.log(response);
+    if (modal) modal.hide();
+    $this.find("span").addClass("visually-hidden");
+    if (response.ok) {
+        if (!!$this.data("redirect")) {
+            let text = await response.text();
+            show_modal("成功", "成功" + action_name, !$this.data("no-refresh"), text, !!$this.data("skip-success"));
+        } else if ($this.data("filename")) {
+            let blob = await response.blob();
+            let url = window.URL.createObjectURL(blob);
+            let a = $("<a/>").attr("href", url).attr("download", $this.data("filename"));
+            a[0].click();
+            window.URL.revokeObjectURL(url);
+        } else if (!!$this.data("show-text")) {
+            let text = await response.text();
+            show_modal("成功", text, !$this.data("no-refresh"), $this.data("next"), !!$this.data("skip-success"));
         } else {
-            response.text().then(function (text) {
-                if (response.status === 500) {
-                    show_modal("失敗", "伺服器內部錯誤，log uid=" + text);
-                } else {
-                    let msg = $this.data("msg-" + response.status);
-                    if ($this.data("msg-type-" + response.status) === "return") msg = text;
-                    if (!msg && response.status === 400) {
-                        if (text.includes("CSRF")&&text.includes("token")) msg = "CSRF token失效，請刷新頁面再試一次";
-                        else msg = "輸入格式不正確"
-                    }
-                    if (!msg && response.status === 403) msg = "您似乎沒有權限執行此操作"
-                    show_modal("失敗", msg ? msg : "Error Code: " + response.status);
-                }
-            });
+            show_modal("成功", "成功" + action_name, !$this.data("no-refresh"), $this.data("next"), !!$this.data("skip-success"));
         }
-    });
+    } else {
+        let text = await response.text();
+        if (response.status === 500) {
+            show_modal("失敗", "伺服器內部錯誤，log uid=" + text);
+        } else {
+            let msg = $this.data("msg-" + response.status);
+            if ($this.data("msg-type-" + response.status) === "return") msg = text;
+            if (!msg && response.status === 400) {
+                if (text.includes("CSRF")&&text.includes("token")) msg = "CSRF token失效，請刷新頁面再試一次";
+                else msg = "輸入格式不正確"
+            }
+            if (!msg && response.status === 403) msg = "您似乎沒有權限執行此操作"
+            show_modal("失敗", msg ? msg : "Error Code: " + response.status);
+        }
+    }
 });

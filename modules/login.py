@@ -1,4 +1,5 @@
 import hashlib
+import os
 import smtplib
 
 from flask import abort
@@ -74,6 +75,18 @@ class User(UserMixin):
             return Permission.admin.name in perms
         return False
 
+    def check_api_key(self, key: str) -> bool:
+        """
+        Check if the user has a specific API key.
+
+        Args:
+            key (str): The API key to check.
+
+        Returns:
+            bool: True if the user has the API key, False otherwise.
+        """
+        return self.data.api_key == try_hash(key)
+
 
 app = server.app
 login_manager = LoginManager(app)
@@ -105,9 +118,11 @@ def send_email(target: str, content: str) -> bool:
 def try_hash(content: str | None) -> str:
     if content is None:
         return ""
-    m = hashlib.sha256()
-    m.update(content.encode())
-    return m.hexdigest()
+    return hashlib.sha256(content.encode()).hexdigest()
+
+
+def gen_key() -> str:
+    return hashlib.sha256(os.urandom(32)).hexdigest()
 
 
 def try_login(user_id: str, password: str) -> tuple[None | User, str]:

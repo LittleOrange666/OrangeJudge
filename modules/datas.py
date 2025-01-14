@@ -29,6 +29,7 @@ class User(db.Model):
     problems = db.relationship('Problem', backref='user', lazy='dynamic')
     contests = db.relationship('Contest', backref='user', lazy='dynamic')
     announcements = db.relationship('Announcement', backref='user', lazy='dynamic')
+    api_key = db.Column(db.String(64), nullable=True)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
