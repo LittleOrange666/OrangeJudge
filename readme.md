@@ -40,6 +40,18 @@ docker-compose up -d
 
 本judge不保證能在 非 x86_64,x64,AMD64 架構主機上運行
 
+### TOKEN
+
+judge server的token默認是自動生成的，可能比較不穩定，最好是在docker-compose.yml裡面設定一下固定的token
+
+在judge_server和judge_backend的environment裡面加上
+
+```yaml
+- JUDGE_SERVER_TOKEN=your_token
+```
+
+即可
+
 ## 手動安裝
 
 若有修改程式之需求(Ex. 增加可用語言)，可以把這個repo跟[OrangeJudge_Judger](https://github.com/LittleOrange666/OrangeJudge_Judger) clone下來
