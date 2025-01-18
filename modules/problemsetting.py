@@ -20,10 +20,10 @@ from sqlalchemy.orm.attributes import flag_modified
 from werkzeug.datastructures import ImmutableMultiDict, MultiDict
 from werkzeug.utils import secure_filename
 
-from .objs import ProgramType
 from . import executing, tools, constants, createhtml, datas, objs, judge
 from .constants import tmp_path, preparing_problem_path, testlib, problem_path
 from .judge import SandboxPath, SandboxUser
+from .objs import ProgramType
 from .routers.general import render_problem
 from .server import sending_file
 from .tools import TempFile

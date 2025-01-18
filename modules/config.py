@@ -41,6 +41,7 @@ def ConfigProperty(name: str, _type: Type[T], _default_val: T):
 def ConfigCategory(name: str, _type: Type[T]):
     def factory():
         return _type()
+
     return field(default_factory=factory, metadata={"name": name, "type": _type})
 
 
@@ -167,5 +168,5 @@ def get_fields():
     ret = []
     for category in categories:
         for slot in fields(category.type):
-            ret.append((category.name + "." + slot.name,category.metadata["name"], slot.metadata["name"], slot.type))
+            ret.append((category.name + "." + slot.name, category.metadata["name"], slot.metadata["name"], slot.type))
     return ret

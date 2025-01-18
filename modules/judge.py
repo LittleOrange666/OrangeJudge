@@ -3,12 +3,12 @@ import os
 import queue
 import re
 import secrets
+import subprocess
 from enum import Enum
 from pathlib import Path
 
 import requests
 from loguru import logger
-import subprocess
 
 from . import constants, server
 from .objs import InteractResult, CallResult, Result
@@ -110,11 +110,21 @@ class SandboxUser(Enum):
         chmod(filepath, 0o750)
 
 
+local_session = None
+
+
+def get_session():
+    global local_session
+    if local_session is None:
+        local_session = requests.Session()
+    return local_session
+
+
 def send_request(op: str, dat: dict):
     headers = {
         "token": server.app.config["JUDGE_TOKEN"]
     }
-    res = requests.post(constants.judger_url + "/" + op, json=dat, headers=headers)
+    res = get_session().post(constants.judger_url + "/" + op, json=dat, headers=headers)
     return res.json()
 
 
@@ -175,14 +185,14 @@ def run(cmd: list[str], tl: int = 1000, ml: int = 128, in_file: SandboxPath | No
     if ret.signal == 31 and save_seccomp_info:
         if os.path.exists("/var/log/dmesg"):
             txt = subprocess.check_output(["dmesg"]).decode("utf-8")
-            lines = [line[line.find("] ")+2:] for line in txt.split("\n") if "] " in line]
+            lines = [line[line.find("] ") + 2:] for line in txt.split("\n") if "] " in line]
             target_line = -1
-            for i in range(len(lines)-1,-1,-1):
+            for i in range(len(lines) - 1, -1, -1):
                 if "signal: 31" in lines[i]:
                     target_line = i
                     break
             if target_line != -1:
-                good_lines = lines[max(0, target_line-10):target_line]
+                good_lines = lines[max(0, target_line - 10):target_line]
                 pat = "(R[A-Z0-9]{2}):\\s([0-9a-f]+)\\s"
                 need = ("RAX", "RDI", "RSI", "RDX", "R10", "R08", "R09")
                 mp = dict(re.findall(pat, "\n".join(good_lines)))

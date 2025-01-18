@@ -2,6 +2,7 @@ import os
 import re
 from pathlib import Path
 from re import Pattern
+
 from .objs import TaskResult
 
 signal_names = {'1': 'SIGHUP', '2': 'SIGINT', '3': 'SIGQUIT', '4': 'SIGILL', '5': 'SIGTRAP', '6': 'SIGABRT',

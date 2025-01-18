@@ -1,7 +1,7 @@
+import html as html_
 import os
 import re
 import shutil
-import html as html_
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Callable

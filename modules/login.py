@@ -101,6 +101,20 @@ def user_loader(name):
 
 
 def send_email(target: str, content: str) -> bool:
+    """
+    Send an email to the specified target with the given content.
+
+    This function attempts to send an email using the configured SMTP server.
+    If the initial attempt fails, it reconnects to the SMTP server, starts TLS,
+    logs in, and retries sending the email.
+
+    Args:
+        target (str): The recipient's email address.
+        content (str): The content of the email to be sent.
+
+    Returns:
+        bool: True if the email was sent successfully, False otherwise.
+    """
     try:
         smtp.sendmail(email_sender, target, content)
     except smtplib.SMTPException:
@@ -116,12 +130,33 @@ def send_email(target: str, content: str) -> bool:
 
 
 def try_hash(content: str | None) -> str:
+    """
+    Hash the given content using SHA-256.
+
+    This function takes a string input, encodes it, and returns its SHA-256 hash
+    in hexadecimal format. If the input is None, it returns an empty string.
+
+    Args:
+        content (str | None): The content to be hashed.
+
+    Returns:
+        str: The SHA-256 hash of the content in hexadecimal format, or an empty string if the input is None.
+    """
     if content is None:
         return ""
     return hashlib.sha256(content.encode()).hexdigest()
 
 
 def gen_key() -> str:
+    """
+    Generate a random SHA-256 hash key.
+
+    This function generates a random 32-byte string using os.urandom,
+    then computes and returns its SHA-256 hash in hexadecimal format.
+
+    Returns:
+        str: A SHA-256 hash key in hexadecimal format.
+    """
     return hashlib.sha256(os.urandom(32)).hexdigest()
 
 
@@ -163,6 +198,19 @@ def try_login(user_id: str, password: str) -> tuple[None | User, str]:
 
 
 def get_user(user_id: str) -> User | None:
+    """
+    Retrieve a User object based on the provided user identifier.
+
+    This function attempts to find a user by their username first. If no user is found,
+    it then tries to find the user by their email address. If a user is found by email,
+    the function updates the user_id to the corresponding username.
+
+    Args:
+        user_id (str): The user's identifier, which can be either a username or an email address.
+
+    Returns:
+        User | None: A User object if the user is found, or None if no user is found.
+    """
     usr = datas.User.query.filter_by(username=user_id)
     if usr.count() == 0:
         usr = datas.User.query.filter_by(email=user_id)
@@ -173,7 +221,7 @@ def get_user(user_id: str) -> User | None:
 
 
 def exist(user_id: str) -> bool:
-    return datas.User.query.filter_by(username=user_id).count() > 0
+    return datas.User.query.filter_by(username=user_id.lower()).count() > 0
 
 
 def create_account(email: str, user_id: str, password: str | None) -> None:
@@ -186,6 +234,22 @@ def create_account(email: str, user_id: str, password: str | None) -> None:
 
 
 def check_user(require: Permission | None = None, users: list[str] | None = None) -> User:
+    """
+    Check the current user's authentication and permissions.
+
+    This function verifies if the current user is authenticated and has the required permissions.
+    If the user is not authenticated or does not have the necessary permissions, it aborts with a 403 error.
+
+    Args:
+        require (Permission | None): The required permission to check. Defaults to None.
+        users (list[str] | None): A list of user IDs to check against. Defaults to None.
+
+    Returns:
+        User: The current authenticated user.
+
+    Raises:
+        werkzeug.exceptions.HTTPException: If the user is not authenticated or does not have the required permissions.
+    """
     user: User = current_user
     if not user.is_authenticated:
         abort(403)
