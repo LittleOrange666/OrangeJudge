@@ -4,6 +4,7 @@ from typing import Callable
 
 from loguru import logger
 
+import config
 from . import constants, tools, judge, objs
 from .constants import lang_path
 from .judge import SandboxPath, SandboxUser
@@ -274,9 +275,11 @@ class Language:
         self.base_exec_name = base_name + self.data["source_ext"]
         self.base_time = 0
         self.base_memory = 0
-        self.seccomp_rule = judge.SeccompRule.general
+        self.seccomp_rule: judge.SeccompRule
         if "seccomp_rule" in self.data:
             self.seccomp_rule = judge.SeccompRule[self.data["seccomp_rule"]]
+        else:
+            self.seccomp_rule = judge.SeccompRule.general
 
     def compile(self, filename: SandboxPath, env: Environment, runner_filename: SandboxPath | None = None) -> \
             tuple[SandboxPath, str]:
@@ -331,7 +334,11 @@ class Language:
 
     def update_base_resource_usage(self, env: Environment):
         logger.info(f"Updating base resource usage for {self.branch}")
-        filename = env.send_file(constants.judge_path / self.base_exec_name)
+        source_path = constants.lang_path / self.name / self.base_exec_name
+        if not source_path.exists():
+            logger.warning(f"Base resource usage for {self.branch} failed: File not found")
+            return
+        filename = env.send_file(source_path)
         exec_filename, ce_msg = self.compile(filename, env)
         if ce_msg:
             logger.warning(f"Base resource usage for {self.branch} failed: CE")
@@ -357,6 +364,7 @@ def init():
         keys = dat["branches"].keys()
         for key in keys:
             langs[key] = Language(lang_name, key)
-    env = Environment()
-    for lang in langs.values():
-        lang.update_base_resource_usage(env)
+    if config.judge.test_langs:
+        env = Environment()
+        for lang in langs.values():
+            lang.update_base_resource_usage(env)

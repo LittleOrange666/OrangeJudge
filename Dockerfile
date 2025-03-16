@@ -10,15 +10,11 @@ RUN apt-get install -y sudo python3 python3-pip redis
 
 COPY testlib /app/testlib
 
-COPY langs /app/langs
-
 COPY static /app/static
 
 COPY templates /app/templates
 
 COPY modules /app/modules
-
-COPY judge /app/judge
 
 COPY main.py tools/requirements.txt /app/
 

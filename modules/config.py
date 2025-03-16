@@ -98,6 +98,7 @@ class JudgeConfig(metaclass=DataMeta):
         pending_limit (int): The limit for pending submissions.
         file_size (int): The file size limit in KB.
         save_period (int): The save period for the judge system.
+        test_langs (bool): Whether to check language environments.
     """
     workers: int = ConfigProperty("評測系統並行數量", int, 1)
     period: int = ConfigProperty("評測系統掃描週期(s)", int, 3)
@@ -105,6 +106,7 @@ class JudgeConfig(metaclass=DataMeta):
     pending_limit: int = ConfigProperty("等待中提交數量限制", int, 1)
     file_size: int = ConfigProperty("檔案大小限制(KB)", int, 100)
     save_period: int = ConfigProperty("評測系統儲存週期(每完成幾筆測資更新狀態)", int, 3)
+    test_langs: bool = ConfigProperty("是否檢查各語言環境", bool, True)
 
 
 @dataclass
