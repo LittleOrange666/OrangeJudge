@@ -51,7 +51,7 @@ def test_submit():
         inp += "\n"
     if lang not in executing.langs:
         abort(404)
-    ext = executing.langs[lang].data["source_ext"]
+    ext = executing.langs[lang].source_ext
     fn = constants.source_file_name + ext
     dat = datas.Submission(source=fn, time=datetime.datetime.now(), user=current_user.data,
                            problem=datas.Problem.query.filter_by(pid="test").first(), language=lang,
@@ -82,7 +82,7 @@ def submit():
         abort(404)
     if not pdat.lang_allowed(lang):
         abort(400)
-    ext = executing.langs[lang].data["source_ext"]
+    ext = executing.langs[lang].source_ext
     fn = constants.source_file_name + ext
     dat = datas.Submission(source=fn, time=datetime.datetime.now(), user=current_user.data,
                            problem=pdat, language=lang, data={}, pid=pid, simple_result="waiting",
@@ -203,7 +203,7 @@ def problem_page(idx):
 def render_problem(dat: objs.ProblemInfo, idx: str, langs: list[str], preview: bool = False, **kwargs):
     path = problem_path / idx
     statement = tools.read(path / "statement.html")
-    lang_exts = json.dumps({k: v.data["source_ext"] for k, v in executing.langs.items()})
+    lang_exts = json.dumps({k: v.source_ext for k, v in executing.langs.items()})
     samples = dat.manual_samples
     samples.extend([objs.ManualSample(tools.read(path / "testcases" / o.in_file),
                                       tools.read(path / "testcases" / o.out_file))

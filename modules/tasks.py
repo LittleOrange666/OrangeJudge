@@ -108,7 +108,7 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
     sent_source = env.send_file(source)
     if problem_info.runner_enabled:
         judge_runner = env.send_file(p_path / "file" / problem_info.runner_source.get(dat.language))
-        judge_runner = env.rename(judge_runner, constants.runner_source_file_name + lang.data["source_ext"])
+        judge_runner = env.rename(judge_runner, constants.runner_source_file_name + lang.source_ext)
         filename, ce_msg = lang.compile(sent_source, env, judge_runner)
     else:
         filename, ce_msg = lang.compile(sent_source, env)

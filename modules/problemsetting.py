@@ -141,7 +141,7 @@ class Problem(objs.ProblemInfo):
         :raises: StopActionException if the file is not found.
         """
         if fileinfo.type == objs.ProgramType.default:
-            return executing.langs["C++17"]
+            return executing.langs[constants.default_lang]
         fs = [o.type for o in self.files if o.name == fileinfo.name]
         if len(fs):
             return executing.langs[fs[0]]
@@ -172,7 +172,7 @@ class Problem(objs.ProblemInfo):
         :return: A SandboxPath representing the compiled file.
         """
         path = (Path(f"testlib/{name}s") if fileinfo.type == "default" else self.path / "file") / fileinfo.name
-        lang = executing.langs["C++17"] if fileinfo.type == "default" else self.lang(fileinfo.name)
+        lang = executing.langs[constants.default_lang] if fileinfo.type == "default" else self.lang(fileinfo.name)
         return just_compile(path, name, lang, env)
 
     def exist(self, fileinfo: objs.ProgramPtr, name: str) -> bool:
@@ -408,21 +408,24 @@ def do_import_polygon(pid: str, filename: str):
     tools.write_binary(zip_file.read(files[checker.get("path")]), path / "file" / fn)
     dat.checker_source = objs.ProgramPtr(type=objs.ProgramType.my, name=fn)
     nw_files: list[objs.ProgramFile] = [objs.ProgramFile(name=fn,
-                                                         type=constants.polygon_type.get(checker.get("type"), "C++17"))]
+                                                         type=constants.polygon_type.get(checker.get("type"),
+                                                                                         constants.default_lang))]
     interactor = assets.find("interactor")
     if interactor:
         source = interactor.find("source")
         fn = "interactor_" + Path(source.get("path")).name
         tools.write_binary(zip_file.read(files[source.get("path")]), path / "file" / fn)
         dat.interactor_source = fn
-        nw_files.append(objs.ProgramFile(name=fn, type=constants.polygon_type.get(checker.get("type"), "C++17")))
+        nw_files.append(objs.ProgramFile(name=fn, type=constants.polygon_type.get(checker.get("type"),
+                                                                                         constants.default_lang)))
         dat.is_interact = True
     main_sol = None
     for solution in assets.find("solutions").iter("solution"):
         source = solution.find("source")
         fn = "solution_" + Path(source.get("path")).name
         tools.write_binary(zip_file.read(files[source.get("path")]), path / "file" / fn)
-        nw_files.append(objs.ProgramFile(name=fn, type=constants.polygon_type.get(checker.get("type"), "C++17")))
+        nw_files.append(objs.ProgramFile(name=fn, type=constants.polygon_type.get(checker.get("type"),
+                                                                                         constants.default_lang)))
         if solution.get("tag") == "main":
             main_sol = fn
         logger.debug(source.get("path") + " " + solution.get("tag"))
@@ -430,7 +433,8 @@ def do_import_polygon(pid: str, filename: str):
         source = executable.find("source")
         fn = Path(source.get("path")).name
         tools.write_binary(zip_file.read(files[source.get("path")]), path / "file" / fn)
-        nw_files.append(objs.ProgramFile(name=fn, type=constants.polygon_type.get(checker.get("type"), "C++17")))
+        nw_files.append(objs.ProgramFile(name=fn, type=constants.polygon_type.get(checker.get("type"),
+                                                                                         constants.default_lang)))
     for o in nw_files:
         for old in dat.files:
             if old.name == o.name:
@@ -698,9 +702,9 @@ def upload_file(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Respo
             abort(409)
         file.save(dat.path / "file" / fn)
         ext = Path(fn).suffix
-        tp = "C++17"
+        tp = constants.default_lang
         for lang in executing.langs.values():
-            if ext == lang.data["source_ext"]:
+            if ext == lang.source_ext:
                 tp = lang.data["default_branch"]
                 break
         dat.files.append(objs.ProgramFile(name=fn, type=tp))
@@ -716,7 +720,7 @@ def create_file(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Respo
     if filepath.exists():
         abort(409)
     filepath.touch()
-    dat.files.append(objs.ProgramFile(name=filename, type="C++17"))
+    dat.files.append(objs.ProgramFile(name=filename, type=constants.default_lang))
     return "files"
 
 

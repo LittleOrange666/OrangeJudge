@@ -91,6 +91,8 @@ judger_url = os.environ.get("JUDGER_URL", "http://localhost:9132")
 
 judge_path = Path("judge").absolute()
 
+default_lang = "C++17"
+
 
 def init():
     problem_path.mkdir(exist_ok=True, parents=True)

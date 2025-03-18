@@ -86,8 +86,11 @@ def contest_status(cid, page_str):
             if v.pid == pid:
                 problem = k
                 problem_name = v.name
-        result = obj.simple_result or "unknown"
         can_see = current_user.has(Permission.admin) or current_user.id == obj.user.username
+        can_know = can_see or info.standing.public
+        result = obj.simple_result or "unknown"
+        if not can_know:
+            result = "hidden"
         out.append({"idx": str(obj.id),
                     "time": obj.time.timestamp(),
                     "user_id": obj.user.username,

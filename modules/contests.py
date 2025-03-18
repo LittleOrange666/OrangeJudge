@@ -316,7 +316,7 @@ def get_standing(cid: str):
                      "judging": per.judging,
                      "idx": per.id})
     return {"submissions": ret,
-            "rule": info.type,
+            "rule": info.type.name,
             "pids": list(info.problems.keys()),
             "penalty": info.penalty,
             "pers": pers,

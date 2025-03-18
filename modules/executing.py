@@ -239,41 +239,29 @@ class Environment:
 
 
 class Language:
-    """
-    A class representing a programming language with compile and execution capabilities.
-
-    Attributes:
-    name (str): The name of the programming language.
-    branch (str): The branch of the programming language.
-    kwargs (dict): Keyword arguments for the programming language.
-    base_exec_cmd (list[str]): The base execution command for the programming language.
-
-    Methods:
-    __init__(self, name: str, branch: str | None = None):
-        Initializes the Language object with the given name and branch.
-
-    compile(self, filename: SandboxPath, env: Environment, runner_filename: SandboxPath | None = None) -> tuple[SandboxPath, str]:
-        Compiles the given source file using the programming language's compiler.
-        Returns the compiled file's path and any compilation errors.
-
-    get_execmd(self, filename: SandboxPath) -> list[str]:
-        Returns the execution command for the given source file.
-
-    supports_runner(self) -> bool:
-        Returns True if the programming language supports running a runner file, False otherwise.
-    """
-
     def __init__(self, name: str, branch: str | None = None):
+        """
+        Initialize the Language class.
+
+        This method reads the language configuration from a JSON file and sets up
+        various attributes such as the branch, source extension, base executable name,
+        and seccomp rule.
+
+        Args:
+            name (str): The name of the language.
+            branch (str | None, optional): The branch of the language configuration. Defaults to None.
+        """
         self.name = name
         self.data = tools.read_json(lang_path / f"{name}.json")
-        self.branch = self.data["default_branch"] if branch is None else branch
-        self.kwargs = self.data["branches"][self.branch]
+        self.branch: str = self.data["default_branch"] if branch is None else branch
+        self.kwargs: dict[str, str] = self.data["branches"][self.branch]
         base_name = "base_" + self.name
         if "base_name" in self.data:
             base_name = self.data["base_name"].format(**self.kwargs)
-        self.base_exec_name = base_name + self.data["source_ext"]
-        self.base_time = 0
-        self.base_memory = 0
+        self.source_ext: str = self.data["source_ext"]
+        self.base_exec_name: str = base_name + self.source_ext
+        self.base_time: float = 0
+        self.base_memory: float = 0
         self.seccomp_rule: judge.SeccompRule
         if "seccomp_rule" in self.data:
             self.seccomp_rule = judge.SeccompRule[self.data["seccomp_rule"]]
@@ -282,6 +270,20 @@ class Language:
 
     def compile(self, filename: SandboxPath, env: Environment, runner_filename: SandboxPath | None = None) -> \
             tuple[SandboxPath, str]:
+        """
+        Compile the source file in the sandbox environment.
+
+        This method compiles the given source file using the specified environment. If a runner file is provided,
+        it compiles both the source and runner files. It returns the path to the compiled file and any compilation errors.
+
+        Args:
+            filename (SandboxPath): The path to the source file to compile.
+            env (Environment): The sandbox environment to use for compilation.
+            runner_filename (SandboxPath | None, optional): The path to the runner file. Defaults to None.
+
+        Returns:
+            tuple[SandboxPath, str]: A tuple containing the path to the compiled file and any compilation errors.
+        """
         if self.data["require_compile"]:
             if runner_filename is not None:
                 if not self.supports_runner():
@@ -322,6 +324,17 @@ class Language:
         return filename, ""
 
     def get_execmd(self, filename: SandboxPath) -> list[str]:
+        """
+        Get the execution command for the compiled file.
+
+        This method generates the command to execute the compiled file based on the language configuration.
+
+        Args:
+            filename (SandboxPath): The path to the compiled file.
+
+        Returns:
+            list[str]: The command to execute the compiled file.
+        """
         exec_cmd = self.data["exec_cmd"][:]
         for i in range(len(exec_cmd)):
             exec_cmd[i] = exec_cmd[i].format(filename.sandbox, filename.stem, folder=filename.sandbox.parent,
@@ -329,9 +342,26 @@ class Language:
         return exec_cmd
 
     def supports_runner(self) -> bool:
+        """
+        Check if the language supports a runner file.
+
+        This method checks if the language configuration includes a command to compile a runner file.
+
+        Returns:
+            bool: True if the language supports a runner file, False otherwise.
+        """
         return "compile_runner_cmd" in self.data
 
     def update_base_resource_usage(self, env: Environment):
+        """
+        Update the base resource usage for the language.
+
+        This method updates the base CPU time and memory usage for the language by running a base executable
+        in the sandbox environment.
+
+        Args:
+            env (Environment): The sandbox environment to use for running the base executable.
+        """
         logger.info(f"Updating base resource usage for {self.branch}")
         source_path = constants.lang_path / self.name / self.base_exec_name
         if not source_path.exists():

@@ -80,33 +80,42 @@ class DataMeta(type):
                     elif is_enum(v.__args__[1]):
                         arr_l.append((k, v.__args__[1], True, 2))
         arr = tuple(arr_l)
-        if "__post_init__" in namespace:
-            _old_post_init = namespace["__post_init__"]
+        ks = set(namespace["__annotations__"].keys())
+        _old_init = namespace["__init__"]
 
-            def _the__post_init__(obj):
-                """
-                Custom __post_init__ method to initialize nested dataclasses from dictionaries and enums from strings.
+        def _the__init__(self, *args, **kwargs):
+            nw_kwargs = {k: v for k, v in kwargs.items() if k in ks}
+            return _old_init(self, *args, **nw_kwargs)
 
-                Args:
-                    obj: The instance of the class being initialized.
-                """
-                for key, value, e, t in arr:
-                    setattr(obj, key, _resolve_r(getattr(obj, key), value, e, t))
-                _old_post_init(obj)
+        namespace["__init__"] = _the__init__
+        if arr:
+            if "__post_init__" in namespace:
+                _old_post_init = namespace["__post_init__"]
 
-            namespace["__post_init__"] = _the__post_init__
-        else:
-            def _the__post_init__(obj):
-                """
-                Custom __post_init__ method to initialize nested dataclasses from dictionaries and enums from strings.
+                def _the__post_init__(obj):
+                    """
+                    Custom __post_init__ method to initialize nested dataclasses from dictionaries and enums from strings.
 
-                Args:
-                    obj: The instance of the class being initialized.
-                """
-                for key, value, e, t in arr:
-                    setattr(obj, key, _resolve_r(getattr(obj, key), value, e, t))
+                    Args:
+                        obj: The instance of the class being initialized.
+                    """
+                    for key, value, e, t in arr:
+                        setattr(obj, key, _resolve_r(getattr(obj, key), value, e, t))
+                    _old_post_init(obj)
 
-            namespace["__post_init__"] = _the__post_init__
+                namespace["__post_init__"] = _the__post_init__
+            else:
+                def _the__post_init__(obj):
+                    """
+                    Custom __post_init__ method to initialize nested dataclasses from dictionaries and enums from strings.
+
+                    Args:
+                        obj: The instance of the class being initialized.
+                    """
+                    for key, value, e, t in arr:
+                        setattr(obj, key, _resolve_r(getattr(obj, key), value, e, t))
+
+                namespace["__post_init__"] = _the__post_init__
 
         # Add the custom __post_init__ method to the class namespace
         namespace["as_dict"] = as_dict
@@ -114,7 +123,7 @@ class DataMeta(type):
 
 
 @dataclass
-class Result:
+class Result(metaclass=DataMeta):
     """
     A dataclass representing the result of an judge operation.
 
@@ -158,7 +167,7 @@ class InteractResult(metaclass=DataMeta):
 
 
 @dataclass
-class CallResult:
+class CallResult(metaclass=DataMeta):
     """
     A dataclass representing the result of a system call.
 
@@ -339,7 +348,7 @@ class TaskResult(Enum):
 
 
 @dataclass
-class StandingsData:
+class StandingsData(metaclass=DataMeta):
     """
     A dataclass representing the standings data.
 
@@ -495,7 +504,7 @@ class RunningTestcaseGroup(metaclass=DataMeta):
 
 
 @dataclass
-class Testcase:
+class Testcase(metaclass=DataMeta):
     """
     A dataclass representing a test case.
 
@@ -518,7 +527,7 @@ class Testcase:
 
 
 @dataclass
-class ProgramFile:
+class ProgramFile(metaclass=DataMeta):
     """
     A dataclass representing a program file.
 
@@ -544,7 +553,7 @@ class ProgramPtr(metaclass=DataMeta):
 
 
 @dataclass
-class ExecPtr:
+class ExecPtr(metaclass=DataMeta):
     """
     A dataclass representing a pointer to an executable.
 
@@ -557,7 +566,7 @@ class ExecPtr:
 
 
 @dataclass
-class ManualSample:
+class ManualSample(metaclass=DataMeta):
     """
     A dataclass representing a manual sample.
 
@@ -591,7 +600,7 @@ class GenGroup(metaclass=DataMeta):
 
 
 @dataclass
-class ProblemVersion:
+class ProblemVersion(metaclass=DataMeta):
     """
     A dataclass representing a version of a problem.
 
@@ -679,7 +688,7 @@ class ProblemInfo(metaclass=DataMeta):
 
 
 @dataclass
-class SubmissionData:
+class SubmissionData(metaclass=DataMeta):
     """
     A dataclass representing the data of a submission.
 
