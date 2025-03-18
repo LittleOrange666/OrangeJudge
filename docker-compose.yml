@@ -25,7 +25,7 @@ services:
         ports:
             - "0.0.0.0:9132:8000"
     judge_backend:
-        image: littleorange666/orange_judge:1.1.0
+        image: littleorange666/orange_judge:1.1.1
         read_only: true
         restart: on-failure
         depends_on:
@@ -52,6 +52,3 @@ services:
             - "0.0.0.0:8080:8080"
 volumes:
     sandbox:
-        external: false
-        driver_opts:
-            o: "nocopy"

@@ -4,8 +4,7 @@ from typing import Callable
 
 from loguru import logger
 
-import config
-from . import constants, tools, judge, objs
+from . import constants, tools, judge, objs, config
 from .constants import lang_path
 from .judge import SandboxPath, SandboxUser
 
