@@ -394,7 +394,7 @@
                                placeholder="持續時間"
                                value="{{ data.elapsed }}" required>
                     </div>
-                    <div class="radio-selector" data-value="{{ data.type }}">
+                    <div class="radio-selector" data-value="{{ data.type.name }}">
                         <h4>計分規則</h4>
                         <div class="form-check">
                             <input class="form-check-input" type="radio" name="rule_type" id="rule_type1" value="icpc">
@@ -414,7 +414,7 @@
                         <input type="number" class="form-control" id="penalty" name="penalty" placeholder="罰時"
                                value="{{ data.penalty }}" required>
                     </div>
-                    <div class="radio-selector" data-value="{{ data.pretest }}">
+                    <div class="radio-selector" data-value="{{ data.pretest.name }}">
                         <h4>後測</h4>
                         <div class="form-check">
                             <input class="form-check-input" type="radio" name="pretest_type" id="pretest_type1"
