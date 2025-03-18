@@ -374,7 +374,8 @@ $(".submitter").each(function () {
         if(!$(this).prop("required")) return;
         let bad_pattern = $(this).prop("pattern") && !$(this).val().match(RegExp($(this).prop("pattern")));
         let bad_number = $(this).prop("type") === "number" &&
-            (isNaN(+$(this).val()) || +$(this).val() < $(this).prop("min") || +$(this).val() > $(this).prop("max"));
+            (isNaN(+$(this).val()) || ($(this).prop("min") && +$(this).val() < $(this).prop("min")) ||
+                ($(this).prop("max") && +$(this).val() > $(this).prop("max")));
         let id = $(this).attr("id");
         let label = $("label[for=" + id + "]");
         let name = label.length ? label.text() : $(this).attr("name");
