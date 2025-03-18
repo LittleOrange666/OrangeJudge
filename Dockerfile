@@ -4,19 +4,18 @@ WORKDIR /app
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update -y
+RUN apt-get update &&\
+    apt-get -y sudo python3 python3-pip redis --fix-missing &&\
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
-RUN apt-get install -y sudo python3 python3-pip redis
-
-COPY testlib /app/testlib
-
-COPY static /app/static
-
-COPY templates /app/templates
-
-COPY modules /app/modules
-
-COPY main.py tools/requirements.txt /app/
+COPY \
+    testlib \
+    static \
+    templates \
+    modules \
+    main.py \
+    tools/requirements.txt \
+    /app/
 
 RUN pip3 install -r requirements.txt
 

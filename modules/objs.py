@@ -81,13 +81,6 @@ class DataMeta(type):
                         arr_l.append((k, v.__args__[1], True, 2))
         arr = tuple(arr_l)
         ks = set(namespace["__annotations__"].keys())
-        _old_init = namespace["__init__"]
-
-        def _the__init__(self, *args, **kwargs):
-            nw_kwargs = {k: v for k, v in kwargs.items() if k in ks}
-            return _old_init(self, *args, **nw_kwargs)
-
-        namespace["__init__"] = _the__init__
         if arr:
             if "__post_init__" in namespace:
                 _old_post_init = namespace["__post_init__"]
