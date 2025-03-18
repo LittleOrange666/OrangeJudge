@@ -1,3 +1,4 @@
+import os
 import subprocess
 import sys
 from gunicorn.app.base import BaseApplication
@@ -35,7 +36,8 @@ def main():
     locks.init()
     tools.init()
     modules.routers.init()
-    if not server.check_port("localhost", 6379):
+    redis_host = os.environ.get("REDIS_HOST", "localhost")
+    if not server.check_port(redis_host, 6379):
         subprocess.Popen("redis-server")
     with server.app.app_context():  # following need sqlalchemy
         datas.init()

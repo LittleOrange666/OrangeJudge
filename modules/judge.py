@@ -79,6 +79,7 @@ class SeccompRule(Enum):
     general = "general"
     golang = "golang"
     node = "node"
+    none = "none"
 
 
 def chmod(filepath: SandboxPath, mode: int):
@@ -166,6 +167,8 @@ def run(cmd: list[str], tl: int = 1000, ml: int = 128, in_file: SandboxPath | No
         out_file: SandboxPath | None = None,
         err_file: SandboxPath | None = None, seccomp_rule: SeccompRule | None = SeccompRule.general,
         user: SandboxUser = SandboxUser.nobody, cwd: str | None = None, save_seccomp_info: bool = False) -> Result:
+    if seccomp_rule is SeccompRule.none:
+        seccomp_rule = None
     dat = {
         "cmd": list(map(str, cmd)),
         "tl": tl,
@@ -207,6 +210,8 @@ def interact_run(cmd: list[str], interact_cmd: list[str], tl: int = 1000, ml: in
                  seccomp_rule: SeccompRule | None = SeccompRule.general,
                  user: SandboxUser = SandboxUser.nobody, interact_user: SandboxUser = SandboxUser.nobody,
                  cwd: str | None = None):
+    if seccomp_rule is SeccompRule.none:
+        seccomp_rule = None
     dat = {
         "cmd": list(map(str, cmd)),
         "interact_cmd": list(map(str, interact_cmd)),
