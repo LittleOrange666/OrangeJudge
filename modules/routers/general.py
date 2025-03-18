@@ -148,13 +148,13 @@ def submission(idx: str):
                                  and not super_access)
             result["checker_protected"] = checker_protected
             for i in range(len(results)):
-                if results[i].result != "SKIP" and (not protected or super_access or results[i].sample):
-                    results[i].in_txt = tools.read(testcase_path / f"{i}.in")
-                    results[i].ans_txt = tools.read(testcase_path / f"{i}.ans")
+                if results[i].result != objs.TaskResult.SKIP and (not protected or super_access or results[i].sample):
+                    results[i].in_txt = tools.read_default(testcase_path / f"{i}.in")
+                    results[i].ans_txt = tools.read_default(testcase_path / f"{i}.ans")
                 else:
                     results[i].in_txt = results[i].ans_txt = ""
                 if results[i].has_output:
-                    results[i].out_txt = tools.read(testcase_path / f"{i}.out")
+                    results[i].out_txt = tools.read_default(testcase_path / f"{i}.out")
             gpr = result_data.group_results
             if len(gpr) > 0 and type(next(iter(gpr.values()))) is objs.GroupResult:
                 group_results = gpr
