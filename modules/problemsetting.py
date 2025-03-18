@@ -335,7 +335,7 @@ def creating_version(pid: str, description: str):
         end(False)
     file = problem.compile_dat(problem.checker_source, "checker", env)
     env.get_file(problem.path / file.inner, file)
-    problem.checker_source = objs.ExecPtr(name=str(file.inner), lang=problem.lang_of(problem.checker_source).branch)
+    problem.checker = objs.ExecPtr(name=str(file.inner), lang=problem.lang_of(problem.checker_source).branch)
     if problem.is_interact:
         interactor = objs.ProgramPtr(type=objs.ProgramType.my, name=problem.interactor_source)
         if not problem.exist(interactor, "interactor"):
