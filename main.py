@@ -29,6 +29,7 @@ def main():
         raise RuntimeError("The judge server only supports Linux")
     judge.init()
     executing.init()
+    constants.init()
     # following do nothing
     config.init()
     locks.init()

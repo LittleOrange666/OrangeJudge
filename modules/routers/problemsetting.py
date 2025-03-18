@@ -17,7 +17,7 @@ app = server.app
 @login_required
 def my_problems():
     user = login.check_user(Permission.make_problems)
-    problem_obj = user.data.problems
+    problem_obj = user.data.problems.filter(datas.Problem.pid != "test")
     got_data, page_cnt, page_idx, show_pages = tools.pagination(problem_obj)
     problems_dat = []
     for obj in got_data:

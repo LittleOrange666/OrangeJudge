@@ -90,3 +90,11 @@ sandbox_path = Path("sandbox").absolute()
 judger_url = os.environ.get("JUDGER_URL", "http://localhost:9132")
 
 judge_path = Path("judge").absolute()
+
+
+def init():
+    problem_path.mkdir(exist_ok=True, parents=True)
+    preparing_problem_path.mkdir(exist_ok=True, parents=True)
+    tmp_path.mkdir(exist_ok=True, parents=True)
+    contest_path.mkdir(exist_ok=True, parents=True)
+    log_path.mkdir(exist_ok=True, parents=True)

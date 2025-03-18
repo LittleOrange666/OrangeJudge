@@ -220,10 +220,10 @@ def create_problem(name: str, pid: str, user: datas.User) -> str:
         pid = str(pidx)
     dat = datas.Problem(id=problem_count + 1, pid=pid, name=name, data={}, user=user)
     path = preparing_problem_path / pid
-    path.mkdir()
-    (path / "testcases").mkdir()
-    (path / "file").mkdir()
-    (path / "public_file").mkdir()
+    path.mkdir(parents=True, exist_ok=True)
+    (path / "testcases").mkdir(parents=True, exist_ok=True)
+    (path / "file").mkdir(parents=True, exist_ok=True)
+    (path / "public_file").mkdir(parents=True, exist_ok=True)
     info = objs.ProblemInfo(name=name, users=[user.username])
     dat.datas = dat.new_datas = info
     datas.add(dat)
