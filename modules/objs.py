@@ -41,6 +41,23 @@ def _resolve_r(val, tp, e, t):
         return {k: _resolve(v, tp, e) for k, v in val.items()}
 
 
+def better_init(cls):
+    anno = cls.__annotations__
+    ks = set(anno.keys())
+    old_init = cls.__init__
+
+    def _the__init__(self, *args, **kwargs):
+        nw_kwargs = {k: kwargs[k] for k in ks if k in kwargs}
+        old_init(self, *args, **nw_kwargs)
+
+    cls.__init__ = _the__init__
+    return cls
+
+
+def my_dataclass(cls):
+    return better_init(dataclass(cls))
+
+
 class DataMeta(type):
     """
     Metaclass for dataclasses that automatically initializes nested dataclasses and enums from dictionaries and strings.
@@ -80,7 +97,6 @@ class DataMeta(type):
                     elif is_enum(v.__args__[1]):
                         arr_l.append((k, v.__args__[1], True, 2))
         arr = tuple(arr_l)
-        ks = set(namespace["__annotations__"].keys())
         if arr:
             if "__post_init__" in namespace:
                 _old_post_init = namespace["__post_init__"]
@@ -115,7 +131,7 @@ class DataMeta(type):
         return super().__new__(cls, name, bases, namespace)
 
 
-@dataclass
+@my_dataclass
 class Result(metaclass=DataMeta):
     """
     A dataclass representing the result of an judge operation.
@@ -146,7 +162,7 @@ class Result(metaclass=DataMeta):
     seccomp_info: str = ""
 
 
-@dataclass
+@my_dataclass
 class InteractResult(metaclass=DataMeta):
     """
     A dataclass representing an interaction judge result.
@@ -159,7 +175,7 @@ class InteractResult(metaclass=DataMeta):
     interact_result: Result
 
 
-@dataclass
+@my_dataclass
 class CallResult(metaclass=DataMeta):
     """
     A dataclass representing the result of a system call.
@@ -340,7 +356,7 @@ class TaskResult(Enum):
                 return "table-secondary"
 
 
-@dataclass
+@my_dataclass
 class StandingsData(metaclass=DataMeta):
     """
     A dataclass representing the standings data.
@@ -355,7 +371,7 @@ class StandingsData(metaclass=DataMeta):
     end_freeze: int = 0
 
 
-@dataclass
+@my_dataclass
 class ContestProblem(metaclass=DataMeta):
     """
     A dataclass representing a contest problem.
@@ -368,7 +384,7 @@ class ContestProblem(metaclass=DataMeta):
     name: str = "unknown"
 
 
-@dataclass
+@my_dataclass
 class ContestData(metaclass=DataMeta):
     """
     A dataclass representing the data of a contest.
@@ -403,7 +419,7 @@ class ContestData(metaclass=DataMeta):
     penalty: int = 20
 
 
-@dataclass
+@my_dataclass
 class Statement(metaclass=DataMeta):
     """
     A dataclass representing the statement of a problem.
@@ -424,7 +440,7 @@ class Statement(metaclass=DataMeta):
     type: StatementType = StatementType.md
 
 
-@dataclass
+@my_dataclass
 class TestcaseGroup(metaclass=DataMeta):
     """
     A dataclass representing a group of test cases.
@@ -439,7 +455,7 @@ class TestcaseGroup(metaclass=DataMeta):
     dependency: list[str] = field(default_factory=list)
 
 
-@dataclass
+@my_dataclass
 class GroupResult(metaclass=DataMeta):
     """
     A dataclass representing the result of a group of test cases.
@@ -458,7 +474,7 @@ class GroupResult(metaclass=DataMeta):
     css_class: str = ""
 
 
-@dataclass
+@my_dataclass
 class RunningTestcaseGroup(metaclass=DataMeta):
     """
     A dataclass record a group of test cases while judging.
@@ -496,7 +512,7 @@ class RunningTestcaseGroup(metaclass=DataMeta):
         return GroupResult(result=res, time=self.time, mem=self.mem, gainscore=self.gainscore)
 
 
-@dataclass
+@my_dataclass
 class Testcase(metaclass=DataMeta):
     """
     A dataclass representing a test case.
@@ -519,7 +535,7 @@ class Testcase(metaclass=DataMeta):
     gen: bool = False
 
 
-@dataclass
+@my_dataclass
 class ProgramFile(metaclass=DataMeta):
     """
     A dataclass representing a program file.
@@ -532,7 +548,7 @@ class ProgramFile(metaclass=DataMeta):
     type: str
 
 
-@dataclass
+@my_dataclass
 class ProgramPtr(metaclass=DataMeta):
     """
     A dataclass representing a pointer to a program.
@@ -545,7 +561,7 @@ class ProgramPtr(metaclass=DataMeta):
     name: str
 
 
-@dataclass
+@my_dataclass
 class ExecPtr(metaclass=DataMeta):
     """
     A dataclass representing a pointer to an executable.
@@ -558,7 +574,7 @@ class ExecPtr(metaclass=DataMeta):
     lang: str = "unknown"
 
 
-@dataclass
+@my_dataclass
 class ManualSample(metaclass=DataMeta):
     """
     A dataclass representing a manual sample.
@@ -571,7 +587,7 @@ class ManualSample(metaclass=DataMeta):
     out_txt: str
 
 
-@dataclass
+@my_dataclass
 class GenGroup(metaclass=DataMeta):
     """
     A dataclass representing a generation group.
@@ -592,7 +608,7 @@ class GenGroup(metaclass=DataMeta):
     status: str = "未更新"
 
 
-@dataclass
+@my_dataclass
 class ProblemVersion(metaclass=DataMeta):
     """
     A dataclass representing a version of a problem.
@@ -605,7 +621,7 @@ class ProblemVersion(metaclass=DataMeta):
     time: float
 
 
-@dataclass
+@my_dataclass
 class ProblemInfo(metaclass=DataMeta):
     """
     A dataclass representing the information of a problem.
@@ -680,7 +696,7 @@ class ProblemInfo(metaclass=DataMeta):
         self.__post_init__()
 
 
-@dataclass
+@my_dataclass
 class SubmissionData(metaclass=DataMeta):
     """
     A dataclass representing the data of a submission.
@@ -697,7 +713,7 @@ class SubmissionData(metaclass=DataMeta):
     log_uuid: str = ""
 
 
-@dataclass
+@my_dataclass
 class TestcaseResult(metaclass=DataMeta):
     """
     A dataclass representing the result of a test case.
@@ -728,7 +744,7 @@ class TestcaseResult(metaclass=DataMeta):
     completed: bool = True
 
 
-@dataclass
+@my_dataclass
 class SubmissionResult(metaclass=DataMeta):
     """
     A dataclass representing the result of a submission.

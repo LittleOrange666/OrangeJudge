@@ -6,7 +6,7 @@ from typing import TypeVar, Type
 import yaml
 from loguru import logger
 
-from .objs import as_dict, DataMeta
+from .objs import as_dict, DataMeta, my_dataclass
 
 T = TypeVar('T')
 
@@ -45,7 +45,7 @@ def ConfigCategory(name: str, _type: Type[T]):
     return field(default_factory=factory, metadata={"name": name, "type": _type})
 
 
-@dataclass
+@my_dataclass
 class SmtpConfig(metaclass=DataMeta):
     """
     Configuration class for SMTP settings.
@@ -66,7 +66,7 @@ class SmtpConfig(metaclass=DataMeta):
     limit: str = ConfigProperty("驗證碼頻率限制", str, "1 per 20 second")
 
 
-@dataclass
+@my_dataclass
 class ServerConfig(metaclass=DataMeta):
     """
     Configuration class for server settings.
@@ -86,7 +86,7 @@ class ServerConfig(metaclass=DataMeta):
     admin_fast: bool = ConfigProperty("管理員可無視請求頻率限制", bool, False)
 
 
-@dataclass
+@my_dataclass
 class JudgeConfig(metaclass=DataMeta):
     """
     Configuration class for judge system settings.
@@ -109,7 +109,7 @@ class JudgeConfig(metaclass=DataMeta):
     test_langs: bool = ConfigProperty("是否檢查各語言環境", bool, True)
 
 
-@dataclass
+@my_dataclass
 class DebugConfig(metaclass=DataMeta):
     """
     Configuration class for debug settings.
@@ -122,7 +122,7 @@ class DebugConfig(metaclass=DataMeta):
     single_secret: bool = ConfigProperty("使用固定的SECRET_KEY", bool, False)
 
 
-@dataclass
+@my_dataclass
 class AccountConfig(metaclass=DataMeta):
     """
     Configuration class for account settings.
@@ -133,7 +133,7 @@ class AccountConfig(metaclass=DataMeta):
     signup: bool = ConfigProperty("是否開放註冊", bool, True)
 
 
-@dataclass
+@my_dataclass
 class Config(metaclass=DataMeta):
     """
     Configuration class that aggregates all configuration categories.

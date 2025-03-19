@@ -325,7 +325,7 @@ def get_standing(cid: str):
             "virtual_participants": info.virtual_participants}
 
 
-def break_result(dat: datas.Submission):
+def reject(dat: datas.Submission):
     dat.simple_result = "ignored"
     res = dat.results
     res.total_score = 0
@@ -334,8 +334,8 @@ def break_result(dat: datas.Submission):
     dat.results = res
 
 
-def resubmit(dat: datas.Submission):
-    dat.simple_result = "wait system test"
+def rejudge(dat: datas.Submission, msg: str = "wait system test"):
+    dat.simple_result = msg
     dat.completed = False
     dat.queue_position = tasks.enqueue(dat.id)
 
@@ -359,14 +359,14 @@ def contest_worker():
                             submission.just_pretest = False
                             key = (submission.user_id, submission.pid)
                             if submission.simple_result.lower() not in ("jc", "ce"):
-                                break_result(submission)
+                                reject(submission)
                                 if pretest == objs.PretestType.all:
-                                    resubmit(submission)
+                                    rejudge(submission)
                                 elif submission.simple_result.lower() == 'pretest passed':
                                     dic[key] = submission
                         if pretest == objs.PretestType.last:
                             for v in dic.values():
-                                resubmit(v)
+                                rejudge(v)
                         datas.add(*submissions)
                 datas.add(dat)
         sleep(5)

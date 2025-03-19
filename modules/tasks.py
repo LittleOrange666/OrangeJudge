@@ -76,8 +76,8 @@ def run(lang: executing.Language, file: Path, env: executing.Environment, stdin:
     if res.result == "MLE":
         return "MLE: 測試執行記憶體超過限制(1GB)"
     env.get_file(stdout, out_file)
-    time_usage = max(0, res.cpu_time - lang.base_time)
-    memusage = max(0, res.memory - lang.base_memory)
+    time_usage = max(0.0, res.cpu_time - lang.base_time)
+    memusage = max(0.0, res.memory - lang.base_memory)
     return f"OK: {time_usage}ms, {memusage}B"
 
 
@@ -149,10 +149,10 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
         if res.stderr.startswith("partially correct"):
             codechecker_score = res.return_code
         else:
-            name = constants.checker_exit_codes.get(res.return_code, "JE")
-            if name == "OK":
+            name = constants.checker_exit_codes.get(res.return_code, TaskResult.JE)
+            if name == TaskResult.OK:
                 codechecker_score = top_score
-            elif name == "POINTS":
+            elif name == TaskResult.POINTS:
                 st = res.stderr.split(" ")
                 if len(st) > 1 and st[1].replace(".", "", 1).isdigit():
                     codechecker_score = float(st[1])
@@ -263,8 +263,8 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
                 else:
                     ret = (TaskResult.RE, "執行期間錯誤")
             elif ret[0] == TaskResult.OK:  # skip code below if interactor return with non-zero return code
-                time_usage = max(0, res.cpu_time - lang.base_time)
-                memusage = math.ceil(max(0, res.memory - lang.base_memory) / 1024)
+                time_usage = max(0, math.ceil(res.cpu_time - lang.base_time))
+                memusage = math.ceil(max(0.0, res.memory - lang.base_memory) / 1024)
                 groups[gp].time = max(groups[gp].time, time_usage)
                 groups[gp].mem = max(groups[gp].mem, memusage)
                 has_output = True
@@ -301,7 +301,7 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
         if ret[0] != TaskResult.OK:
             appeared_result.add(ret[0].name)
             simple_result = "NA"
-        if groups[gp].result != ret[0] and ret[0] != TaskResult.OK:
+        if groups[gp].result != ret[0] and groups[gp].result == TaskResult.OK:
             if groups[gp].rule == objs.TestcaseRule.min:
                 groups[gp].result = ret[0]
             else:
@@ -349,19 +349,19 @@ def runner(dat: datas.Submission):
 
 def queue_receiver():
     while True:
-        check_lock.acquire()
-        submissions = datas.Submission.query.filter_by(completed=False, running=False)
-        if submissions.count() == 0:
-            check_lock.release()
+        dat = None
+        with check_lock:
+            submissions = datas.Submission.query.filter_by(completed=False, running=False)
+            if submissions.count() > 0:
+                dat = submissions.first()
+                dat.running = True
+                datas.add(dat)
+                last_judged.inc()
+        if dat is None:
             time.sleep(config.judge.period)
-            continue
-        dat = submissions.first()
-        dat.running = True
-        datas.add(dat)
-        last_judged.inc()
-        check_lock.release()
-        runner(dat)
-        time.sleep(1)
+        else:
+            runner(dat)
+            time.sleep(1)
 
 
 def enqueue(idx: int) -> int:
