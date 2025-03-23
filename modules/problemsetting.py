@@ -20,6 +20,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from werkzeug.datastructures import ImmutableMultiDict, MultiDict
 from werkzeug.utils import secure_filename
 
+from objs import GenType
 from . import executing, tools, constants, createhtml, datas, objs, judge
 from .constants import tmp_path, preparing_problem_path, testlib, problem_path
 from .judge import SandboxPath, SandboxUser
@@ -62,19 +63,16 @@ def do_compile(path: Path, name: str, lang: executing.Language, env: executing.E
 
 
 class Problem(objs.ProblemInfo):
-    """
-    A class representing a problem in the OrangeJudge system.
-
-    This class encapsulates problem data, provides methods for manipulating the problem,
-    and handles database interactions.
-    """
-
     def __init__(self, pid: str, is_important_editing_now: bool = True):
         """
-        Initialize a Problem instance.
+        Initialize the Problem class.
 
-        :param pid: The problem identifier.
-        :param is_important_editing_now: Flag indicating if this is an important edit session.
+        This method initializes the Problem instance with the given problem ID and editing status.
+        It retrieves the problem data from the database and sets the editing status if necessary.
+
+        Args:
+            pid (str): The problem ID.
+            is_important_editing_now (bool, optional): Flag indicating if the problem is currently being edited. Defaults to True.
         """
         self.pid = pid
         self.is_important_editing_now = is_important_editing_now
@@ -86,21 +84,23 @@ class Problem(objs.ProblemInfo):
 
     def __enter__(self):
         """
-        Enter the runtime context for the problem.
+        Enter the runtime context related to this object.
 
-        :return: The Problem instance.
+        Returns:
+            Problem: The current instance of the Problem class.
         """
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """
-        Exit the runtime context for the problem.
+        Exit the runtime context related to this object.
 
-        This method updates the problem data in the database when exiting the context.
+        This method updates the problem data in the database and resets the editing status if necessary.
 
-        :param exc_type: The exception type if an exception was raised.
-        :param exc_val: The exception value if an exception was raised.
-        :param exc_tb: The traceback if an exception was raised.
+        Args:
+            exc_type: The exception type.
+            exc_val: The exception value.
+            exc_tb: The traceback object.
         """
         self.sql_data.new_datas = self
         self.sql_data.name = self.name
@@ -112,6 +112,8 @@ class Problem(objs.ProblemInfo):
     def save(self):
         """
         Save the current problem data to the database.
+
+        This method updates the problem data in the database and marks the data as modified.
         """
         self.sql_data.data = self.sql_data.new_data
         flag_modified(self.sql_data, "data")
@@ -119,11 +121,13 @@ class Problem(objs.ProblemInfo):
 
     def lang(self, name) -> executing.Language:
         """
-        Get the language for a given file name.
+        Get the language configuration for the given file name.
 
-        :param name: The name of the file.
-        :return: The Language instance for the file.
-        :raises: StopActionException if the file is not found.
+        Args:
+            name (str): The name of the file.
+
+        Returns:
+            executing.Language: The language configuration for the file.
         """
         fs = [o.type for o in self.files if o.name == name]
         if len(fs):
@@ -134,11 +138,13 @@ class Problem(objs.ProblemInfo):
 
     def lang_of(self, fileinfo: objs.ProgramPtr) -> executing.Language:
         """
-        Get the language for a given file type and name.
+        Get the language configuration for the given file information.
 
-        :param fileinfo: A ProgramPtr containing the file type and name.
-        :return: The Language instance for the file.
-        :raises: StopActionException if the file is not found.
+        Args:
+            fileinfo (objs.ProgramPtr): The file information object.
+
+        Returns:
+            executing.Language: The language configuration for the file.
         """
         if fileinfo.type == objs.ProgramType.default:
             return executing.langs[constants.default_lang]
@@ -151,46 +157,73 @@ class Problem(objs.ProblemInfo):
 
     def compile_inner(self, filename: str, name: str, env: executing.Environment) -> list[str]:
         """
-        Compile a file within the problem's context.
+        Compile the given file in the specified environment.
 
-        :param filename: The name of the file to compile.
-        :param name: The name to use for logging and identification.
-        :param env: The execution environment.
-        :return: A list of strings representing the compilation command.
+        Args:
+            filename (str): The name of the file to compile.
+            name (str): The name of the compilation task.
+            env (executing.Environment): The environment to use for compilation.
+
+        Returns:
+            list[str]: The compilation command.
         """
         lang = self.lang(filename)
         path = self.path / "file" / filename
         return do_compile(path, name, lang, env)
 
+    def get_path(self, fileinfo: objs.ProgramPtr, filetype: str) -> Path:
+        """
+        Get the file path for the given file information and type.
+
+        Args:
+            fileinfo (objs.ProgramPtr): The file information object.
+            filetype (str): The type of the file.
+
+        Returns:
+            Path: The file path.
+        """
+        path = (Path(f"testlib/{filetype}s") if fileinfo.type is ProgramType.default else self.path / "file") / fileinfo.name
+        return path
+
     def compile_dat(self, fileinfo: objs.ProgramPtr, name: str, env: executing.Environment) -> SandboxPath:
         """
-        Compile a file based on file data.
+        Compile the given data file in the specified environment.
 
-        :param fileinfo: A tuple containing the file type and name.
-        :param name: The name to use for logging and identification.
-        :param env: The execution environment.
-        :return: A SandboxPath representing the compiled file.
+        Args:
+            fileinfo (objs.ProgramPtr): The file information object.
+            name (str): The name of the compilation task.
+            env (executing.Environment): The environment to use for compilation.
+
+        Returns:
+            SandboxPath: The path to the compiled file.
         """
-        path = (Path(f"testlib/{name}s") if fileinfo.type == "default" else self.path / "file") / fileinfo.name
-        lang = executing.langs[constants.default_lang] if fileinfo.type == "default" else self.lang(fileinfo.name)
+        path = self.get_path(fileinfo, name)
+        lang = executing.langs[constants.default_lang] if fileinfo.type is ProgramType.default else self.lang(fileinfo.name)
         return just_compile(path, name, lang, env)
 
-    def exist(self, fileinfo: objs.ProgramPtr, name: str) -> bool:
+    def check_missing(self, fileinfo: objs.ProgramPtr, name: str):
         """
-        Check if a file exists.
+        Check if the given file exists.
 
-        :param fileinfo: A tuple containing the file type and name.
-        :return: True if the file exists, False otherwise.
+        Args:
+            fileinfo (objs.ProgramPtr): The file information object.
+            name (str): The name of the file.
+
+        Returns:
+            bool: True if the file exists, False otherwise.
         """
-        path = (Path(f"testlib/{name}s") if fileinfo.type == "default" else self.path / "file") / fileinfo.name
-        return path.is_file()
+        path = self.get_path(fileinfo, name)
+        if not path.is_file():
+            log(f"{name} missing: {path} not found")
+            end(False)
 
     @property
     def path(self) -> Path:
         """
-        Returns the path of the preparing problem.
-        
-        :return: A Path object representing the problem's directory.
+        Get the path to the problem directory.
+
+        Returns:
+            Path: The path to the problem directory.
         """
         return preparing_problem_path / self.pid
 
@@ -272,7 +305,7 @@ def generate_testcase(pid: str):
     log("complete clear folder")
     for group_id, gen_group in enumerate(problem.gen_groups):
         file1_cmd = get_cmd(gen_group.file1, "generator")
-        file2_cmd = get_cmd(gen_group.file2, "solution" if gen_group.type == "sol" else "ans_generator")
+        file2_cmd = get_cmd(gen_group.file2, "solution" if gen_group.type is GenType.sol else "ans_generator")
         cur: list[objs.Testcase] = []
         for tcidx, cmd in enumerate(gen_group.cmds):
             name = f"{group_id}_{tcidx}"
@@ -290,7 +323,7 @@ def generate_testcase(pid: str):
                 log(gen_out.stderr)
                 break
             tools.write(gen_out.stdout, in_file)
-            if gen_group.type == "sol":
+            if gen_group.type is GenType.sol:
                 in_path = env.send_file(in_file)
                 out_path = env.path(out_file.name)
                 if problem.is_interact:
@@ -330,25 +363,19 @@ def creating_version(pid: str, description: str):
     log(f"creating version {description!r}")
     env = executing.Environment()
     env.send_file(testlib, env.executable)
-    if not problem.exist(problem.checker_source, "checker"):
-        log("checker missing")
-        end(False)
+    problem.check_missing(problem.checker_source, "checker")
     file = problem.compile_dat(problem.checker_source, "checker", env)
     env.get_file(problem.path / file.inner, file)
     problem.checker = objs.ExecPtr(name=str(file.inner), lang=problem.lang_of(problem.checker_source).branch)
     if problem.is_interact:
         interactor = objs.ProgramPtr(type=objs.ProgramType.my, name=problem.interactor_source)
-        if not problem.exist(interactor, "interactor"):
-            log("interactor missing")
-            end(False)
+        problem.check_missing(interactor, "interactor")
         file = problem.compile_dat(interactor, "interactor", env)
         env.get_file(problem.path / file.inner, file)
         problem.interactor = objs.ExecPtr(name=str(file.inner), lang=problem.lang_of(interactor).branch)
     if problem.codechecker_mode != objs.CodecheckerMode.disabled:
         codechecker = objs.ProgramPtr(type=objs.ProgramType.my, name=problem.codechecker_source)
-        if not problem.exist(codechecker, "codechecker"):
-            log("codechecker missing")
-            end(False)
+        problem.check_missing(codechecker, "codechecker")
         file = problem.compile_dat(codechecker, "codechecker", env)
         env.get_file(problem.path / file.inner, file)
         problem.codechecker = objs.ExecPtr(name=str(file.inner), lang=problem.lang(problem.codechecker_source).branch)

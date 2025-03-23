@@ -301,7 +301,7 @@ def get_standing(cid: str):
         if dat.completed:
             if dat.user_id not in mp:
                 mp[dat.user_id] = dat.user.display_name
-            scores = {k: v.gainscore for k, v in res.group_results.items()}
+            scores = {k: v.gained_score for k, v in res.group_results.items()}
             ret.append({"user": mp[dat.user_id],
                         "pid": rmp[dat.pid],
                         "scores": scores,
@@ -330,7 +330,7 @@ def reject(dat: datas.Submission):
     res = dat.results
     res.total_score = 0
     for k in res.group_results:
-        res.group_results[k].gainscore = 0
+        res.group_results[k].gained_score = 0
     dat.results = res
 
 

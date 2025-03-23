@@ -168,7 +168,7 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
     for k, v in groups_.items():
         groups[k] = objs.RunningTestcaseGroup(
             score=v.score, rule=v.rule, dependency=v.dependency,
-            gainscore=top_score if v.rule == objs.TestcaseRule.min else 0
+            gained_score=top_score if v.rule is objs.TestcaseRule.min else 0
         )
     testcases = problem_info.testcases
     testcases.extend([replace(o, gen=True) for o in problem_info.testcases_gen])
@@ -204,9 +204,9 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
         gp = testcase.group
         is_sample = testcase.sample
         for k in groups[gp].dependency:
-            if groups[k].result.is_zero():
+            if groups[k].is_zero():
                 groups[gp].result = TaskResult.SKIP
-        if groups[gp].result.is_zero() and groups[gp].rule == objs.TestcaseRule.min:
+        if groups[gp].is_zero() and groups[gp].rule is objs.TestcaseRule.min:
             results[i] = objs.TestcaseResult(result=TaskResult.SKIP, info="Skipped")
             unsaved_count += 1
             continue
@@ -298,28 +298,28 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
             time_usage = tl
         results[i] = objs.TestcaseResult(time=time_usage, mem=memusage, result=ret[0], info=ret[1],
                                          has_output=has_output, score=score, sample=is_sample)
-        if ret[0] != TaskResult.OK:
+        if ret[0] is not TaskResult.OK:
             appeared_result.add(ret[0].name)
             simple_result = "NA"
-        if groups[gp].result != ret[0] and groups[gp].result == TaskResult.OK:
-            if groups[gp].rule == objs.TestcaseRule.min:
+        if groups[gp].result is not ret[0] and groups[gp].result is TaskResult.OK:
+            if groups[gp].rule is objs.TestcaseRule.min:
                 groups[gp].result = ret[0]
             else:
                 groups[gp].result = TaskResult.PARTIAL
-        if groups[gp].rule == objs.TestcaseRule.min:
-            groups[gp].gainscore = min(groups[gp].gainscore, score)
+        if groups[gp].rule is objs.TestcaseRule.min:
+            groups[gp].gained_score = min(groups[gp].gained_score, score)
         else:
-            groups[gp].gainscore += score
+            groups[gp].gained_score += score
         groups[gp].cnt += 1
         unsaved_count += 1
     for o in groups.values():
         if o.cnt:
-            if o.rule == objs.TestcaseRule.avg:
-                o.gainscore /= o.cnt
-            o.gainscore = o.gainscore * o.score / top_score
-            total_score += o.gainscore
-        elif o.rule == objs.TestcaseRule.avg:
-            o.gainscore = o.score
+            if o.rule is objs.TestcaseRule.avg:
+                o.gained_score /= o.cnt
+            o.gained_score = o.gained_score * o.score / top_score
+            total_score += o.gained_score
+        elif o.rule is objs.TestcaseRule.avg:
+            o.gained_score = o.score
     save_result(True)
 
 

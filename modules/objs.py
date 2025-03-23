@@ -464,13 +464,13 @@ class GroupResult(metaclass=DataMeta):
         result (TaskResult): The result of the group.
         time (int): The maximum time used in the group.
         mem (int): The maximum memory used in group.
-        gainscore (float): The score gained by the group.
+        gained_score (float): The score gained by the group.
         css_class (str): The CSS class for the group result.
     """
     result: TaskResult
     time: int
     mem: int
-    gainscore: float
+    gained_score: float
     css_class: str = ""
 
 
@@ -486,7 +486,7 @@ class RunningTestcaseGroup(metaclass=DataMeta):
         result (str): The result of the group.
         time (int): The maximum time used in the group.
         mem (int): The maximum memory used in group.
-        gainscore (int): The score gained by the group.
+        gained_score (float): The score gained by the group.
         cnt (int): The count of test cases in the group.
     """
     score: int = 100
@@ -495,7 +495,7 @@ class RunningTestcaseGroup(metaclass=DataMeta):
     result: TaskResult = TaskResult.OK
     time: int = 0
     mem: int = 0
-    gainscore: int = 0
+    gained_score: float = 0
     cnt: int = 0
     target_cnt: int = 0
 
@@ -509,7 +509,18 @@ class RunningTestcaseGroup(metaclass=DataMeta):
         res = self.result
         if self.cnt < self.target_cnt:
             res = TaskResult.PENDING
-        return GroupResult(result=res, time=self.time, mem=self.mem, gainscore=self.gainscore)
+        return GroupResult(result=res, time=self.time, mem=self.mem, gained_score=self.gained_score)
+
+    def is_zero(self):
+        """
+        Check if the gained score is zero or less.
+
+        This method returns True if the gained score is less than or equal to zero, indicating no score was gained.
+
+        Returns:
+            bool: True if the gained score is zero or less, False otherwise.
+        """
+        return self.gained_score <= 0
 
 
 @my_dataclass
