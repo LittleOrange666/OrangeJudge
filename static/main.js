@@ -197,7 +197,7 @@ $(".countdown-timer").each(function () {
 $("select[data-value]").each(function () {
     let val = $(this).data("value");
     let vals = $(this).find('option').toArray().map(item => item.value)
-    if(vals.includes(val)) $(this).val(val).change();
+    if (vals.includes(val)) $(this).val(val).change();
 });
 $(".time-string").each(function () {
     let t = Math.floor(+$(this).text());
@@ -241,7 +241,7 @@ function show_modal(title, text, refresh, next_page, skip) {
         let timeout_id = window.setTimeout(function () {
             myModal.hide();
         }, 3000);
-        let close_evt = function (){
+        let close_evt = function () {
             myModal.hide();
         };
         document.addEventListener("keypress", close_evt);
@@ -250,7 +250,7 @@ function show_modal(title, text, refresh, next_page, skip) {
                 window.clearTimeout(timeout_id);
                 timeout_id = -1;
             }
-            if (close_evt){
+            if (close_evt) {
                 document.removeEventListener("keypress", close_evt);
                 close_evt = null;
             }
@@ -361,7 +361,7 @@ $(".submitter").each(function () {
             let id = $(this).attr("id");
             let label = $("label[for=" + id + "]");
             let name = label.length ? label.text() : $(this).attr("name");
-            missings.push('"'+name+'"');
+            missings.push('"' + name + '"');
             ok = false;
         }
     });
@@ -371,7 +371,7 @@ $(".submitter").each(function () {
     }
     let bads = [];
     $this.parents("form").find("input,select,textarea").each(function () {
-        if(!$(this).prop("required")) return;
+        if (!$(this).prop("required")) return;
         let bad_pattern = $(this).prop("pattern") && !$(this).val().match(RegExp($(this).prop("pattern")));
         let bad_number = $(this).prop("type") === "number" &&
             (isNaN(+$(this).val()) || ($(this).prop("min") && +$(this).val() < $(this).prop("min")) ||
@@ -381,12 +381,12 @@ $(".submitter").each(function () {
         let name = label.length ? label.text() : $(this).attr("name");
         if (bad_pattern) {
             let info = $(this).data("format") || "格式不正確";
-            bads.push('"'+name+'" '+info);
+            bads.push('"' + name + '" ' + info);
             ok = false;
         }
         if (bad_number) {
-            let info = $(this).data("format") || "應界於 "+$(this).prop("min")+" 與 "+$(this).prop("max")+" 之間";
-            bads.push('"'+name+'" '+info);
+            let info = $(this).data("format") || "應界於 " + $(this).prop("min") + " 與 " + $(this).prop("max") + " 之間";
+            bads.push('"' + name + '" ' + info);
             ok = false;
         }
     });
@@ -427,7 +427,7 @@ $(".submitter").each(function () {
             let msg = $this.data("msg-" + response.status);
             if ($this.data("msg-type-" + response.status) === "return") msg = text;
             if (!msg && response.status === 400) {
-                if (text.includes("CSRF")&&text.includes("token")) msg = "CSRF token失效，請刷新頁面再試一次";
+                if (text.includes("CSRF") && text.includes("token")) msg = "CSRF token失效，請刷新頁面再試一次";
                 else msg = "輸入格式不正確"
             }
             if (!msg && response.status === 403) msg = "您似乎沒有權限執行此操作"

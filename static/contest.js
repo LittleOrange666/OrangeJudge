@@ -190,14 +190,34 @@ $(function () {
                 pers[o["idx"]] = o;
             }
             let official_only = $("#standing_official_only").prop("checked");
-            if (data['rule'] == "ioi") {
+            if (data['rule'] === "ioi") {
                 let out = {};
+                for (let user of data["participants"]) {
+                    let key = user + ";" + data["main_per"];
+                    if (out[key] === undefined) {
+                        out[key] = {
+                            "scores": {}, "total_score": 0, "last_update": 0,
+                            "is_main": true, "is_practice": false
+                        }
+                        for (let pid of data["pids"]) out[key]["scores"][pid] = {}
+                    }
+                }
+                for (let user in data["virtual_participants"]) {
+                    let key = user + ";" + data["virtual_participants"][user];
+                    if (out[key] === undefined) {
+                        out[key] = {
+                            "scores": {}, "total_score": 0, "last_update": 0,
+                            "is_main": false, "is_practice": false
+                        }
+                        for (let pid of data["pids"]) out[key]["scores"][pid] = {}
+                    }
+                }
                 for (let obj of data['submissions']) {
                     let key = obj["user"] + ";" + obj["per"];
                     if (out[key] === undefined) {
                         out[key] = {
                             "scores": {}, "total_score": 0, "last_update": 0,
-                            "is_main": (obj["per"] == data["main_per"]), "is_practice": (obj["per"] == null)
+                            "is_main": (obj["per"] === data["main_per"]), "is_practice": (obj["per"] == null)
                         }
                         for (let pid of data["pids"]) out[key]["scores"][pid] = {}
                     }
@@ -276,9 +296,33 @@ $(function () {
                     tr.append($('<td>').text(time));
                     tb.find("tbody").append(tr);
                 }
-            } else if (data['rule'] == "icpc") {
+            } else if (data['rule'] === "icpc") {
                 let out = {};
                 let penalty = data['penalty'];
+                for (let user of data["participants"]) {
+                    let key = user + ";" + data["main_per"];
+                    if (out[key] === undefined) {
+                        out[key] = {
+                            "scores": {}, "total_score": 0, "total_penalty": 0,
+                            "is_main": true, "is_practice": false
+                        }
+                        for (let pid of data["pids"]) {
+                            out[key]["scores"][pid] = {"score": 0, "penalty_cnt": 0, "cnt": 0, "penalty": 0}
+                        }
+                    }
+                }
+                for (let user in data["virtual_participants"]) {
+                    let key = user + ";" + data["virtual_participants"][user];
+                    if (out[key] === undefined) {
+                        out[key] = {
+                            "scores": {}, "total_score": 0, "total_penalty": 0,
+                            "is_main": false, "is_practice": false
+                        }
+                        for (let pid of data["pids"]) {
+                            out[key]["scores"][pid] = {"score": 0, "penalty_cnt": 0, "cnt": 0, "penalty": 0}
+                        }
+                    }
+                }
                 for (let obj of data['submissions']) {
                     let key = obj["user"] + ";" + obj["per"];
                     if (out[key] === undefined) {

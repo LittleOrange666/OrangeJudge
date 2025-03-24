@@ -1,5 +1,5 @@
 from copy import deepcopy
-from dataclasses import fields, dataclass, field
+from dataclasses import fields, field
 from pathlib import Path
 from typing import TypeVar, Type
 

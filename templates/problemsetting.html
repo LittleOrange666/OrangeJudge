@@ -100,7 +100,9 @@
                             </label>
                         </div>
                     </div>
-                    <button class="btn btn-primary data-saver submitter" id="save_general_info" data-no-refresh="true">儲存</button>
+                    <button class="btn btn-primary data-saver submitter" id="save_general_info" data-no-refresh="true">
+                        儲存
+                    </button>
                 </form>
             </div>
             <br>
@@ -313,7 +315,8 @@
             <h3>裁判</h3>
             <div class="container-fluid">
                 <h4>評分</h4>
-                <p>目前：{{ dat.checker_source.name }}{{ "(內建)" if dat.checker_source.type.name=="default" else "" }}</p>
+                <p>
+                    目前：{{ dat.checker_source.name }}{{ "(內建)" if dat.checker_source.type.name=="default" else "" }}</p>
                 <form the_action="choose_checker" id="choose_checker">
                     <div class="radio-selector" data-value="{{ dat.checker_source.type.name }}">
                         <div class="form-check">
@@ -332,7 +335,8 @@
                             {% endfor %}
                         </select>
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" name="checker_type" id="checker_type2" value="my">
+                            <input class="form-check-input" type="radio" name="checker_type" id="checker_type2"
+                                   value="my">
                             <label class="form-check-label" for="checker_type2">
                                 自訂評分程式
                             </label>
@@ -391,7 +395,7 @@
                             </div>
                             <div class="col-auto">
                                 <select class="form-select" name="my_runner_{{ lang }}"
-                                    data-value="{{ dat.runner_source[lang] }}">
+                                        data-value="{{ dat.runner_source[lang] }}">
                                     <option selected>選擇檔案</option>
                                     {% for file in dat.files %}
                                         <option value="{{ file.name }}">{{ file.name }}</option>
@@ -445,7 +449,7 @@
                 <p>目前：{{ dat.codechecker_source }}</p>
                 <form the_action="choose_codechecker" id="choose_codechecker">
                     <select class="form-select alternative_fileselect" name="my_codechecker"
-                                    data-value="{{ dat.codechecker_source }}">
+                            data-value="{{ dat.codechecker_source }}">
                         <option selected>選擇檔案</option>
                         {% for file in dat.files %}
                             <option value="{{ file.name }}">{{ file.name }}</option>
@@ -626,7 +630,8 @@
                     {% for i, testcase in enumerate(dat.testcases) %}
                         <tr class="testcase testcase-normal">
                             <th scope="row">{{ i }}</th>
-                            <td><a href="/problemsetting_preview?pid={{ pid }}&type=testcases&name={{ testcase.in_file }}"
+                            <td>
+                                <a href="/problemsetting_preview?pid={{ pid }}&type=testcases&name={{ testcase.in_file }}"
                                    target="_blank">{{ testcase.in_file }}</a></td>
                             <td>
                                 <a href="/problemsetting_preview?pid={{ pid }}&type=testcases&name={{ testcase.out_file }}"

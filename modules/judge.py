@@ -235,7 +235,8 @@ def interact_run(cmd: list[str], interact_cmd: list[str], tl: int = 1000, ml: in
 
 def init():
     token_path = (constants.data_path / "TOKEN")
-    new_token = secrets.token_urlsafe(33) if "JUDGE_SERVER_TOKEN" not in os.environ else os.environ["JUDGE_SERVER_TOKEN"]
+    new_token = secrets.token_urlsafe(33) if "JUDGE_SERVER_TOKEN" not in os.environ else os.environ[
+        "JUDGE_SERVER_TOKEN"]
     try:
         res = requests.post(constants.judger_url + "/init", json={"token": new_token, "op": "init"}, timeout=10).text
         logger.debug("response of init: " + repr(res))

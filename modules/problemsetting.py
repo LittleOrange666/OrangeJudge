@@ -181,7 +181,8 @@ class Problem(objs.ProblemInfo):
         Returns:
             Path: The file path.
         """
-        path = (Path(f"testlib/{filetype}s") if fileinfo.type is ProgramType.default else self.path / "file") / fileinfo.name
+        path = (Path(
+            f"testlib/{filetype}s") if fileinfo.type is ProgramType.default else self.path / "file") / fileinfo.name
         return path
 
     def compile_dat(self, fileinfo: objs.ProgramPtr, name: str, env: executing.Environment) -> SandboxPath:
@@ -197,7 +198,8 @@ class Problem(objs.ProblemInfo):
             SandboxPath: The path to the compiled file.
         """
         path = self.get_path(fileinfo, name)
-        lang = executing.langs[constants.default_lang] if fileinfo.type is ProgramType.default else self.lang(fileinfo.name)
+        lang = executing.langs[constants.default_lang] if fileinfo.type is ProgramType.default else self.lang(
+            fileinfo.name)
         return just_compile(path, name, lang, env)
 
     def check_missing(self, fileinfo: objs.ProgramPtr, name: str):
@@ -443,7 +445,7 @@ def do_import_polygon(pid: str, filename: str):
         tools.write_binary(zip_file.read(files[source.get("path")]), path / "file" / fn)
         dat.interactor_source = fn
         nw_files.append(objs.ProgramFile(name=fn, type=constants.polygon_type.get(checker.get("type"),
-                                                                                         constants.default_lang)))
+                                                                                  constants.default_lang)))
         dat.is_interact = True
     main_sol = None
     for solution in assets.find("solutions").iter("solution"):
@@ -451,7 +453,7 @@ def do_import_polygon(pid: str, filename: str):
         fn = "solution_" + Path(source.get("path")).name
         tools.write_binary(zip_file.read(files[source.get("path")]), path / "file" / fn)
         nw_files.append(objs.ProgramFile(name=fn, type=constants.polygon_type.get(checker.get("type"),
-                                                                                         constants.default_lang)))
+                                                                                  constants.default_lang)))
         if solution.get("tag") == "main":
             main_sol = fn
         logger.debug(source.get("path") + " " + solution.get("tag"))
@@ -460,7 +462,7 @@ def do_import_polygon(pid: str, filename: str):
         fn = Path(source.get("path")).name
         tools.write_binary(zip_file.read(files[source.get("path")]), path / "file" / fn)
         nw_files.append(objs.ProgramFile(name=fn, type=constants.polygon_type.get(checker.get("type"),
-                                                                                         constants.default_lang)))
+                                                                                  constants.default_lang)))
     for o in nw_files:
         for old in dat.files:
             if old.name == o.name:
@@ -1102,7 +1104,7 @@ def action(form: ImmutableMultiDict[str, str]) -> Response:
 def preview(args: MultiDict[str, str], pdat: datas.Problem) -> Response:
     pid = args["pid"]
     path = preparing_problem_path / pid
-    filename = secure_filename(args["name"])
+    filename = lambda: secure_filename(args["name"])
     match args["type"]:
         case "statement":
             if not (path / "statement.html").exists():
@@ -1111,13 +1113,13 @@ def preview(args: MultiDict[str, str], pdat: datas.Problem) -> Response:
             langs = [lang for lang in executing.langs.keys() if pdat.lang_allowed(lang)]
             return render_problem(dat, pid, langs, preview=True, is_contest=False)
         case "public_file":
-            return sending_file(path / "public_file" / filename)
+            return sending_file(path / "public_file" / filename())
         case "file":
-            return sending_file(path / "file" / filename)
+            return sending_file(path / "file" / filename())
         case "testcases":
-            return sending_file(path / "testcases" / filename)
+            return sending_file(path / "testcases" / filename())
         case "testcases_gen":
-            return sending_file(path / "testcases_gen" / filename)
+            return sending_file(path / "testcases_gen" / filename())
     abort(404)
 
 

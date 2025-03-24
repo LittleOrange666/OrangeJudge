@@ -148,7 +148,8 @@ def submission(idx: str):
                                  and not super_access)
             result["checker_protected"] = checker_protected
             for i in range(len(results)):
-                if results[i].result != objs.TaskResult.SKIP and (not protected or super_access or results[i].sample):
+                if (results[i].result not in (objs.TaskResult.SKIP, objs.TaskResult.PASS)
+                        and (not protected or super_access or results[i].sample)):
                     results[i].in_txt = tools.read_default(testcase_path / f"{i}.in")
                     results[i].ans_txt = tools.read_default(testcase_path / f"{i}.ans")
                 else:

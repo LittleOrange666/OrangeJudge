@@ -150,9 +150,9 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
             codechecker_score = res.return_code
         else:
             name = constants.checker_exit_codes.get(res.return_code, TaskResult.JE)
-            if name == TaskResult.OK:
+            if name is TaskResult.OK:
                 codechecker_score = top_score
-            elif name == TaskResult.POINTS:
+            elif name is TaskResult.POINTS:
                 st = res.stderr.split(" ")
                 if len(st) > 1 and st[1].replace(".", "", 1).isdigit():
                     codechecker_score = float(st[1])
@@ -262,7 +262,7 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
                     ret = (TaskResult.RE, constants.exit_codes[exit_code])
                 else:
                     ret = (TaskResult.RE, "執行期間錯誤")
-            elif ret[0] == TaskResult.OK:  # skip code below if interactor return with non-zero return code
+            elif ret[0] is TaskResult.OK:  # skip code below if interactor return with non-zero return code
                 time_usage = max(0, math.ceil(res.cpu_time - lang.base_time))
                 memusage = math.ceil(max(0.0, res.memory - lang.base_memory) / 1024)
                 groups[gp].time = max(groups[gp].time, time_usage)
@@ -283,9 +283,9 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
                         name = "OK" if score >= top_score else "PARTIAL"
                     else:
                         name = constants.checker_exit_codes.get(checker_out.return_code, TaskResult.FAIL)
-                        if name == TaskResult.OK:
+                        if name is TaskResult.OK:
                             score = top_score
-                        elif name == TaskResult.POINTS:
+                        elif name is TaskResult.POINTS:
                             st = checker_out.stderr.split(" ")
                             if len(st) > 1 and st[1].replace(".", "", 1).isdigit():
                                 score = float(st[1])
@@ -296,7 +296,8 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
             score = score * codechecker_score / top_score
         if ret[0] == TaskResult.TLE:
             time_usage = tl
-        results[i] = objs.TestcaseResult(time=time_usage, mem=memusage, result=ret[0], info=ret[1],
+        result_tp = TaskResult.PASS if just_pretest and not testcase.pretest else ret[0]
+        results[i] = objs.TestcaseResult(time=time_usage, mem=memusage, result=result_tp, info=ret[1],
                                          has_output=has_output, score=score, sample=is_sample)
         if ret[0] is not TaskResult.OK:
             appeared_result.add(ret[0].name)

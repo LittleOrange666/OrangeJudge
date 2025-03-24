@@ -65,7 +65,7 @@
         </div>
         <div id="api" class="tab-pane fade">
             <h3>API</h3>
-            <div>目前{{'有' if data.api_key else '沒有'}}API key</div>
+            <div>目前{{ '有' if data.api_key else '沒有' }}API key</div>
             <button class="btn btn-primary" id="gen_key">重新生成</button>
             <div class="row">
                 <div class="col-12">
@@ -86,11 +86,11 @@
 
 {% block script %}
     $("#gen_key").click(async function () {
-        let res = await posting("/gen_key", {});
-        let key = await res.text();
-        $("#api_key").val(key);
+    let res = await posting("/gen_key", {});
+    let key = await res.text();
+    $("#api_key").val(key);
     });
     $("#copy_key").click(function (){
-        copy_text($("#api_key").val());
+    copy_text($("#api_key").val());
     });
 {% endblock %}

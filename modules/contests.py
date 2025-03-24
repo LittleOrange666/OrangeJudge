@@ -362,7 +362,7 @@ def contest_worker():
                                 reject(submission)
                                 if pretest == objs.PretestType.all:
                                     rejudge(submission)
-                                elif submission.simple_result.lower() == 'pretest passed':
+                                else:
                                     dic[key] = submission
                         if pretest == objs.PretestType.last:
                             for v in dic.values():

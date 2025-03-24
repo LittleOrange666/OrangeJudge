@@ -317,6 +317,7 @@ class TaskResult(Enum):
         DIRT (str): Represents a dirt?.
         OLE (str): Represents an output limit exceeded.
         SKIP (str): Represents a skipped task.
+        PASS (str): Represents a passed task.
     """
     OK = "OK"
     WA = "WA"
@@ -334,6 +335,7 @@ class TaskResult(Enum):
     DIRT = "DIRT"
     OLE = "OLE"
     SKIP = "SKIP"
+    PASS = "PASS"
 
     def is_zero(self):
         return self not in (TaskResult.OK, TaskResult.PARTIAL, TaskResult.POINTS, TaskResult.PENDING, TaskResult.SKIP)
