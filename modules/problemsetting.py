@@ -1104,7 +1104,10 @@ def action(form: ImmutableMultiDict[str, str]) -> Response:
 def preview(args: MultiDict[str, str], pdat: datas.Problem) -> Response:
     pid = args["pid"]
     path = preparing_problem_path / pid
-    filename = lambda: secure_filename(args["name"])
+
+    def filename():
+        return secure_filename(args["name"])
+
     match args["type"]:
         case "statement":
             if not (path / "statement.html").exists():

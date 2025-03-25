@@ -86,7 +86,8 @@ def contest_status(cid, page_str):
             if v.pid == pid:
                 problem = k
                 problem_name = v.name
-        can_see = current_user.has(Permission.admin) or current_user.id == obj.user.username
+        can_see = login.has_permission(Permission.admin) or current_user.id == obj.user.username
+        can_rejudge = contests.check_super_access(dat)
         can_know = can_see or info.standing.public
         result = obj.simple_result or "unknown"
         if not can_know:
@@ -99,7 +100,8 @@ def contest_status(cid, page_str):
                     "problem_name": problem_name,
                     "lang": obj.language,
                     "result": result,
-                    "can_see": can_see})
+                    "can_see": can_see,
+                    "can_rejudge": can_rejudge})
     ret = {"show_pages": show_pages, "page_cnt": page_cnt, "page": page_idx, "data": out}
     return jsonify(ret)
 

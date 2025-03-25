@@ -1,12 +1,13 @@
 import hashlib
 import os
 import smtplib
+from email.message import EmailMessage
 
 from flask import abort
 from flask_login import LoginManager, UserMixin, current_user
 from werkzeug.utils import secure_filename
 
-from . import server, datas, config
+from . import server, datas, config, constants
 from .objs import Permission
 
 smtp = smtplib.SMTP(config.smtp.host, config.smtp.port)
@@ -100,33 +101,28 @@ def user_loader(name):
     return get_user(name)
 
 
-def send_email(target: str, content: str) -> bool:
-    """
-    Send an email to the specified target with the given content.
-
-    This function attempts to send an email using the configured SMTP server.
-    If the initial attempt fails, it reconnects to the SMTP server, starts TLS,
-    logs in, and retries sending the email.
-
-    Args:
-        target (str): The recipient's email address.
-        content (str): The content of the email to be sent.
-
-    Returns:
-        bool: True if the email was sent successfully, False otherwise.
-    """
+def send_mail(msg: EmailMessage, target: str) -> bool:
+    msg["From"] = email_sender
+    msg["To"] = target
     try:
-        smtp.sendmail(email_sender, target, content)
+        smtp.send_message(msg)
     except smtplib.SMTPException:
         smtp.connect(config.smtp.host, config.smtp.port)
         smtp.ehlo()
         smtp.starttls()
         smtp.login(config.smtp.user, config.smtp.password)
         try:
-            smtp.sendmail(email_sender, target, content)
+            smtp.send_message(msg)
         except smtplib.SMTPException:
             return False
     return True
+
+
+def send_code(target: str, idx: str) -> bool:
+    msg = EmailMessage()
+    msg["Subject"] = constants.email_subject.format(idx)
+    msg.set_content(constants.email_content.format(idx))
+    return send_mail(msg, target)
 
 
 def try_hash(content: str | None) -> str:
@@ -231,6 +227,10 @@ def create_account(email: str, user_id: str, password: str | None) -> None:
                      password_sha256_hex=try_hash(password),
                      permissions="")
     datas.add(obj)
+
+
+def has_permission(key: Permission) -> bool:
+    return current_user.is_authenticated and current_user.has(key)
 
 
 def check_user(require: Permission | None = None, users: list[str] | None = None) -> User:

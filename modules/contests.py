@@ -334,12 +334,6 @@ def reject(dat: datas.Submission):
     dat.results = res
 
 
-def rejudge(dat: datas.Submission, msg: str = "wait system test"):
-    dat.simple_result = msg
-    dat.completed = False
-    dat.queue_position = tasks.enqueue(dat.id)
-
-
 def contest_worker():
     while True:
         with datas.DelayCommit():
@@ -361,12 +355,12 @@ def contest_worker():
                             if submission.simple_result.lower() not in ("jc", "ce"):
                                 reject(submission)
                                 if pretest == objs.PretestType.all:
-                                    rejudge(submission)
+                                    tasks.rejudge(submission)
                                 else:
                                     dic[key] = submission
                         if pretest == objs.PretestType.last:
                             for v in dic.values():
-                                rejudge(v)
+                                tasks.rejudge(v)
                         datas.add(*submissions)
                 datas.add(dat)
         sleep(5)

@@ -87,7 +87,7 @@ def get_code():
     verify_codes[email] = (idx, time.time())
     if not config.smtp.enabled:
         abort(503)
-    if not login.send_email(email, constants.email_content.format(idx)):
+    if not login.send_code(email, idx):
         abort(503)
     return Response(status=200)
 

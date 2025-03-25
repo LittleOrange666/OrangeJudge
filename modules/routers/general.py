@@ -271,6 +271,7 @@ def all_status_data():
                                                      current_user.id == obj.user.username or
                                                      (obj.problem.user and
                                                       obj.problem.user.username == current_user.id))
+        can_rejudge = can_see and (current_user.has(Permission.admin) or obj.problem.user.username == current_user.id)
         out.append({"idx": str(obj.id),
                     "time": obj.time.timestamp(),
                     "user_id": obj.user.username,
@@ -279,7 +280,8 @@ def all_status_data():
                     "problem_name": problem_name,
                     "lang": obj.language,
                     "result": result,
-                    "can_see": can_see})
+                    "can_see": can_see,
+                    "can_rejudge": can_rejudge})
     ret = {"show_pages": show_pages, "page_cnt": page_cnt, "page": page_idx, "data": out}
     return jsonify(ret)
 
@@ -316,3 +318,21 @@ def admin():
 @app.route('/preferences', methods=['GET'])
 def preferences():
     return render_template("preferences.html")
+
+
+@app.route('/rejudge', methods=['POST'])
+@login_required
+def rejudge():
+    idx = request.form["idx"]
+    dat: datas.Submission = datas.Submission.query.get_or_404(idx)
+    if "cid" in request.form:
+        cdat: datas.Contest = datas.Contest.query.filter_by(cid=request.form["cid"]).first_or_404()
+        contests.check_access(cdat)
+    else:
+        if not current_user.has(Permission.admin) and current_user.id != dat.problem.user.username:
+            abort(403)
+    if not dat.completed:
+        abort(400)
+    tasks.rejudge(dat, "wait for rejudge")
+    datas.add(dat)
+    return "OK", 200

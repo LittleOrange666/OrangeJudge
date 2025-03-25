@@ -370,6 +370,13 @@ def enqueue(idx: int) -> int:
     return queue_position.inc()
 
 
+def rejudge(dat: datas.Submission, msg: str = "wait system test"):
+    dat.simple_result = msg
+    dat.completed = False
+    dat.running = False
+    dat.queue_position = enqueue(dat.id)
+
+
 def init():
     for submission in datas.Submission.query.filter_by(completed=False):
         submission.running = False

@@ -1,175 +1,118 @@
 $(function () {
     const cid = $("#cid").val();
     const username = $("#username").val();
+    function mk_input(name, value) {
+        return $('<input name="' + name + '" value="' + value + '" hidden>');
+    }
     $("form[the_action]").each(function () {
         let $this = $(this);
         $this.attr("action", "/contest_action");
         $this.attr("method", "post");
         $this.attr("target", "_self");
         $this.attr("enctype", "multipart/form-data");
-        $this.prepend($('<input name="cid" value="' + cid + '" hidden>'));
-        $this.prepend($('<input name="action" value="' + $(this).attr("the_action") + '" hidden>'));
+        $this.prepend(mk_input("cid", cid));
+        $this.prepend(mk_input("action", $this.attr("the_action")));
     });
-    {
-        let current_page = 1;
-        let pid = "";
-
-        function change_page(page) {
-            current_page = page;
-            let fd = new FormData();
-            fd.append("user", $("#status_filter_username").val().toLowerCase());
-            fd.append("pid", pid);
-            fetch("/contest/" + cid + "/status/" + page, {
-                method: "POST",
-                headers: {"x-csrf-token": $("#csrf_token").val()},
-                body: fd
-            }).then(function (response) {
-                return response.json();
-            }).then(function (data) {
-                current_page = data["page"];
-                let table = $("#status_table");
-                table.empty();
-                for (let obj of data["data"]) {
-                    let line = $("<tr>");
+    function changing_page(page) {
+        let $this = this;
+        let pf = $this.my ? "#my_status" : "#status";
+        this.current_page = page;
+        let fd = new FormData();
+        let user_key = $this.my ? "#username" : "#status_filter_username";
+        fd.append("user", $(user_key).val().toLowerCase());
+        fd.append("pid", $this.pid);
+        fetch("/contest/" + cid + "/status/" + page, {
+            method: "POST",
+            headers: {"x-csrf-token": $("#csrf_token").val()},
+            body: fd
+        }).then(function (response) {
+            return response.json();
+        }).then(function (data) {
+            page = +data["page"];
+            let table = $(pf+"_table");
+            table.empty();
+            for (let obj of data["data"]) {
+                let line = $("<tr>");
+                if (obj["can_see"]) {
                     line.append($('<th scope="row">').append($("<a>").text(obj["idx"]).attr("href", "/submission/" + obj["idx"])));
-                    line.append($('<td>').text(timestamp_to_str(obj["time"])));
-                    line.append($('<td>').append($("<a>").text(obj["user_name"]).attr("href", "/user/" + obj["user_id"])));
-                    line.append($('<td>').append($("<a>").text(obj["problem"] + ". " + obj["problem_name"]).attr("href", "/contest/" + cid + "/problem/" + obj["problem"])));
-                    line.append($('<td>').text(obj["lang"]));
-                    line.append($('<td>').text(obj["result"]));
-                    table.append(line);
+                } else {
+                    line.append($('<th scope="row">').text(obj["idx"]));
                 }
-                let pagination = $("#status_page");
-                pagination.empty();
-                let first = $('<li class="page-item">');
-                if (page == 1) {
-                    first.addClass("disabled");
+                line.append($('<td>').text(timestamp_to_str(obj["time"])));
+                if(!$this.my){
+                    line.append($('<td>').append($("<a>").text(obj["user_name"]).attr("href","/user/"+obj["user_id"])));
                 }
-                let first_btn = $('<a class="page-link" aria-label="Previous"><span aria-hidden="true">&laquo;</span></a>');
-                first_btn.click(function () {
-                    change_page(1)
-                });
-                first.append(first_btn);
-                pagination.append(first);
-                for (let i of data["show_pages"]) {
-                    let li = $('<li class="page-item">');
-                    if (i == current_page)
-                        li.addClass("active");
-                    let a = $('<a class="page-link">').text(i);
-                    a.click(function () {
-                        change_page(i)
-                    });
-                    li.append(a);
-                    pagination.append(li);
+                line.append($('<td>').append($("<a>").text(obj["problem"] + ". " + obj["problem_name"]).attr("href", "/contest/" + cid + "/problem/" + obj["problem"])));
+                line.append($('<td>').text(obj["lang"]));
+                line.append($('<td>').text(obj["result"]));
+                if (obj["can_rejudge"]){
+                    let btn = $('<button class="btn btn-primary">').text("Rejudge");
+                    resolve_submitter.call(btn);
+                    let form = $('<form action="/rejudge" method="post" target="_self" enctype="multipart/form-data">')
+                    form.append(mk_input("cid", cid)).append(mk_input("idx", obj["idx"])).append(btn);
+                    line.append($('<td>').append(form));
                 }
-                let last = $('<li class="page-item">');
-                if (page == data["page_cnt"]) {
-                    last.addClass("disabled");
-                }
-                let last_btn = $('<a class="page-link" aria-label="Next"><span aria-hidden="true">&raquo;</span></a>');
-                last_btn.click(function () {
-                    change_page(data["page_cnt"])
-                });
-                last.append(last_btn);
-                pagination.append(last);
-            });
-        }
-
-        let inited = false;
-        $("#status_tab").click(function () {
-            if (!inited) {
-                inited = true;
-                change_page(current_page);
+                table.append(line);
             }
-        });
-        if (location.hash == "#status") $("#status_tab").click();
-        $("#status_filter").click(function () {
-            pid = $("#status_filter_pid").val();
-            change_page(current_page);
+            let pagination = $(pf+"_page");
+            pagination.empty();
+            let first = $('<li class="page-item">');
+            if (page === 1) {
+                first.addClass("disabled");
+            }
+            let first_btn = $('<a class="page-link" aria-label="Previous"><span aria-hidden="true">&laquo;</span></a>');
+            first_btn.click(function () {
+                $this.change_page(1)
+            });
+            first.append(first_btn);
+            pagination.append(first);
+            for (let i of data["show_pages"]) {
+                let li = $('<li class="page-item">');
+                if (i === page)
+                    li.addClass("active");
+                let a = $('<a class="page-link">').text(i);
+                a.click(function () {
+                    $this.change_page(i)
+                });
+                li.append(a);
+                pagination.append(li);
+            }
+            let last = $('<li class="page-item">');
+            if (page === data["page_cnt"]) {
+                last.addClass("disabled");
+            }
+            let last_btn = $('<a class="page-link" aria-label="Next"><span aria-hidden="true">&raquo;</span></a>');
+            last_btn.click(function () {
+                $this.change_page(data["page_cnt"])
+            });
+            last.append(last_btn);
+            pagination.append(last);
         });
     }
-    {
-        let current_page = 1;
-        let pid = "";
-
-        function change_page(page) {
-            current_page = page;
-            let fd = new FormData();
-            fd.append("user", $("#username").val());
-            fd.append("pid", pid);
-            fetch("/contest/" + cid + "/status/" + page, {
-                method: "POST",
-                headers: {"x-csrf-token": $("#csrf_token").val()},
-                body: fd
-            }).then(function (response) {
-                return response.json();
-            }).then(function (data) {
-                page = data["page"];
-                let table = $("#my_status_table");
-                table.empty();
-                for (let obj of data["data"]) {
-                    let line = $("<tr>");
-                    if (obj["can_see"]) {
-                        line.append($('<th scope="row">').append($("<a>").text(obj["idx"]).attr("href", "/submission/" + obj["idx"])));
-                    } else {
-                        line.append($('<th scope="row">').text(obj["idx"]));
-                    }
-                    line.append($('<td>').text(timestamp_to_str(obj["time"])));
-                    // line.append($('<td>').append($("<a>").text(obj["user_name"]).attr("href","/user/"+obj["user_id"])));
-                    line.append($('<td>').append($("<a>").text(obj["problem"] + ". " + obj["problem_name"]).attr("href", "/contest/" + cid + "/problem/" + obj["problem"])));
-                    line.append($('<td>').text(obj["lang"]));
-                    line.append($('<td>').text(obj["result"]));
-                    table.append(line);
-                }
-                let pagination = $("#my_status_page");
-                pagination.empty();
-                let first = $('<li class="page-item">');
-                if (page == 1) {
-                    first.addClass("disabled");
-                }
-                let first_btn = $('<a class="page-link" aria-label="Previous"><span aria-hidden="true">&laquo;</span></a>');
-                first_btn.click(function () {
-                    change_page(1)
-                });
-                first.append(first_btn);
-                pagination.append(first);
-                for (let i of data["show_pages"]) {
-                    let li = $('<li class="page-item">');
-                    if (i == page)
-                        li.addClass("active");
-                    let a = $('<a class="page-link">').text(i);
-                    a.click(function () {
-                        change_page(i)
-                    });
-                    li.append(a);
-                    pagination.append(li);
-                }
-                let last = $('<li class="page-item">');
-                if (page == data["page_cnt"]) {
-                    last.addClass("disabled");
-                }
-                let last_btn = $('<a class="page-link" aria-label="Next"><span aria-hidden="true">&raquo;</span></a>');
-                last_btn.click(function () {
-                    change_page(data["page_cnt"])
-                });
-                last.append(last_btn);
-                pagination.append(last);
-            });
+    function status_resolve(my){
+        let obj = {
+            my: my,
+            current_page: 1,
+            pid: ""
         }
+        obj.change_page = changing_page.bind(obj);
+        let pf = obj.my ? "#my_status" : "#status";
 
         let inited = false;
-        $("#my_status_tab").click(function () {
+        $(pf+"_tab").click(function () {
             if (!inited) {
                 inited = true;
-                change_page(current_page);
+                obj.change_page(obj.current_page);
             }
         });
-        if (location.hash == "#my_status") $("#my_status_tab").click();
-        $("#my_status_filter").click(function () {
-            pid = $("#my_status_filter_pid").val();
-            change_page(current_page);
+        if (location.hash === pf) $(pf+"_tab").click();
+        $(pf+"_filter").click(function () {
+            $this.pid = $(pf+"_filter_pid").val();
+            obj.change_page(obj.current_page);
         });
     }
+    status_resolve(false);
+    status_resolve(true);
     {
         var data;
         var standing_ok = false;
@@ -230,7 +173,7 @@ $(function () {
                             tot += out[key]["scores"][pid][k];
                         }
                     }
-                    if (Number(tot) != Number(out[key]["total_score"])) {
+                    if (Number(tot) !== Number(out[key]["total_score"])) {
                         out[key]["total_score"] = tot;
                         out[key]["last_update"] = obj["time"] - (obj["per"] == null ? 0 : pers[obj["per"]]["start_time"]);
                     }
@@ -433,7 +376,7 @@ $(function () {
             }).then(function (response) {
                 if (response.ok) {
                     return response.json();
-                } else if (response.status == 403) {
+                } else if (response.status === 403) {
                     $("#standing_error").text("目前無法觀看記分板").removeClass("d-none");
                 } else {
                     $("#standing_error").text("Error " + response.status + " " + response.statusText).removeClass("d-none");
@@ -478,17 +421,13 @@ $(function () {
     $("#contest_status").text(status_mp[contest_status]);
     if ($("#save_order").length) {
         let moveing_problem = null;
-        $("tr.problem").attr("draggable", "true");
-        $("tr.problem").on("dragstart", function (e) {
+        $("tr.problem").attr("draggable", "true").on("dragstart", function (e) {
             moveing_problem = $(this);
-        });
-        $("tr.problem").on("dragover", function (e) {
+        }).on("dragover", function (e) {
             e.preventDefault();
-        });
-        $("tr.problem").on("dragenter", function (e) {
+        }).on("dragenter", function (e) {
             e.preventDefault();
-        });
-        $("tr.problem").on("drop", function (e) {
+        }).on("drop", function (e) {
             e.preventDefault();
             $(this).before(moveing_problem);
             moveing_problem = null;

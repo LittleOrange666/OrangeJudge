@@ -347,91 +347,92 @@ function posting(url, data) {
     });
 }
 
-$(".submitter").each(function () {
+function resolve_submitter() {
     let spin = $('<span class="visually-hidden spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
-    $(this).prepend(spin);
-}).click(async function (e) {
-    e.preventDefault();
-    let $this = $(this);
-    let action_name = $this.text().trim();
-    let ok = true;
-    let missings = [];
-    $this.parents("form").find("input,select,textarea").each(function () {
-        if ($(this).prop("required") && !$(this).val()) {
+    $(this).prepend(spin).click(async function (e) {
+        e.preventDefault();
+        let $this = $(this);
+        let action_name = $this.text().trim();
+        let ok = true;
+        let missings = [];
+        $this.parents("form").find("input,select,textarea").each(function () {
+            if ($(this).prop("required") && !$(this).val()) {
+                let id = $(this).attr("id");
+                let label = $("label[for=" + id + "]");
+                let name = label.length ? label.text() : $(this).attr("name");
+                missings.push('"' + name + '"');
+                ok = false;
+            }
+        });
+        if (!ok) {
+            show_modal("錯誤", missings.join(", ") + " 未填寫");
+            return;
+        }
+        let bads = [];
+        $this.parents("form").find("input,select,textarea").each(function () {
+            if (!$(this).prop("required")) return;
+            let bad_pattern = $(this).prop("pattern") && !$(this).val().match(RegExp($(this).prop("pattern")));
+            let bad_number = $(this).prop("type") === "number" &&
+                (isNaN(+$(this).val()) || ($(this).prop("min") && +$(this).val() < $(this).prop("min")) ||
+                    ($(this).prop("max") && +$(this).val() > $(this).prop("max")));
             let id = $(this).attr("id");
             let label = $("label[for=" + id + "]");
             let name = label.length ? label.text() : $(this).attr("name");
-            missings.push('"' + name + '"');
-            ok = false;
-        }
-    });
-    if (!ok) {
-        show_modal("錯誤", missings.join(", ") + " 未填寫");
-        return;
-    }
-    let bads = [];
-    $this.parents("form").find("input,select,textarea").each(function () {
-        if (!$(this).prop("required")) return;
-        let bad_pattern = $(this).prop("pattern") && !$(this).val().match(RegExp($(this).prop("pattern")));
-        let bad_number = $(this).prop("type") === "number" &&
-            (isNaN(+$(this).val()) || ($(this).prop("min") && +$(this).val() < $(this).prop("min")) ||
-                ($(this).prop("max") && +$(this).val() > $(this).prop("max")));
-        let id = $(this).attr("id");
-        let label = $("label[for=" + id + "]");
-        let name = label.length ? label.text() : $(this).attr("name");
-        if (bad_pattern) {
-            let info = $(this).data("format") || "格式不正確";
-            bads.push('"' + name + '" ' + info);
-            ok = false;
-        }
-        if (bad_number) {
-            let info = $(this).data("format") || "應界於 " + $(this).prop("min") + " 與 " + $(this).prop("max") + " 之間";
-            bads.push('"' + name + '" ' + info);
-            ok = false;
-        }
-    });
-    if (!ok || $this.parents("form")[0].onsubmit && !$this.parents("form")[0].onsubmit()) {
-        show_modal("錯誤", bads.join("\n"));
-        return;
-    }
-    $this.find("span").removeClass("visually-hidden");
-    let modals = $this.parents(".modal");
-    let modal = null;
-    if (modals.length) modal = bootstrap.Modal.getOrCreateInstance(modals[0]);
-    $this.trigger("saved_data");
-    let response = await fetching($this.parents("form").first());
-    console.log(response);
-    if (modal) modal.hide();
-    $this.find("span").addClass("visually-hidden");
-    if (response.ok) {
-        if (!!$this.data("redirect")) {
-            let text = await response.text();
-            show_modal("成功", "成功" + action_name, !$this.data("no-refresh"), text, !!$this.data("skip-success"));
-        } else if ($this.data("filename")) {
-            let blob = await response.blob();
-            let url = window.URL.createObjectURL(blob);
-            let a = $("<a/>").attr("href", url).attr("download", $this.data("filename"));
-            a[0].click();
-            window.URL.revokeObjectURL(url);
-        } else if (!!$this.data("show-text")) {
-            let text = await response.text();
-            show_modal("成功", text, !$this.data("no-refresh"), $this.data("next"), !!$this.data("skip-success"));
-        } else {
-            show_modal("成功", "成功" + action_name, !$this.data("no-refresh"), $this.data("next"), !!$this.data("skip-success"));
-        }
-    } else {
-        let text = await response.text();
-        if (response.status === 500) {
-            show_modal("失敗", "伺服器內部錯誤，log uid=" + text);
-        } else {
-            let msg = $this.data("msg-" + response.status);
-            if ($this.data("msg-type-" + response.status) === "return") msg = text;
-            if (!msg && response.status === 400) {
-                if (text.includes("CSRF") && text.includes("token")) msg = "CSRF token失效，請刷新頁面再試一次";
-                else msg = "輸入格式不正確"
+            if (bad_pattern) {
+                let info = $(this).data("format") || "格式不正確";
+                bads.push('"' + name + '" ' + info);
+                ok = false;
             }
-            if (!msg && response.status === 403) msg = "您似乎沒有權限執行此操作"
-            show_modal("失敗", msg ? msg : "Error Code: " + response.status);
+            if (bad_number) {
+                let info = $(this).data("format") || "應界於 " + $(this).prop("min") + " 與 " + $(this).prop("max") + " 之間";
+                bads.push('"' + name + '" ' + info);
+                ok = false;
+            }
+        });
+        if (!ok || $this.parents("form")[0].onsubmit && !$this.parents("form")[0].onsubmit()) {
+            show_modal("錯誤", bads.join("\n"));
+            return;
         }
-    }
-});
+        $this.find("span").removeClass("visually-hidden");
+        let modals = $this.parents(".modal");
+        let modal = null;
+        if (modals.length) modal = bootstrap.Modal.getOrCreateInstance(modals[0]);
+        $this.trigger("saved_data");
+        let response = await fetching($this.parents("form").first());
+        console.log(response);
+        if (modal) modal.hide();
+        $this.find("span").addClass("visually-hidden");
+        if (response.ok) {
+            if (!!$this.data("redirect")) {
+                let text = await response.text();
+                show_modal("成功", "成功" + action_name, !$this.data("no-refresh"), text, !!$this.data("skip-success"));
+            } else if ($this.data("filename")) {
+                let blob = await response.blob();
+                let url = window.URL.createObjectURL(blob);
+                let a = $("<a/>").attr("href", url).attr("download", $this.data("filename"));
+                a[0].click();
+                window.URL.revokeObjectURL(url);
+            } else if (!!$this.data("show-text")) {
+                let text = await response.text();
+                show_modal("成功", text, !$this.data("no-refresh"), $this.data("next"), !!$this.data("skip-success"));
+            } else {
+                show_modal("成功", "成功" + action_name, !$this.data("no-refresh"), $this.data("next"), !!$this.data("skip-success"));
+            }
+        } else {
+            let text = await response.text();
+            if (response.status === 500) {
+                show_modal("失敗", "伺服器內部錯誤，log uid=" + text);
+            } else {
+                let msg = $this.data("msg-" + response.status);
+                if ($this.data("msg-type-" + response.status) === "return") msg = text;
+                if (!msg && response.status === 400) {
+                    if (text.includes("CSRF") && text.includes("token")) msg = "CSRF token失效，請刷新頁面再試一次";
+                    else msg = "輸入格式不正確"
+                }
+                if (!msg && response.status === 403) msg = "您似乎沒有權限執行此操作"
+                show_modal("失敗", msg ? msg : "Error Code: " + response.status);
+            }
+        }
+    });
+}
+$(".submitter").each(resolve_submitter);
