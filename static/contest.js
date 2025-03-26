@@ -40,9 +40,17 @@ $(function () {
                 }
                 line.append($('<td>').text(timestamp_to_str(obj["time"])));
                 if(!$this.my){
-                    line.append($('<td>').append($("<a>").text(obj["user_name"]).attr("href","/user/"+obj["user_id"])));
+                    if(obj["user_id"]==="???"){
+                        line.append($('<td>').text("???"));
+                    }else {
+                        line.append($('<td>').append($("<a>").text(obj["user_name"]).attr("href", "/user/" + obj["user_id"])));
+                    }
                 }
-                line.append($('<td>').append($("<a>").text(obj["problem"] + ". " + obj["problem_name"]).attr("href", "/contest/" + cid + "/problem/" + obj["problem"])));
+                if(obj["problem"]==="?"){
+                    line.append($('<td>').text("???"));
+                }else{
+                    line.append($('<td>').append($("<a>").text(obj["problem"] + ". " + obj["problem_name"]).attr("href", "/contest/" + cid + "/problem/" + obj["problem"])));
+                }
                 line.append($('<td>').text(obj["lang"]));
                 line.append($('<td>').text(obj["result"]));
                 if (!$this.my&&obj["can_rejudge"]){

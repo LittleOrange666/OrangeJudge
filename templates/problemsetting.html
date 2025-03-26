@@ -175,6 +175,11 @@
                     <textarea class="form-control" id="statement_scoring_area"
                               rows="3">{{ dat.statement.scoring }}</textarea>
                 </div>
+                <div class="mb-3">
+                    <label for="statement_note_area" class="form-label">配分</label>
+                    <textarea class="form-control" id="statement_note_area"
+                              rows="3">{{ dat.statement.note }}</textarea>
+                </div>
                 <div class="card card-body" id="manual_samples">
                     {% for i,sample in enumerate(dat.manual_samples) %}
                         <div class="row">

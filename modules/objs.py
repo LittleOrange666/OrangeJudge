@@ -432,6 +432,7 @@ class Statement(metaclass=DataMeta):
         output (str): The output description.
         scoring (str): The scoring description.
         interaction (str): The interaction description.
+        note (str): Additional notes.
         type (StatementType): The type of the statement.
     """
     main: str = ""
@@ -439,6 +440,7 @@ class Statement(metaclass=DataMeta):
     output: str = ""
     scoring: str = ""
     interaction: str = ""
+    note: str = ""
     type: StatementType = StatementType.md
 
 

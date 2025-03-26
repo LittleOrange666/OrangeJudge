@@ -600,17 +600,18 @@ def save_statement(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Re
     dat.statement.output = form["statement_output"]
     dat.statement.interaction = form["statement_interaction"]
     dat.statement.scoring = form["statement_scoring"]
+    dat.statement.note = form["statement_note"]
     dat.statement.type = objs.StatementType[form.get("statement_type", "md")]
     render_statement(dat)
     return "statement"
 
 
 def render_statement(dat: Problem):
-    obj = dataclasses.replace(dat.statement)
+    obj: objs.Statement = dataclasses.replace(dat.statement)
     if obj.type == objs.StatementType.latex:
-        obj.main, obj.input, obj.output, obj.interaction, obj.scoring = \
+        obj.main, obj.input, obj.output, obj.interaction, obj.scoring, obj.note = \
             createhtml.run_latex(dat.pid,
-                                 [obj.main, obj.input, obj.output, obj.interaction, obj.scoring])
+                                 [obj.main, obj.input, obj.output, obj.interaction, obj.scoring, obj.note])
     full = "# 題目敘述\n" + obj.main
     if obj.input:
         full += "\n## 輸入說明\n" + obj.input
@@ -620,6 +621,8 @@ def render_statement(dat: Problem):
         full += "\n## 互動說明\n" + obj.interaction
     if obj.scoring:
         full += "\n## 配分\n" + obj.scoring
+    if obj.note:
+        full += "\n## Note\n" + obj.note
     tools.write(full, dat.path / "statement.md")
     createhtml.parse.dirname = dat.pid
     tools.write(createhtml.run_markdown(full), dat.path / "statement.html")
