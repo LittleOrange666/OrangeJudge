@@ -326,13 +326,47 @@ def rejudge():
     idx = request.form["idx"]
     dat: datas.Submission = datas.Submission.query.get_or_404(idx)
     if "cid" in request.form:
+        if dat.contest.cid != request.form["cid"]:
+            abort(400)
         cdat: datas.Contest = datas.Contest.query.filter_by(cid=request.form["cid"]).first_or_404()
-        contests.check_access(cdat)
+        if not contests.check_super_access(cdat):
+            abort(403)
     else:
+        if dat.contest_id is not None:
+            abort(400)
         if not current_user.has(Permission.admin) and current_user.id != dat.problem.user.username:
             abort(403)
     if not dat.completed:
         abort(400)
     tasks.rejudge(dat, "wait for rejudge")
     datas.add(dat)
+    return "OK", 200
+
+
+@app.route('/rejudge_all', methods=['POST'])
+@login_required
+def rejudge_all():
+    if "pid" not in request.form or request.form["pid"] == "":
+        return "僅允許Rejudge特定題目", 400
+    pid = request.form["pid"]
+    if "cid" in request.form:
+        cdat: datas.Contest = datas.Contest.query.filter_by(cid=request.form["cid"]).first_or_404()
+        if not contests.check_super_access(cdat):
+            abort(403)
+        probs = cdat.datas.problems
+        if pid not in probs:
+            abort(404)
+        the_pid = probs[pid].pid
+        prob = datas.Problem.query.filter_by(pid=the_pid).first_or_404()
+        status = datas.Submission.query.filter_by(problem_id=prob.id, contest_id=cdat.id, completed=True)
+    else:
+        if pid == "test":
+            return "不允許Rejudge測試題目", 400
+        prob = datas.Problem.query.filter_by(pid=pid).first_or_404()
+        if not current_user.has(Permission.admin) and current_user.id != prob.user.username:
+            abort(403)
+        status = datas.Submission.query.filter_by(problem_id=prob.id, contest_id=None, completed=True)
+    for a_submit in status:
+        tasks.rejudge(a_submit, "wait for rejudge")
+        datas.add(submission)
     return "OK", 200

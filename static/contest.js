@@ -46,7 +46,7 @@ $(function () {
                 line.append($('<td>').text(obj["lang"]));
                 line.append($('<td>').text(obj["result"]));
                 if (obj["can_rejudge"]){
-                    let btn = $('<button class="btn btn-primary">').text("Rejudge");
+                    let btn = $('<button class="btn btn-primary">').text("Rejudge").data("no-refresh", "true");
                     resolve_submitter.call(btn);
                     let form = $('<form action="/rejudge" method="post" target="_self" enctype="multipart/form-data">')
                     form.append(mk_input("cid", cid)).append(mk_input("idx", obj["idx"])).append(btn);
@@ -107,12 +107,35 @@ $(function () {
         });
         if (location.hash === pf) $(pf+"_tab").click();
         $(pf+"_filter").click(function () {
-            $this.pid = $(pf+"_filter_pid").val();
+            obj.pid = $(pf+"_filter_pid").val();
             obj.change_page(obj.current_page);
         });
     }
     status_resolve(false);
     status_resolve(true);
+    $("#rejudge_btn").click(async function () {
+        let fd = new FormData();
+        fd.append("user", $("#status_filter_username").val().toLowerCase());
+        fd.append("pid", $("status_filter_pid").val());
+        fd.append("cid", cid);
+        let res = await fetch("/rejudge_all", {
+            method: "POST",
+            headers: {"x-csrf-token": $("#csrf_token").val()},
+            body: fd
+        });
+        if (res.ok){
+            show_modal("成功", "Rejudge", false, text, false);
+        }else {
+            let text = await res.text();
+            if (res.status === 500) {
+                show_modal("失敗", "伺服器內部錯誤，log uid=" + text);
+            } else {
+                let msg = text;
+                if (res.status === 403) msg = "您似乎沒有權限執行此操作"
+                show_modal("失敗", msg);
+            }
+        }
+    });
     {
         var data;
         var standing_ok = false;

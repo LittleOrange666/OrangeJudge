@@ -284,8 +284,13 @@
                     <input type="text" class="form-control" placeholder="使用者id" id="status_filter_username">
                 </div>
                 <div class="col-auto">
-                    <button class="btn btn-primary" id="status_filter">篩選</button>
+                    <button class="btn btn-primary" id="status_filter">刷新</button>
                 </div>
+                {% if can_edit %}
+                    <div class="col-auto">
+                        <button class="btn btn-primary" id="rejudge_btn">Rejudge</button>
+                    </div>
+                {% endif %}
             </div>
             <table class="table table-hover table-striped">
                 <thead>
@@ -319,7 +324,7 @@
                         </select>
                     </div>
                     <div class="col-auto">
-                        <button class="btn btn-primary" id="my_status_filter">篩選</button>
+                        <button class="btn btn-primary" id="my_status_filter">刷新</button>
                     </div>
                 </div>
                 <table class="table table-hover table-striped">

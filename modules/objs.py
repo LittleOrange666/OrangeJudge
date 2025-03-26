@@ -469,10 +469,10 @@ class GroupResult(metaclass=DataMeta):
         gained_score (float): The score gained by the group.
         css_class (str): The CSS class for the group result.
     """
-    result: TaskResult
-    time: int
-    mem: int
-    gained_score: float
+    result: TaskResult = TaskResult.OK
+    time: int = 0.0
+    mem: int = 0.0
+    gained_score: float = 0.0
     css_class: str = ""
 
 
