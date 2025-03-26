@@ -81,7 +81,7 @@ def contest_status(cid, page_str):
         obj: datas.Submission
         pid = obj.pid
         problem = "?"
-        problem_name = "?"
+        problem_name = "???"
         for k, v in info.problems.items():
             if v.pid == pid:
                 problem = k
@@ -90,18 +90,28 @@ def contest_status(cid, page_str):
         can_rejudge = contests.check_super_access(dat)
         can_know = can_see or info.standing.public
         result = obj.simple_result or "unknown"
-        if not can_know:
-            result = "hidden"
-        out.append({"idx": str(obj.id),
-                    "time": obj.time.timestamp(),
-                    "user_id": obj.user.username,
-                    "user_name": obj.user.display_name,
-                    "problem": problem,
-                    "problem_name": problem_name,
-                    "lang": obj.language,
-                    "result": result,
-                    "can_see": can_see,
-                    "can_rejudge": can_rejudge})
+        if can_know:
+            out.append({"idx": str(obj.id),
+                        "time": obj.time.timestamp(),
+                        "user_id": obj.user.username,
+                        "user_name": obj.user.display_name,
+                        "problem": problem,
+                        "problem_name": problem_name,
+                        "lang": obj.language,
+                        "result": result,
+                        "can_see": can_see,
+                        "can_rejudge": can_rejudge})
+        else:
+            out.append({"idx": str(obj.id),
+                        "time": obj.time.timestamp(),
+                        "user_id": "???",
+                        "user_name": "???",
+                        "problem": "?",
+                        "problem_name": "???",
+                        "lang": "???",
+                        "result": "???",
+                        "can_see": can_see,
+                        "can_rejudge": can_rejudge})
     ret = {"show_pages": show_pages, "page_cnt": page_cnt, "page": page_idx, "data": out}
     return jsonify(ret)
 
@@ -208,3 +218,21 @@ def contest_question(cid):
                              question=True)
     datas.add(obj)
     return "", 200
+
+
+@app.route('/reject', methods=['POST'])
+@login_required
+def reject():
+    idx = request.form["idx"]
+    cid = request.form["cid"]
+    dat: datas.Submission = datas.Submission.query.get_or_404(idx)
+    if dat.contest.cid != cid:
+        abort(400)
+    cdat: datas.Contest = datas.Contest.query.filter_by(cid=cid).first_or_404()
+    if not contests.check_super_access(cdat):
+        abort(403)
+    if not dat.completed:
+        abort(400)
+    contests.reject(dat)
+    datas.add(dat)
+    return "OK", 200

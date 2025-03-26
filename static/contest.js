@@ -45,12 +45,17 @@ $(function () {
                 line.append($('<td>').append($("<a>").text(obj["problem"] + ". " + obj["problem_name"]).attr("href", "/contest/" + cid + "/problem/" + obj["problem"])));
                 line.append($('<td>').text(obj["lang"]));
                 line.append($('<td>').text(obj["result"]));
-                if (obj["can_rejudge"]){
+                if (!$this.my&&obj["can_rejudge"]){
                     let btn = $('<button class="btn btn-primary">').text("Rejudge").data("no-refresh", "true");
                     resolve_submitter.call(btn);
                     let form = $('<form action="/rejudge" method="post" target="_self" enctype="multipart/form-data">')
                     form.append(mk_input("cid", cid)).append(mk_input("idx", obj["idx"])).append(btn);
                     line.append($('<td>').append(form));
+                    let btn0 = $('<button class="btn btn-danger">').text("Reject").data("no-refresh", "true");
+                    resolve_submitter.call(btn0);
+                    let form0 = $('<form action="/reject" method="post" target="_self" enctype="multipart/form-data">')
+                    form0.append(mk_input("cid", cid)).append(mk_input("idx", obj["idx"])).append(btn0);
+                    line.append($('<td>').append(form0));
                 }
                 table.append(line);
             }
@@ -116,7 +121,8 @@ $(function () {
     $("#rejudge_btn").click(async function () {
         let fd = new FormData();
         fd.append("user", $("#status_filter_username").val().toLowerCase());
-        fd.append("pid", $("status_filter_pid").val());
+        let pid = $("status_filter_pid").val();
+        if (pid) fd.append("pid", pid);
         fd.append("cid", cid);
         let res = await fetch("/rejudge_all", {
             method: "POST",

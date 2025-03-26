@@ -182,7 +182,8 @@ $(".countdown-timer").each(function () {
     let $this = $(this);
     let target = +$this.data("target") * 1000;
     let is_zero = target - (new Date()).getTime() <= 0;
-    window.setInterval(function () {
+    let interval_id = 0;
+    interval_id = window.setInterval(function () {
         let delta = Math.max(0, target - (new Date()).getTime());
         delta = Math.floor(delta / 1000);
         let sec = "" + (delta % 60);
@@ -191,7 +192,10 @@ $(".countdown-timer").each(function () {
         if (sec.length < 2) sec = "0" + sec;
         if (min.length < 2) min = "0" + min;
         $this.text(hr + ":" + min + ":" + sec);
-        if (!is_zero && (delta <= 0)) location.reload();
+        if (!is_zero && (delta <= 0)) {
+            window.clearInterval(interval_id);
+            location.reload();
+        }
     }, 100);
 });
 $("select[data-value]").each(function () {
