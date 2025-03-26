@@ -114,8 +114,10 @@ class Problem(objs.ProblemInfo):
 
         This method updates the problem data in the database and marks the data as modified.
         """
+        self.sql_data.new_datas = self
         self.sql_data.data = self.sql_data.new_data
         flag_modified(self.sql_data, "data")
+        flag_modified(self.sql_data, "new_data")
         datas.add(self.sql_data)
 
     def lang(self, name) -> executing.Language:
@@ -1128,7 +1130,7 @@ def preview(args: MultiDict[str, str], pdat: datas.Problem) -> Response:
 
 def query_versions(pdat: datas.Problem):
     out = []
-    info = pdat.datas
+    info = pdat.new_datas
     for o in info.versions:
         out.append({
             "date": str(int(float(o.time))),
