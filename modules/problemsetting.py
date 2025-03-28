@@ -973,7 +973,7 @@ def save_groups(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Respo
 @actions.bind
 def protect_problem(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Response:
     if not dat.sql_data.is_public:
-        abort(409)
+        abort(400)
     dat.sql_data.is_public = False
     return "general_info"
 
@@ -981,6 +981,8 @@ def protect_problem(form: ImmutableMultiDict[str, str], dat: Problem) -> str | R
 @actions.bind
 def public_problem(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Response:
     if dat.sql_data.is_public:
+        abort(400)
+    if len(dat.versions) == 0:
         abort(409)
     dat.sql_data.is_public = True
     return "general_info"

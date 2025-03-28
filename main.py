@@ -1,6 +1,8 @@
 import os
 import subprocess
 import sys
+import traceback
+
 from gunicorn.app.base import BaseApplication
 
 from modules import contests, constants, datas, executing, locks, login, problemsetting, server, tasks, tools, config, \
@@ -28,23 +30,28 @@ class StandaloneApplication(BaseApplication):
 def main():
     if not sys.platform.startswith("linux"):
         raise RuntimeError("The judge server only supports Linux")
-    judge.init()
-    executing.init()
-    constants.init()
-    # following do nothing
-    config.init()
-    locks.init()
-    tools.init()
-    modules.routers.init()
-    redis_host = os.environ.get("REDIS_HOST", "localhost")
-    if not server.check_port(redis_host, 6379):
-        subprocess.Popen("redis-server")
-    with server.app.app_context():  # following need sqlalchemy
-        datas.init()
-        login.init()
-        tasks.init()
-        contests.init()
-        problemsetting.init()
+    try:
+        judge.init()
+        executing.init()
+        constants.init()
+        # following do nothing
+        config.init()
+        locks.init()
+        tools.init()
+        modules.routers.init()
+        redis_host = os.environ.get("REDIS_HOST", "localhost")
+        if not server.check_port(redis_host, 6379):
+            subprocess.Popen("redis-server")
+        with server.app.app_context():  # following need sqlalchemy
+            datas.init()
+            login.init()
+            tasks.init()
+            contests.init()
+            problemsetting.init()
+    except Exception as e:
+        print("Error while initializing:", e)
+        traceback.print_exception(e)
+        return
     options = {
         'bind': '%s:%s' % ('[::]', str(config.server.port)),
         'workers': config.server.workers,

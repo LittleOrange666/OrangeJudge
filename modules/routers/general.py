@@ -8,7 +8,7 @@ from pygments.formatters import HtmlFormatter
 from werkzeug.utils import secure_filename
 
 from .. import tools, server, constants, executing, tasks, datas, contests, login, config, objs
-from ..constants import problem_path
+from ..constants import problem_path, preparing_problem_path
 from ..objs import Permission
 from ..server import sending_file
 
@@ -202,7 +202,10 @@ def problem_page(idx):
 
 
 def render_problem(dat: objs.ProblemInfo, idx: str, langs: list[str], preview: bool = False, **kwargs):
-    path = problem_path / idx
+    if preview:
+        path = problem_path / idx
+    else:
+        path = preparing_problem_path / idx
     statement = tools.read(path / "statement.html")
     lang_exts = json.dumps({k: v.source_ext for k, v in executing.langs.items()})
     samples = dat.manual_samples

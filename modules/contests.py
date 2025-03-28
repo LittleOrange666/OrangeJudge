@@ -52,6 +52,8 @@ def calidx(idx: int) -> str:
 def add_problem(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: objs.ContestData) -> str:
     pid = form["pid"]
     pdat: datas.Problem = datas.Problem.query.filter_by(pid=pid).first_or_404()
+    if len(pdat.datas.versions) == 0:
+        abort(409)
     for idx, obj in dat.problems.items():
         if obj.pid == pid:
             abort(409)
