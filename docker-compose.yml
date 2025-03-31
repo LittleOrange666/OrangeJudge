@@ -4,6 +4,15 @@ services:
         restart: always
         volumes:
             - ./data/redis:/data
+    judge_postgres:
+        image: postgres:15-alpine
+        restart: always
+        volumes:
+           - ./data/postgres:/var/lib/postgresql/data
+        environment:
+            - POSTGRES_DB=onlinejudge
+            - POSTGRES_USER=onlinejudge
+            - POSTGRES_PASSWORD=onlinejudge
     judge_server:
         image: littleorange666/judge_server:1.3.0
         read_only: true
@@ -25,7 +34,7 @@ services:
         ports:
             - "0.0.0.0:9132:8000"
     judge_backend:
-        image: littleorange666/orange_judge:latest
+        image: littleorange666/orange_judge:1.3.0
         read_only: true
         restart: on-failure
         depends_on:
@@ -48,6 +57,10 @@ services:
         environment:
             - JUDGER_URL=http://judge_server:8000
             - REDIS_HOST=judge_redis
+            - POSTGRES_DB=onlinejudge
+            - POSTGRES_USER=onlinejudge
+            - POSTGRES_PASSWORD=onlinejudge
+            - POSTGRES_HOST=judge_postgres:5432
         ports:
             - "0.0.0.0:8080:8080"
 volumes:

@@ -1,6 +1,6 @@
 services:
     judge_server:
-        image: judge_server
+        image: littleorange666/judge_server:1.3.0
         read_only: true
         restart: always
         cap_drop:
@@ -13,7 +13,8 @@ services:
         tmpfs:
             - /tmp
         volumes:
-            - $PWD/sandbox:/sandbox
+            - ./sandbox:/sandbox
+            - ./langs:/langs:ro
         environment:
             - SERVICE_URL=http://judge-server:9132
         ports:

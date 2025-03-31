@@ -4,11 +4,11 @@ if [ -z $1 ]; then
   echo "Usage: $0 <version>"
 else
   echo "Building version $1"
-  docker build . -t littleorange666/orange_judge:$1 --no-cache
-  echo "Building latest"
-  docker build . -t littleorange666/orange_judge:latest
+  docker build . -t littleorange666/orange_judge:$1 --no-cache | exit 1
   echo "Pushing version $1"
   docker push littleorange666/orange_judge:$1
+  echo "Building latest"
+  docker build . -t littleorange666/orange_judge:latest | exit 1
   echo "Pushing latest"
   docker push littleorange666/orange_judge:latest
 fi

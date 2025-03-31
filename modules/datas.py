@@ -1,4 +1,5 @@
 import inspect
+import os
 from datetime import datetime
 from pathlib import Path
 
@@ -10,9 +11,19 @@ from .constants import problem_path, contest_path, submission_path
 from .objs import ContestData, ProblemInfo, SubmissionData, SubmissionResult
 
 datafile = Path.cwd() / "data" / "data.sqlite"
+sqlite_url = 'sqlite:///' + str(datafile)
 app = server.app
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + str(datafile)
+if all(k in os.environ for k in ("POSTGRES_DB", "POSTGRES_USER", "POSTGRES_PASSWORD", "POSTGRES_HOST")):
+    DB = os.environ["POSTGRES_DB"]
+    USER = os.environ["POSTGRES_USER"]
+    PASSWORD = os.environ["POSTGRES_PASSWORD"]
+    HOST = os.environ["POSTGRES_HOST"]
+    postgres_url = f"postgresql://{USER}:{PASSWORD}@{HOST}/{DB}"
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['SQLALCHEMY_DATABASE_URI'] = postgres_url
+else:
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
+    app.config['SQLALCHEMY_DATABASE_URI'] = sqlite_url
 db = SQLAlchemy(app)
 
 

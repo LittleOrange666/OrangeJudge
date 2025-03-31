@@ -116,7 +116,7 @@ def run_markdown(source: str) -> str:
         get = reg1.search(source)
     # 主要部分
     html = markdown.markdown(source, extensions=['tables', 'md_in_html', 'fenced_code', 'attr_list', 'def_list', 'toc',
-                                                 'codehilite', 'nl2br',
+                                                 'codehilite', 'nl2br', "markdown_del_ins",
                                                  mdx_math.makeExtension(enable_dollar_delimiter=True)])
     # spoiler轉成details
     html = html.replace("<br />", "<br>").replace("<br/>", "<br>").replace("</br>", "<br>").replace("<br>",

@@ -203,9 +203,9 @@ def problem_page(idx):
 
 def render_problem(dat: objs.ProblemInfo, idx: str, langs: list[str], preview: bool = False, **kwargs):
     if preview:
-        path = problem_path / idx
-    else:
         path = preparing_problem_path / idx
+    else:
+        path = problem_path / idx
     statement = tools.read(path / "statement.html")
     lang_exts = json.dumps({k: v.source_ext for k, v in executing.langs.items()})
     samples = dat.manual_samples
