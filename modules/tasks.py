@@ -126,7 +126,8 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
     if ce_msg:
         dat.ce_msg = ce_msg
         out_info.CE = True
-        simple_result = "CE"
+        dat.results = out_info
+        dat.simple_result = "CE"
         dat.completed = True
         datas.add(dat)
         return
