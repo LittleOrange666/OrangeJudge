@@ -271,3 +271,6 @@ def init():
         root: datas.User = datas.User.query.filter_by(username="root").first()
         root.permissions = "root"
         datas.add(root)
+        if datas.Problem.query.filter_by(pid="test").count() == 0:
+            test_problem = datas.Problem(pid="test", name="", data={}, new_data={}, user=root)
+            datas.add(test_problem)

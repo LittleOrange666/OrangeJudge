@@ -243,9 +243,6 @@ class Announcement(db.Model):
 
 def init():
     db.create_all()
-    if Problem.query.filter_by(pid="test").count() == 0:
-        test_problem = Problem(pid="test", name="", data={}, new_data={}, user_id=1)
-        add(test_problem)
     # compatibility resolution
     need_compatibility_resolution = False
     if need_compatibility_resolution:

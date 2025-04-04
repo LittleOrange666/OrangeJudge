@@ -19,6 +19,8 @@ from .constants import log_path
 app = Flask(__name__, static_url_path='/static', static_folder="../static/", template_folder="../templates/")
 if config.debug.single_secret:
     app.config['SECRET_KEY'] = '2lGU53x5P7HujHeoqk5X-IDrK1sSj4RQBeGU84CMpkGJ'
+elif "FLASK_SECRET_KEY" in os.environ:
+    app.config['SECRET_KEY'] = os.environ["FLASK_SECRET_KEY"]
 else:
     app.config['SECRET_KEY'] = secrets.token_urlsafe(33)
 redis_host = os.environ.get("REDIS_HOST", "localhost")

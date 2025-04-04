@@ -54,12 +54,12 @@ $(function () {
                 line.append($('<td>').text(obj["lang"]));
                 line.append($('<td>').text(obj["result"]));
                 if (!$this.my&&obj["can_rejudge"]){
-                    let btn = $('<button class="btn btn-primary">').text("Rejudge").data("no-refresh", "true");
+                    let btn = $('<button class="btn btn-primary btn-sm">').text("Rejudge").data("no-refresh", "true");
                     resolve_submitter.call(btn);
                     let form = $('<form action="/rejudge" method="post" target="_self" enctype="multipart/form-data">')
                     form.append(mk_input("cid", cid)).append(mk_input("idx", obj["idx"])).append(btn);
                     line.append($('<td>').append(form));
-                    let btn0 = $('<button class="btn btn-danger">').text("Reject").data("no-refresh", "true");
+                    let btn0 = $('<button class="btn btn-danger btn-sm">').text("Reject").data("no-refresh", "true");
                     resolve_submitter.call(btn0);
                     let form0 = $('<form action="/reject" method="post" target="_self" enctype="multipart/form-data">')
                     form0.append(mk_input("cid", cid)).append(mk_input("idx", obj["idx"])).append(btn0);
