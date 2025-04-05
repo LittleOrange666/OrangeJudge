@@ -30,7 +30,7 @@ def my_problems():
 @login_required
 def all_problems():
     login.check_user(Permission.admin)
-    problem_obj = datas.Problem.query.filter(datas.Problem.pid != "test")
+    problem_obj = datas.do_filter(datas.Problem, datas.Problem.pid != "test")
     got_data, page_cnt, page_idx, show_pages = tools.pagination(problem_obj)
     problems_dat = []
     for obj in got_data:
@@ -55,7 +55,7 @@ def create_problem():
 @login_required
 def my_problem_page(idx):
     idx = secure_filename(idx)
-    pdat: datas.Problem = datas.Problem.query.filter_by(pid=idx).first_or_404()
+    pdat: datas.Problem = datas.first_or_404(datas.Problem, pid=idx)
     dat = pdat.new_datas
     user = login.check_user(Permission.make_problems, dat.users)
     o = problemsetting.check_background_action(idx)
@@ -85,7 +85,7 @@ def my_problem_page(idx):
 def problem_action():
     idx = request.form["pid"]
     idx = secure_filename(idx)
-    pdat = datas.Problem.query.filter_by(pid=idx).first_or_404()
+    pdat = datas.first_or_404(datas.Problem, pid=idx)
     if (problem_path / idx / "waiting").is_file():
         abort(503)
     if problemsetting.check_background_action(idx) is not None:
@@ -100,7 +100,7 @@ def problem_action():
 @login_required
 def problem_preview():
     idx = request.args["pid"]
-    pdat: datas.Problem = datas.Problem.query.filter_by(pid=idx).first_or_404()
+    pdat = datas.first_or_404(datas.Problem, pid=idx)
     if (problem_path / idx / "waiting").is_file():
         return render_template("pleasewait.html", action=tools.read(pdat.path / "waiting"))
     dat = pdat.new_datas

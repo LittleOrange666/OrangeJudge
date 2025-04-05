@@ -17,9 +17,9 @@ actions = tools.Switcher()
 def create_contest(name: str, user: datas.User) -> str:
     if len(name) > 120:
         abort(400)
-    ccnt = datas.Contest.query.count()
+    ccnt = datas.count(datas.Contest)
     cidx = ccnt + 1
-    while datas.Contest.query.filter_by(cid=str(cidx)).count():
+    while datas.count(datas.Contest, cid=str(cidx)) > 0:
         cidx += 1
     cid = str(cidx)
     start_time = datetime.now().replace(second=0, microsecond=0) + timedelta(days=1)
@@ -51,7 +51,7 @@ def calidx(idx: int) -> str:
 @actions.bind
 def add_problem(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: objs.ContestData) -> str:
     pid = form["pid"]
-    pdat: datas.Problem = datas.Problem.query.filter_by(pid=pid).first_or_404()
+    pdat: datas.Problem = datas.first_or_404(datas.Problem, pid=pid)
     if len(pdat.datas.versions) == 0:
         abort(409)
     for idx, obj in dat.problems.items():
@@ -75,7 +75,7 @@ def remove_problem(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat:
 
 @actions.bind
 def add_participant(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: objs.ContestData) -> str:
-    user: datas.User = datas.User.query.filter_by(username=form["username"].lower()).first_or_404()
+    user: datas.User = datas.first_or_404(datas.User, username=form["username"].lower())
     if user.username in dat.participants:
         abort(409)
     dat.participants.append(user.username)
@@ -84,7 +84,7 @@ def add_participant(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat
 
 @actions.bind
 def remove_participant(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: objs.ContestData) -> str:
-    user: datas.User = datas.User.query.filter_by(username=form["username"].lower()).first_or_404()
+    user: datas.User = datas.first_or_404(datas.User, username=form["username"].lower())
     if user.username not in dat.participants:
         abort(409)
     dat.participants.remove(user.username)
@@ -128,7 +128,7 @@ def change_settings(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat
     if not form["penalty"].isdigit():
         abort(400)
     penalty = int(form["penalty"])
-    per: datas.Period = datas.Period.query.get(cdat.main_period_id)
+    per: datas.Period = datas.get_by_id(datas.Period, cdat.main_period_id)
     per.start_time = datetime.fromtimestamp(start_time)
     cdat.name = contest_title
     dat.name = contest_title
@@ -177,7 +177,7 @@ def send_announcement(form: ImmutableMultiDict[str, str], cdat: datas.Contest, d
 @actions.bind
 def remove_announcement(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: objs.ContestData) -> str:
     idx = tools.to_int(form["id"])
-    obj: datas.Announcement = datas.Announcement.query.get_or_404(idx)
+    obj: datas.Announcement = datas.get_or_404(datas.Announcement, idx)
     if obj.contest != cdat:
         abort(404)
     datas.delete(obj)
@@ -187,7 +187,7 @@ def remove_announcement(form: ImmutableMultiDict[str, str], cdat: datas.Contest,
 @actions.bind
 def save_question(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: objs.ContestData) -> str:
     idx = tools.to_int(form["id"])
-    obj: datas.Announcement = datas.Announcement.query.get_or_404(idx)
+    obj: datas.Announcement = datas.get_or_404(datas.Announcement, idx)
     if obj.contest != cdat:
         abort(404)
     reply = form["content"]
@@ -207,17 +207,16 @@ def action_not_found(*args):
 
 
 def action(form: ImmutableMultiDict[str, str], cdat: datas.Contest):
-    with datas.DelayCommit():
-        dat = cdat.datas
-        cid = cdat.cid
-        tp = actions.call(form["action"], form, cdat, dat)
-        cdat.datas = dat
-        datas.add(cdat)
-        if form["action"] == "change_settings":
-            for the_per in cdat.periods:
-                the_per: datas.Period
-                the_per.end_time = the_per.start_time + timedelta(minutes=dat.elapsed)
-            datas.add(*cdat.periods)
+    dat = cdat.datas
+    cid = cdat.cid
+    tp = actions.call(form["action"], form, cdat, dat)
+    cdat.datas = dat
+    datas.add(cdat)
+    if form["action"] == "change_settings":
+        for the_per in cdat.periods:
+            the_per: datas.Period
+            the_per.end_time = the_per.start_time + timedelta(minutes=dat.elapsed)
+        datas.add(*cdat.periods)
     return f"/contest/{cid}#{tp}"
 
 
@@ -227,7 +226,7 @@ def check_super_access(dat: datas.Contest) -> bool:
 
 
 def check_access(dat: datas.Contest):
-    per: datas.Period = datas.Period.query.get(dat.main_period_id)
+    per: datas.Period = datas.get_by_id(datas.Period, dat.main_period_id)
     info = dat.datas
     if per is None:
         abort(409)
@@ -245,11 +244,11 @@ def check_access(dat: datas.Contest):
 
 
 def check_status(dat: datas.Contest) -> tuple[str, int, bool]:
-    per: datas.Period = datas.Period.query.get_or_404(dat.main_period_id)
+    per = datas.get_or_404(datas.Period, dat.main_period_id)
     info = dat.datas
     if current_user.is_authenticated:
         if current_user.id in info.virtual_participants:
-            vir_per: datas.Period = datas.Period.query.get(info.virtual_participants[current_user.id])
+            vir_per: datas.Period = datas.get_by_id(datas.Period, info.virtual_participants[current_user.id])
             if vir_per is None:
                 abort(409)
             if not vir_per.is_started():
@@ -273,13 +272,13 @@ def check_status(dat: datas.Contest) -> tuple[str, int, bool]:
 
 
 def check_period(dat: datas.Contest) -> int:
-    main_per: datas.Period = datas.Period.query.get_or_404(dat.main_period_id)
+    main_per = datas.get_or_404(datas.Period, dat.main_period_id)
     info = dat.datas
     if current_user.id in info.participants and main_per.is_running():
         return dat.main_period_id
     if current_user.id in info.virtual_participants:
         per_id = info.virtual_participants[current_user.id]
-        cur_per: datas.Period = datas.Period.query.get_or_404(per_id)
+        cur_per = datas.get_or_404(datas.Period, per_id)
         if cur_per.is_running():
             return per_id
     return 0
@@ -290,27 +289,26 @@ standing_lock = multiprocessing.Lock()
 
 @cached(cache=TTLCache(maxsize=20, ttl=10), lock=standing_lock)
 def get_standing(cid: str):
-    cdat: datas.Contest = datas.Contest.query.filter_by(cid=cid).first_or_404()
+    cdat = datas.first_or_404(datas.Contest, cid=cid)
     ret = []
     mp = {}
     rmp = {}
     info = cdat.datas
     for k, v in info.problems.items():
         rmp[v.pid] = k
-    for dat in cdat.submissions:
+    for dat in cdat.submissions.filter_by(completed=True).all():
         dat: datas.Submission
         res = dat.results
-        if dat.completed:
-            if dat.user_id not in mp:
-                mp[dat.user_id] = dat.user.display_name
-            scores = {k: v.gained_score for k, v in res.group_results.items()}
-            ret.append({"user": mp[dat.user_id],
-                        "pid": rmp[dat.pid],
-                        "scores": scores,
-                        "total_score": res.total_score,
-                        "time": dat.time.timestamp(),
-                        "pretest": dat.just_pretest,
-                        "per": dat.period_id})
+        if dat.user_id not in mp:
+            mp[dat.user_id] = dat.user.display_name
+        scores = {k: v.gained_score for k, v in res.group_results.items()}
+        ret.append({"user": mp[dat.user_id],
+                    "pid": rmp[dat.pid],
+                    "scores": scores,
+                    "total_score": res.total_score,
+                    "time": dat.time.timestamp(),
+                    "pretest": dat.just_pretest,
+                    "per": dat.period_id})
     pers = []
     for per in cdat.periods:
         per: datas.Period
@@ -338,9 +336,8 @@ def reject(dat: datas.Submission):
 
 def contest_worker():
     while True:
-        with datas.DelayCommit():
-            for dat in datas.Period.query.filter_by(running=True):
-                dat: datas.Period
+        with datas.SessionContext():
+            for dat in datas.get_all(datas.Period, running=True):
                 if dat.is_over():
                     dat.running = False
                     dat.ended = True
@@ -366,23 +363,23 @@ def contest_worker():
                         datas.add(*submissions)
                 datas.add(dat)
         sleep(5)
-        with datas.DelayCommit():
-            for dat in datas.Period.query.filter_by(running=False, ended=False):
+        with datas.SessionContext():
+            for dat in datas.get_all(datas.Period, running=False, ended=False):
                 dat: datas.Period
                 if dat.is_running():
                     dat.running = True
                     dat.judging = True
                     datas.add(dat)
         sleep(5)
-        with datas.DelayCommit():
-            for dat in datas.Period.query.filter_by(running=False, ended=True, judging=True):
+        with datas.SessionContext():
+            for dat in datas.get_all(datas.Period, running=False, ended=True, judging=True):
                 dat: datas.Period
                 if dat.submissions.filter_by(completed=False).count() == 0:
                     dat.judging = False
                     datas.add(dat)
         sleep(5)
-        with datas.DelayCommit():
-            for dat in datas.Period.query.filter_by(running=False, ended=True, judging=False):
+        with datas.SessionContext():
+            for dat in datas.get_all(datas.Period, running=False, ended=True, judging=False):
                 dat: datas.Period
                 if not dat.is_started():
                     dat.ended = False

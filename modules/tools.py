@@ -322,9 +322,9 @@ def init():
     pass
 
 
-def to_int(text: str) -> int:
+def to_int(text: str, return_code: int = 400) -> int:
     if not text.isdigit():
-        abort(400)
+        abort(return_code)
     return int(text)
 
 

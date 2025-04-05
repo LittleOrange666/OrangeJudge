@@ -26,7 +26,7 @@ def index():
 
 @app.route('/problems', methods=['GET'])
 def problems():
-    public_problems = datas.Problem.query.filter_by(is_public=True)
+    public_problems = datas.filter_by(datas.Problem, is_public=True)
     got_data, page_cnt, page_idx, show_pages = tools.pagination(public_problems, False)
     return render_template("problems.html", problems=got_data, page_cnt=page_cnt, page_idx=page_idx,
                            show_pages=show_pages)
@@ -42,7 +42,7 @@ def test():
 @submit_limit
 @login_required
 def test_submit():
-    if datas.Submission.query.filter_by(user=current_user.data, completed=False).count() >= config.judge.pending_limit:
+    if datas.count(datas.Submission, user=current_user.data, completed=False) >= config.judge.pending_limit:
         return "Too many uncompleted submissions", 409
     lang = request.form["lang"]
     code = request.form["code"].replace("\n\n", "\n")
@@ -54,10 +54,11 @@ def test_submit():
     ext = executing.langs[lang].source_ext
     fn = constants.source_file_name + ext
     dat = datas.Submission(source=fn, time=datetime.datetime.now(), user=current_user.data,
-                           problem=datas.Problem.query.filter_by(pid="test").first(), language=lang,
+                           problem=datas.first(datas.Problem, pid="test"), language=lang,
                            data={"infile": "in.txt", "outfile": "out.txt"}, pid="test", simple_result="waiting",
                            queue_position=0)
     datas.add(dat)
+    datas.flush()
     idx = str(dat.id)
     tools.write(code, dat.path / fn)
     tools.write(inp, dat.path / "in.txt")
@@ -70,14 +71,14 @@ def test_submit():
 @submit_limit
 @login_required
 def submit():
-    if datas.Submission.query.filter_by(user=current_user.data, completed=False).count() >= config.judge.pending_limit:
+    if datas.count(datas.Submission, user=current_user.data, completed=False) >= config.judge.pending_limit:
         return "Too many uncompleted submissions", 409
     lang = request.form["lang"]
     code = request.form["code"].replace("\n\n", "\n")
     if len(code) > config.judge.file_size * 1024:
         abort(400)
     pid = request.form["pid"]
-    pdat: datas.Problem = datas.Problem.query.filter_by(pid=pid).first_or_404()
+    pdat: datas.Problem = datas.first_or_404(datas.Problem, pid=pid)
     if lang not in executing.langs:
         abort(404)
     if not pdat.lang_allowed(lang):
@@ -88,7 +89,7 @@ def submit():
                            problem=pdat, language=lang, data={}, pid=pid, simple_result="waiting",
                            queue_position=0)
     if "cid" in request.form:
-        cdat: datas.Contest = datas.Contest.query.filter_by(cid=request.form["cid"]).first_or_404()
+        cdat: datas.Contest = datas.first_or_404(datas.Contest, cid=request.form["cid"])
         contests.check_access(cdat)
         per_id = contests.check_period(cdat)
         dat.contest = cdat
@@ -97,6 +98,7 @@ def submit():
             if cdat.datas.pretest != objs.PretestType.no:
                 dat.just_pretest = True
     datas.add(dat)
+    datas.flush()
     idx = str(dat.id)
     tools.write(code, dat.path / fn)
     dat.queue_position = tasks.enqueue(dat.id)
@@ -107,7 +109,8 @@ def submit():
 @app.route("/submission/<idx>", methods=['GET'])
 @login_required
 def submission(idx: str):
-    dat: datas.Submission = datas.Submission.query.get_or_404(idx)
+    int_idx = tools.to_int(idx)
+    dat: datas.Submission = datas.get_or_404(datas.Submission, int_idx)
     lang = dat.language
     source = tools.read(dat.path / dat.source)
     source = highlight(source, prepares[executing.langs.get(lang, executing.langs["PlainText"]).name], HtmlFormatter())
@@ -189,7 +192,7 @@ def submission(idx: str):
 def problem_page(idx):
     if idx == "test":
         return redirect("/test")
-    pdat: datas.Problem = datas.Problem.query.filter_by(pid=idx).first_or_404()
+    pdat = datas.first_or_404(datas.Problem, pid=idx)
     idx = secure_filename(idx)
     dat = pdat.datas
     if not pdat.is_public:
@@ -226,7 +229,7 @@ def problem_file(idx, filename):
     idx = secure_filename(idx)
     filename = secure_filename(filename)
     if "cid" in request.args:
-        cdat: datas.Contest = datas.Contest.query.filter_by(cid=request.args["cid"]).first_or_404()
+        cdat = datas.first_or_404(datas.Contest, cid=request.args["cid"])
         for obj in cdat.datas.problems.values():
             if obj.pid == idx:
                 break
@@ -234,7 +237,7 @@ def problem_file(idx, filename):
             abort(404)
         contests.check_access(cdat)
     else:
-        pdat: datas.Problem = datas.Problem.query.filter_by(pid=idx).first_or_404()
+        pdat = datas.first_or_404(datas.Problem, pid=idx)
         dat = pdat.datas
         if not pdat.is_public:
             if not current_user.is_authenticated:
@@ -252,9 +255,9 @@ def all_status():
 
 @app.route("/status_data", methods=["POST"])
 def all_status_data():
-    status = datas.Submission.query.filter_by(contest_id=None)
+    status = datas.filter_by(datas.Submission, contest_id=None)
     if "user" in request.form and len(request.form["user"]):
-        users = datas.User.query.filter_by(username=request.form["user"])
+        users = datas.filter_by(datas.User, username=request.form["user"])
         if users.count() == 0:
             status = status.filter_by(id=-1)
         else:
@@ -267,7 +270,7 @@ def all_status_data():
     for obj in got_data:
         obj: datas.Submission
         pid = obj.pid
-        problem = datas.Problem.query.filter_by(pid=pid)
+        problem = datas.filter_by(datas.Problem, pid=pid)
         problem_name = problem.first().name if problem.count() else "unknown"
         result = obj.simple_result or "unknown"
         can_see = current_user.is_authenticated and (current_user.has(Permission.admin) or
@@ -295,11 +298,11 @@ def admin():
     if not current_user.has(Permission.admin):
         abort(403)
     if request.method == 'GET':
-        users = datas.User.query.all()
+        users = datas.query(datas.User).all()
         return render_template("admin.html", users=users)
     else:
         if request.form["action"] == "update_user":
-            user: datas.User = datas.User.query.filter_by(username=request.form["username"]).first_or_404()
+            user: datas.User = datas.first_or_404(datas.User, username=request.form["username"])
             user.display_name = request.form["display_name"]
             if len(request.form["password"]) > 1:
                 user.password_sha256_hex = login.try_hash(request.form["password"])
@@ -327,11 +330,11 @@ def preferences():
 @login_required
 def rejudge():
     idx = request.form["idx"]
-    dat: datas.Submission = datas.Submission.query.get_or_404(idx)
+    dat = datas.get_or_404(datas.Submission, tools.to_int(idx))
     if "cid" in request.form:
         if dat.contest.cid != request.form["cid"]:
             abort(400)
-        cdat: datas.Contest = datas.Contest.query.filter_by(cid=request.form["cid"]).first_or_404()
+        cdat: datas.Contest = datas.first_or_404(datas.Contest.query, cid=request.form["cid"])
         if not contests.check_super_access(cdat):
             abort(403)
     else:
@@ -353,22 +356,22 @@ def rejudge_all():
         return "僅允許Rejudge特定題目", 400
     pid = request.form["pid"]
     if "cid" in request.form:
-        cdat: datas.Contest = datas.Contest.query.filter_by(cid=request.form["cid"]).first_or_404()
+        cdat: datas.Contest = datas.first_or_404(datas.Contest.query, cid=request.form["cid"])
         if not contests.check_super_access(cdat):
             abort(403)
         probs = cdat.datas.problems
         if pid not in probs:
             abort(404)
         the_pid = probs[pid].pid
-        prob = datas.Problem.query.filter_by(pid=the_pid).first_or_404()
-        status = datas.Submission.query.filter_by(problem_id=prob.id, contest_id=cdat.id, completed=True)
+        prob = datas.first_or_404(datas.Problem, pid=the_pid)
+        status = datas.filter_by(datas.Submission, problem_id=prob.id, contest_id=cdat.id, completed=True)
     else:
         if pid == "test":
             return "不允許Rejudge測試題目", 400
-        prob = datas.Problem.query.filter_by(pid=pid).first_or_404()
+        prob = datas.first_or_404(datas.Problem, pid=pid)
         if not current_user.has(Permission.admin) and current_user.id != prob.user.username:
             abort(403)
-        status = datas.Submission.query.filter_by(problem_id=prob.id, contest_id=None, completed=True)
+        status = datas.filter_by(datas.Submission, problem_id=prob.id, contest_id=None, completed=True)
     for a_submit in status:
         tasks.rejudge(a_submit, "wait for rejudge")
         datas.add(submission)

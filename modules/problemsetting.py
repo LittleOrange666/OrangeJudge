@@ -75,7 +75,7 @@ class Problem(objs.ProblemInfo):
         """
         self.pid = pid
         self.is_important_editing_now = is_important_editing_now
-        self.sql_data: datas.Problem = datas.Problem.query.filter_by(pid=pid).first()
+        self.sql_data: datas.Problem = datas.first(datas.Problem, pid=pid)
         if self.is_important_editing_now:
             self.sql_data.editing = True
             datas.add(self.sql_data)
@@ -241,17 +241,17 @@ def init() -> None:
 
 
 def create_problem(name: str, pid: str, user: datas.User) -> str:
-    problem_count = datas.Problem.query.count()
+    problem_count = datas.count(datas.Problem)
     if len(name) == 0 or len(name) > 120:
         abort(400)
     if pid:
         if constants.problem_id_reg.match(pid) is None:
             abort(400)
-        if datas.Problem.query.filter_by(pid=pid).count():
+        if datas.count(datas.Problem, pid=pid) > 0:
             abort(409)
     else:
         pidx = problem_count + 1000
-        while datas.Problem.query.filter_by(pid=str(pidx)).count():
+        while datas.count(datas.Problem, pid=str(pidx)) > 0:
             pidx += 1
         pid = str(pidx)
     dat = datas.Problem(id=problem_count + 1, pid=pid, name=name, data={}, user=user)
@@ -518,8 +518,9 @@ def runner():
             current_pid = action_data["pid"]
             # time.sleep(1)
             log("start " + action_name)
-            with Problem(current_pid) as problem:
-                background_actions.call(action_name, **action_data)
+            with datas.SessionContext():
+                with Problem(current_pid) as problem:
+                    background_actions.call(action_name, **action_data)
             end(True)
         except StopActionException:
             logger.debug("Stop Action")
@@ -1096,16 +1097,15 @@ def export_problem(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Re
 
 
 def action(form: ImmutableMultiDict[str, str]) -> Response:
-    with datas.DelayCommit():
-        pid = secure_filename(form["pid"])
-        func = actions.get(form["action"])
-        important = hasattr(func, "important") and getattr(func, "important")
-        with Problem(pid, important) as dat:
-            tp = actions.call(form["action"], form, dat)
-            if type(tp) is str:
-                return redirect(f"/problemsetting/{pid}#{tp}")
-            else:
-                return tp
+    pid = secure_filename(form["pid"])
+    func = actions.get(form["action"])
+    important = hasattr(func, "important") and getattr(func, "important")
+    with Problem(pid, important) as dat:
+        tp = actions.call(form["action"], form, dat)
+        if type(tp) is str:
+            return redirect(f"/problemsetting/{pid}#{tp}")
+        else:
+            return tp
 
 
 def preview(args: MultiDict[str, str], pdat: datas.Problem) -> Response:

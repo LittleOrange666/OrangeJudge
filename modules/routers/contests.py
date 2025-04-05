@@ -34,7 +34,7 @@ def create_contest():
 
 @app.route("/contest/<idx>", methods=["GET"])
 def contest_page(idx):
-    dat: datas.Contest = datas.Contest.query.filter_by(cid=idx).first_or_404()
+    dat: datas.Contest = datas.first_or_404(datas.Contest, cid=idx)
     status, target, can_see = contests.check_status(dat)
     info = dat.datas
     can_edit = contests.check_super_access(dat)
@@ -51,13 +51,13 @@ def contest_page(idx):
 
 @app.route("/contest/<cid>/problem/<pid>", methods=["GET"])
 def contest_problem(cid, pid):
-    cdat: datas.Contest = datas.Contest.query.filter_by(cid=cid).first_or_404()
+    cdat: datas.Contest = datas.first_or_404(datas.Contest, cid=cid)
     contests.check_access(cdat)
     info = cdat.datas
     if pid not in info.problems:
         abort(404)
     idx = info.problems[pid].pid
-    pdat: datas.Problem = datas.Problem.query.filter_by(pid=idx).first_or_404()
+    pdat: datas.Problem = datas.first_or_404(datas.Problem, pid=idx)
     dat = pdat.datas
     langs = [lang for lang in executing.langs.keys() if pdat.lang_allowed(lang)]
     return render_problem(dat, idx, langs, is_contest=True, cid=cid, cname=cdat.name, pidx=pid)
@@ -65,11 +65,11 @@ def contest_problem(cid, pid):
 
 @app.route("/contest/<cid>/status/<page_str>", methods=["POST"])
 def contest_status(cid, page_str):
-    dat: datas.Contest = datas.Contest.query.filter_by(cid=cid).first_or_404()
+    dat: datas.Contest = datas.first_or_404(datas.Contest, cid=cid)
     info = dat.datas
     status = dat.submissions
     if "user" in request.form and len(request.form["user"]):
-        user: datas.User = datas.User.query.filter_by(username=request.form["user"]).first_or_404()
+        user: datas.User = datas.first_or_404(datas.User, username=request.form["user"])
         status = status.filter_by(user=user)
     if "pid" in request.form and len(request.form["pid"]):
         if request.form["pid"] not in info.problems:
@@ -120,7 +120,7 @@ def contest_status(cid, page_str):
 @login_required
 def contest_action():
     idx = request.form["cid"]
-    cdat = datas.Contest.query.filter_by(cid=idx).first_or_404()
+    cdat = datas.first_or_404(datas.Contest, cid=idx)
     if not contests.check_super_access(cdat):
         abort(403)
     return contests.action(request.form, cdat)
@@ -129,8 +129,8 @@ def contest_action():
 @app.route("/contest/<cid>/register", methods=['POST'])
 @login_required
 def contest_register(cid):
-    dat: datas.Contest = datas.Contest.query.filter_by(cid=cid).first_or_404()
-    per: datas.Period = datas.Period.query.get_or_404(dat.main_period_id)
+    dat = datas.first_or_404(datas.Contest, cid=cid)
+    per = datas.get_or_404(datas.Period, dat.main_period_id)
     info = dat.datas
     if not info.can_register or per.is_over():
         abort(403)
@@ -146,7 +146,7 @@ def contest_register(cid):
 @app.route("/contest/<cid>/unregister", methods=['POST'])
 @login_required
 def contest_unregister(cid):
-    dat: datas.Contest = datas.Contest.query.filter_by(cid=cid).first_or_404()
+    dat: datas.Contest = datas.first_or_404(datas.Contest, cid=cid)
     info = dat.datas
     if not info.can_register:
         abort(403)
@@ -162,7 +162,7 @@ def contest_unregister(cid):
 @app.route("/contest/<cid>/virtual", methods=['GET', 'POST'])
 @login_required
 def virtual_register(cid):
-    dat: datas.Contest = datas.Contest.query.filter_by(cid=cid).first_or_404()
+    dat: datas.Contest = datas.first_or_404(datas.Contest, cid=cid)
     info = dat.datas
     if not dat.can_virtual():
         abort(403)
@@ -172,8 +172,8 @@ def virtual_register(cid):
         return render_template("virtual_register.html", cid=cid, name=dat.name)
     else:
         start_time: datetime = tools.to_datetime(request.form["start_time"], second=0, microsecond=0)
-        per = datas.Period.query.filter_by(start_time=start_time, contest=dat, is_virtual=True)
-        if per.count():
+        per = datas.filter_by(datas.Period, start_time=start_time, contest=dat, is_virtual=True)
+        if per.count() > 0:
             idx = per.first().id
         else:
             nw_per = datas.Period(start_time=start_time,
@@ -190,7 +190,7 @@ def virtual_register(cid):
 
 @app.route("/contest/<cid>/standing", methods=['POST'])
 def contest_standing(cid):
-    cdat: datas.Contest = datas.Contest.query.filter_by(cid=cid).first_or_404()
+    cdat: datas.Contest = datas.first_or_404(datas.Contest, cid=cid)
     info = cdat.datas
     dt = time.time() - info.start
     dt = dt / 60 - info.elapsed
@@ -204,7 +204,7 @@ def contest_standing(cid):
 
 @app.route("/contest/<cid>/question", methods=['POST'])
 def contest_question(cid):
-    cdat: datas.Contest = datas.Contest.query.filter_by(cid=cid).first_or_404()
+    cdat: datas.Contest = datas.first_or_404(datas.Contest, cid=cid)
     if len(request.form["title"]) > 80:
         abort(400)
     if len(request.form["content"]) > 1000:
@@ -225,10 +225,10 @@ def contest_question(cid):
 def reject():
     idx = request.form["idx"]
     cid = request.form["cid"]
-    dat: datas.Submission = datas.Submission.query.get_or_404(idx)
+    dat = datas.get_or_404(datas.Submission, tools.to_int(idx))
     if dat.contest.cid != cid:
         abort(400)
-    cdat: datas.Contest = datas.Contest.query.filter_by(cid=cid).first_or_404()
+    cdat: datas.Contest = datas.first_or_404(datas.Contest, cid=cid)
     if not contests.check_super_access(cdat):
         abort(403)
     if not dat.completed:

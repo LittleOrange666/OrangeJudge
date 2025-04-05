@@ -56,7 +56,7 @@ def signup():
         return "ID不合法", 400
     if login.exist(user_id):
         return "ID已被使用", 400
-    if datas.User.query.filter_by(email=email).count() > 0:
+    if datas.filter_by(datas.User, email=email).count() > 0:
         return "email已被使用", 400
     if len(password) < 6:
         return "密碼應至少6個字元", 400

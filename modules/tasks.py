@@ -81,56 +81,66 @@ def run(lang: executing.Language, file: Path, env: executing.Environment, stdin:
     return f"OK: {time_usage}ms, {memusage}B"
 
 
-def run_test(dat: datas.Submission) -> None:
-    lang = executing.langs[dat.language]
-    env = executing.Environment()
-    idx = str(dat.id)
-    logger.info("run test", idx)
-    source = dat.path / dat.source
-    info = dat.datas
-    in_file = dat.path / info.infile
-    out_file = dat.path / info.outfile
-    result = run(lang, source, env, in_file, out_file, dat)
-    dat.results = objs.SubmissionResult()
-    dat.simple_result = result
-    dat.completed = True
-    datas.add(dat)
+def run_test(dat_id: int) -> None:
+    with datas.SessionContext():
+        dat = datas.get_by_id(datas.Submission, dat_id)
+        lang = executing.langs[dat.language]
+        env = executing.Environment()
+        idx = str(dat.id)
+        logger.info("run test", idx)
+        source = dat.path / dat.source
+        info = dat.datas
+        in_file = dat.path / info.infile
+        out_file = dat.path / info.outfile
+        result = run(lang, source, env, in_file, out_file, dat)
+        dat.results = objs.SubmissionResult()
+        dat.simple_result = result
+        dat.completed = True
+        datas.add(dat)
 
 
-def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
-    lang = executing.langs[dat.language]
-    env = executing.Environment()
-    source = dat.path / dat.source
-    p_path = pdat.path
-    problem_info = pdat.datas
+def run_problem(pid: str, dat_id: int) -> None:
+    with datas.SessionContext():
+        dat = datas.get_by_id(datas.Submission, dat_id)
+        pdat = datas.first(datas.Problem, pid=pid)
+        lang = executing.langs[dat.language]
+        env = executing.Environment()
+        dat_path = dat.path
+        source = dat_path / dat.source
+        just_pretest: bool = dat.just_pretest
+        p_path = pdat.path
+        problem_info = pdat.datas
+        protected = ((not problem_info.public_testcase or bool(dat.period_id))
+                              and dat.user.username not in problem_info.users)
+        language = dat.language
     for fn in problem_info.library:
         env.send_file(pdat.path / "file" / fn, env.executable)
     sent_source = env.send_file(source)
     if problem_info.runner_enabled:
-        judge_runner = env.send_file(p_path / "file" / problem_info.runner_source.get(dat.language))
+        judge_runner = env.send_file(p_path / "file" / problem_info.runner_source.get(language))
         judge_runner = env.rename(judge_runner, constants.runner_source_file_name + lang.source_ext)
         filename, ce_msg = lang.compile(sent_source, env, judge_runner)
     else:
         filename, ce_msg = lang.compile(sent_source, env)
     out_info = objs.SubmissionResult()
     results: list[objs.TestcaseResult] = []
-    just_pretest: bool = dat.just_pretest
     simple_result = "pretest passed" if just_pretest else "AC"
     top_score = problem_info.top_score
     total_score = 0
     groups: dict[str, objs.RunningTestcaseGroup] = {}
     appeared_result = set()
     codechecker_msg = ""
-    out_info.protected = ((not problem_info.public_testcase or bool(dat.period_id))
-                          and dat.user.username not in problem_info.users)
+    out_info.protected = protected
     if ce_msg:
-        dat.ce_msg = ce_msg
-        out_info.CE = True
-        dat.results = out_info
-        dat.simple_result = "CE"
-        dat.completed = True
-        datas.add(dat)
-        return
+        with datas.SessionContext():
+            dat = datas.get_by_id(datas.Submission, dat_id)
+            dat.ce_msg = ce_msg
+            out_info.CE = True
+            dat.results = out_info
+            dat.simple_result = "CE"
+            dat.completed = True
+            datas.add(dat)
+            return
     tl = int(problem_info.timelimit)
     ml = int(problem_info.memorylimit)
     int_exec = []
@@ -145,7 +155,7 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
         cc_exec = cc_lang.get_execmd(cc_file)
         res = env.call(cc_exec + [str(sent_source.sandbox), lang.branch])  # here should resolve errors
         env.path("codechecker_result.txt").full.write_text(res.stdout)
-        (dat.path / "codechecker_result.txt").write_text(res.stdout)
+        (dat_path / "codechecker_result.txt").write_text(res.stdout)
         codechecker_msg = res.stderr
         if res.stderr.startswith("partially correct"):
             codechecker_score = res.return_code
@@ -161,7 +171,7 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
     checker = env.send_file(p_path / problem_info.checker.name, SandboxUser.judge.executable)
     checker_cmd = executing.langs[problem_info.checker.lang].get_execmd(checker)
     exec_cmd = lang.get_execmd(filename)
-    testcase_path = dat.path / "testcases"
+    testcase_path = dat_path / "testcases"
     testcase_path.mkdir(parents=True, exist_ok=True)
     groups_ = problem_info.groups
     if "default" not in groups_:
@@ -186,15 +196,17 @@ def run_problem(pdat: datas.Problem, dat: datas.Submission) -> None:
         out_info.results = results
         out_info.group_results = {k: v.to_result() for k, v in groups.items()}
         out_info.total_score = total_score
-        dat.results = out_info
-        simple_result_ = simple_result
-        if simple_result_ == "NA":
-            simple_result_ = "/".join(sorted(appeared_result))
-            if completed:
-                simple_result_ += f" {total_score}%"
-        dat.simple_result = simple_result_
-        dat.completed = completed
-        datas.add(dat)
+        with datas.SessionContext():
+            dat = datas.get_by_id(datas.Submission, dat_id)
+            dat.results = out_info
+            simple_result_ = simple_result
+            if simple_result_ == "NA":
+                simple_result_ = "/".join(sorted(appeared_result))
+                if completed:
+                    simple_result_ += f" {total_score}%"
+            dat.simple_result = simple_result_
+            dat.completed = completed
+            datas.add(dat)
 
     unsaved_count = 0
     save_period = config.judge.save_period
@@ -329,40 +341,45 @@ def get_queue_position(dat: datas.Submission) -> int:
     return max((dat.queue_position or 0) - queue_position.value, 0)
 
 
-def runner(dat: datas.Submission):
-    logger.info(f"get {dat.id}")
+def runner(dat_id: int, pid: str):
+    logger.info(f"get {dat_id} with problem {pid!r}")
     try:
-        pdat: datas.Problem = dat.problem
-        if pdat.pid == "test":
-            run_test(dat)
+        if pid == "test":
+            run_test(dat_id)
         else:
-            run_problem(pdat, dat)
+            run_problem(pid, dat_id)
     except Exception as e:
         traceback.print_exception(e)
-        info = dat.datas
-        info.JE = True
-        log_uuid = tools.random_string()
-        info.log_uuid = log_uuid
-        dat.datas = info
-        tools.write("".join(traceback.format_exception(e)), log_path / (log_uuid + ".log"))
-        dat.completed = True
-        datas.add(dat)
+        with datas.SessionContext():
+            dat = datas.get_by_id(datas.Submission, dat_id)
+            info = dat.datas
+            info.JE = True
+            log_uuid = tools.random_string()
+            info.log_uuid = log_uuid
+            dat.datas = info
+            tools.write("".join(traceback.format_exception(e)), log_path / (log_uuid + ".log"))
+            dat.completed = True
+            dat.running = False
+            datas.add(dat)
 
 
 def queue_receiver():
     while True:
-        dat = None
+        dat_id = None
+        pid = None
         with check_lock:
-            submissions = datas.Submission.query.filter_by(completed=False, running=False)
-            if submissions.count() > 0:
-                dat = submissions.first()
-                dat.running = True
-                datas.add(dat)
-                last_judged.inc()
-        if dat is None:
+            with datas.SessionContext():
+                dat = datas.first(datas.Submission, completed=False, running=False)
+                if dat is not None:
+                    dat.running = True
+                    dat_id = dat.id
+                    pid = dat.pid
+                    datas.add(dat)
+                    last_judged.inc()
+        if dat_id is None:
             time.sleep(config.judge.period)
         else:
-            runner(dat)
+            runner(dat_id, pid)
             time.sleep(1)
 
 
@@ -379,9 +396,10 @@ def rejudge(dat: datas.Submission, msg: str = "wait system test"):
 
 
 def init():
-    for submission in datas.Submission.query.filter_by(completed=False):
-        submission.running = False
-        datas.add(submission)
-        enqueue(submission.id)
+    with datas.SessionContext():
+        for submission in datas.get_all(datas.Submission, completed=False):
+            submission.running = False
+            datas.add(submission)
+            enqueue(submission.id)
     for _ in range(config.judge.workers):
         multiprocessing.Process(target=queue_receiver).start()

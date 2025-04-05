@@ -30,7 +30,7 @@ services:
             - sandbox:/sandbox
             - ./langs:/langs:ro
         environment:
-            - SERVICE_URL=http://judge-server:9132
+            - SERVICE_URL=http://judge-server:9134
         ports:
             - "0.0.0.0:9132:8000"
     judge_backend:

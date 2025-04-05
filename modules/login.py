@@ -29,7 +29,7 @@ class User(UserMixin):
             name (str): The username of the user.
         """
         self.id = secure_filename(name.lower())
-        self.data: datas.User = datas.User.query.filter_by(username=name).first()
+        self.data: datas.User = datas.filter_by(datas.User, username=name).first()
 
     def save(self):
         """
@@ -179,9 +179,9 @@ def try_login(user_id: str, password: str) -> tuple[None | User, str]:
     user_id = user_id.lower()
     if password is None:
         return None, "密碼不能為空"
-    usr = datas.User.query.filter_by(username=user_id)
+    usr = datas.filter_by(datas.User, username=user_id)
     if usr.count() == 0:
-        usr = datas.User.query.filter_by(email=user_id)
+        usr = datas.filter_by(datas.User, email=user_id)
         if usr.count() == 0:
             return None, "帳號或密碼錯誤"
         user_id = usr.first().username
@@ -207,9 +207,9 @@ def get_user(user_id: str) -> User | None:
     Returns:
         User | None: A User object if the user is found, or None if no user is found.
     """
-    usr = datas.User.query.filter_by(username=user_id)
+    usr = datas.filter_by(datas.User, username=user_id)
     if usr.count() == 0:
-        usr = datas.User.query.filter_by(email=user_id)
+        usr = datas.filter_by(datas.User, email=user_id)
         if usr.count() == 0:
             return None
         user_id = usr.first().username
@@ -217,7 +217,7 @@ def get_user(user_id: str) -> User | None:
 
 
 def exist(user_id: str) -> bool:
-    return datas.User.query.filter_by(username=user_id.lower()).count() > 0
+    return datas.count(datas.User, username=user_id.lower()) > 0
 
 
 def create_account(email: str, user_id: str, password: str | None) -> None:
@@ -266,11 +266,12 @@ def init():
         smtp.ehlo()
         smtp.starttls()
         smtp.login(config.smtp.user, config.smtp.password)
-    if not exist("root"):
-        create_account("", "root", "root")
-        root: datas.User = datas.User.query.filter_by(username="root").first()
-        root.permissions = "root"
-        datas.add(root)
-        if datas.Problem.query.filter_by(pid="test").count() == 0:
-            test_problem = datas.Problem(pid="test", name="", data={}, new_data={}, user=root)
-            datas.add(test_problem)
+    with datas.SessionContext():
+        if not exist("root"):
+            create_account("", "root", "root")
+            root = datas.first(datas.User, username="root")
+            root.permissions = "root"
+            datas.add(root)
+            if datas.count(datas.Problem, pid="test") == 0:
+                test_problem = datas.Problem(pid="test", name="", data={}, new_data={}, user=root)
+                datas.add(test_problem)
