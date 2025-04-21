@@ -46,7 +46,7 @@ def contest_page(idx):
         user_data = current_user.data if current_user.is_authenticated else None
         questions = reversed(dat.announcements.filter_by(question=True, user=user_data).all())
     return render_template("contest.html", cid=idx, data=info, can_edit=can_edit, can_see=can_see, target=target,
-                           status=status, announcements=announcements, questions=questions)
+                           status=status, announcements=announcements, questions=questions, cur_time=time.time())
 
 
 @app.route("/contest/<cid>/problem/<pid>", methods=["GET"])
@@ -86,7 +86,8 @@ def contest_status(cid, page_str):
             if v.pid == pid:
                 problem = k
                 problem_name = v.name
-        can_see = login.has_permission(Permission.admin) or current_user.id == obj.user.username
+        can_see = current_user.is_authenticated and (login.has_permission(Permission.admin) or
+                                                     current_user.id == obj.user.username)
         can_rejudge = contests.check_super_access(dat)
         can_know = can_see or info.standing.public
         result = obj.simple_result or "unknown"

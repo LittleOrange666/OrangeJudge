@@ -351,7 +351,7 @@ def contest_worker():
                             submission: datas.Submission
                             submission.just_pretest = False
                             key = (submission.user_id, submission.pid)
-                            if submission.simple_result.lower() not in ("jc", "ce"):
+                            if submission.simple_result.lower() not in ("je", "ce"):
                                 reject(submission)
                                 if pretest == objs.PretestType.all:
                                     tasks.rejudge(submission)

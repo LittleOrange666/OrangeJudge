@@ -12,6 +12,19 @@
                 <p class="h2 text-secondary countdown-timer" data-target="{{ target }}"></p>
             {% endif %}
         </div>
+        {% if current_user.is_authenticated and data.can_register and data.start + data.elapsed*60 > cur_time %}
+            <div class="col-auto">
+                {% if current_user.id not in data.participants %}
+                    <form method="post" action="/contest/{{ cid }}/register">
+                        <button class="btn btn-primary submitter">註冊</button>
+                    </form>
+                {% else %}
+                    <form method="post" action="/contest/{{ cid }}/unregister">
+                        <button class="btn btn-danger submitter">取消註冊</button>
+                    </form>
+                {% endif %}
+            </div>
+        {% endif %}
     </div>
     <ul class="nav nav-tabs">
         <li class="nav-item" role="presentation">
