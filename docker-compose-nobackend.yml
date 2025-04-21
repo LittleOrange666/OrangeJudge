@@ -1,9 +1,4 @@
 services:
-    judge_redis:
-        image: redis:4.0-alpine
-        restart: always
-        volumes:
-            - ./data/redis:/data
     judge_postgres:
         image: postgres:15-alpine
         restart: always

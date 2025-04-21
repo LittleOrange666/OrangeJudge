@@ -384,22 +384,27 @@ def runner(dat_id: int, pid: str):
 
 def queue_receiver():
     while True:
-        dat_id = None
-        pid = None
-        with check_lock:
-            with datas.SessionContext():
-                dat = datas.first(datas.Submission, completed=False, running=False)
-                if dat is not None:
-                    dat.running = True
-                    dat_id = dat.id
-                    pid = dat.pid
-                    datas.add(dat)
-                    last_judged.inc()
-        if dat_id is None:
-            time.sleep(config.judge.period)
-        else:
-            runner(dat_id, pid)
-            time.sleep(1)
+        try:
+            dat_id = None
+            pid = None
+            with check_lock:
+                with datas.SessionContext():
+                    dat = datas.first(datas.Submission, completed=False, running=False)
+                    if dat is not None:
+                        dat.running = True
+                        dat_id = dat.id
+                        pid = dat.pid
+                        datas.add(dat)
+                        last_judged.inc()
+            if dat_id is None:
+                time.sleep(config.judge.period)
+            else:
+                runner(dat_id, pid)
+                time.sleep(1)
+        except Exception as e:
+            logger.error(f"Error in queue receiver: {e}")
+            logger.debug(traceback.format_exc())
+            time.sleep(60)
 
 
 def enqueue(idx: int) -> int:

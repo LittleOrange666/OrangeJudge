@@ -18,6 +18,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import multiprocessing
+import time
+import traceback
 from datetime import datetime, timedelta
 from multiprocessing import Process
 from time import sleep
@@ -25,6 +27,7 @@ from time import sleep
 from cachetools import TTLCache, cached
 from flask import abort
 from flask_login import current_user
+from loguru import logger
 from werkzeug.datastructures import ImmutableMultiDict
 
 from . import tools, datas, tasks, objs
@@ -355,55 +358,60 @@ def reject(dat: datas.Submission):
 
 def contest_worker():
     while True:
-        with datas.SessionContext():
-            for dat in datas.get_all(datas.Period, running=True):
-                if dat.is_over():
-                    dat.running = False
-                    dat.ended = True
-                    cdat: datas.Contest = dat.contest
-                    pretest = cdat.datas.pretest
-                    if pretest != objs.PretestType.no:
-                        submissions = dat.submissions.filter_by(just_pretest=True).all()
-                        dic: dict[tuple[int, str], datas.Submission] = {}
-                        datas.add(*submissions)
-                        for submission in submissions:
-                            submission: datas.Submission
-                            submission.just_pretest = False
-                            key = (submission.user_id, submission.pid)
-                            if submission.simple_result.lower() not in ("je", "ce"):
-                                reject(submission)
-                                if pretest == objs.PretestType.all:
-                                    tasks.rejudge(submission)
-                                else:
-                                    dic[key] = submission
-                        if pretest == objs.PretestType.last:
-                            for v in dic.values():
-                                tasks.rejudge(v)
-                        datas.add(*submissions)
-                datas.add(dat)
-        sleep(5)
-        with datas.SessionContext():
-            for dat in datas.get_all(datas.Period, running=False, ended=False):
-                dat: datas.Period
-                if dat.is_running():
-                    dat.running = True
-                    dat.judging = True
+        try:
+            with datas.SessionContext():
+                for dat in datas.get_all(datas.Period, running=True):
+                    if dat.is_over():
+                        dat.running = False
+                        dat.ended = True
+                        cdat: datas.Contest = dat.contest
+                        pretest = cdat.datas.pretest
+                        if pretest != objs.PretestType.no:
+                            submissions = dat.submissions.filter_by(just_pretest=True).all()
+                            dic: dict[tuple[int, str], datas.Submission] = {}
+                            datas.add(*submissions)
+                            for submission in submissions:
+                                submission: datas.Submission
+                                submission.just_pretest = False
+                                key = (submission.user_id, submission.pid)
+                                if submission.simple_result.lower() not in ("je", "ce"):
+                                    reject(submission)
+                                    if pretest == objs.PretestType.all:
+                                        tasks.rejudge(submission)
+                                    else:
+                                        dic[key] = submission
+                            if pretest == objs.PretestType.last:
+                                for v in dic.values():
+                                    tasks.rejudge(v)
+                            datas.add(*submissions)
                     datas.add(dat)
-        sleep(5)
-        with datas.SessionContext():
-            for dat in datas.get_all(datas.Period, running=False, ended=True, judging=True):
-                dat: datas.Period
-                if dat.submissions.filter_by(completed=False).count() == 0:
-                    dat.judging = False
-                    datas.add(dat)
-        sleep(5)
-        with datas.SessionContext():
-            for dat in datas.get_all(datas.Period, running=False, ended=True, judging=False):
-                dat: datas.Period
-                if not dat.is_started():
-                    dat.ended = False
-                    datas.add(dat)
-        sleep(5)
+            sleep(5)
+            with datas.SessionContext():
+                for dat in datas.get_all(datas.Period, running=False, ended=False):
+                    dat: datas.Period
+                    if dat.is_running():
+                        dat.running = True
+                        dat.judging = True
+                        datas.add(dat)
+            sleep(5)
+            with datas.SessionContext():
+                for dat in datas.get_all(datas.Period, running=False, ended=True, judging=True):
+                    dat: datas.Period
+                    if dat.submissions.filter_by(completed=False).count() == 0:
+                        dat.judging = False
+                        datas.add(dat)
+            sleep(5)
+            with datas.SessionContext():
+                for dat in datas.get_all(datas.Period, running=False, ended=True, judging=False):
+                    dat: datas.Period
+                    if not dat.is_started():
+                        dat.ended = False
+                        datas.add(dat)
+            sleep(5)
+        except Exception as e:
+            logger.error(f"Error in contest worker: {e}")
+            logger.debug(traceback.format_exc())
+            time.sleep(60)
 
 
 def init():

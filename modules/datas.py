@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import os
+import traceback
 from contextlib import contextmanager
 from contextvars import ContextVar
 from datetime import datetime
@@ -28,6 +29,7 @@ from flask import has_request_context
 from flask_sqlalchemy import SQLAlchemy
 from flask_sqlalchemy.query import Query
 from flask_sqlalchemy.session import Session
+from loguru import logger
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -508,6 +510,8 @@ def SessionContext():
     elif _current_session.get() is not None:
         yield _current_session.get()
     else:
+        # logger.info("Creating new session")
+        # traceback.print_stack()
         session = SessionFactory()
         token = _current_session.set(session)
         try:
@@ -519,6 +523,7 @@ def SessionContext():
         finally:
             session.close()
             _current_session.reset(token)
+        # logger.info("Session closed")
 
 
 def get_session() -> Session:
@@ -710,7 +715,9 @@ def first(model_class: Type[T], **kwargs) -> T | None:
         T | None: The first record that matches the given criteria, or None if no match is found.
     """
     session = get_session()
-    return session.query(model_class).filter_by(**kwargs).first()
+    if session.query(model_class).filter_by(**kwargs).count() > 0:
+        return session.query(model_class).filter_by(**kwargs).first()
+    return None
 
 
 def first_or_404(model_class: Type[T], **kwargs) -> T:

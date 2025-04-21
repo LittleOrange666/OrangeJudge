@@ -19,13 +19,28 @@ ask2 = """Server is not running:
 2. quit
 number: """
 
+envs = {
+    "POSTGRES_DB": "orangejudge",
+    "POSTGRES_USER": "orangejudgeuser",
+    "POSTGRES_PASSWORD": "orangejudgepassword",
+    "POSTGRES_HOST": "localhost:5432"
+}
+
 
 def main():
-    process = subprocess.Popen(main_cmd, shell=True, preexec_fn=os.setsid)
+    process: subprocess.Popen = None
 
     def start():
         nonlocal process
-        process = subprocess.Popen(main_cmd, shell=True, preexec_fn=os.setsid)
+        pids = subprocess.check_output("lsof -ti :8080", shell=True).decode().split()
+        for pid in pids:
+            try:
+                os.kill(int(pid), signal.SIGTERM)
+                print("Kill process", pid)
+            except Exception as e:
+                print("Error while killing process:", e)
+        process = subprocess.Popen(main_cmd, shell=True, preexec_fn=os.setsid, env=os.environ.copy() | envs)
+    start()
 
     def stop():
         nonlocal process
