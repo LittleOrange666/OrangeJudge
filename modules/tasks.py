@@ -1,3 +1,22 @@
+"""
+OrangeJudge, a competitive programming platform
+
+Copyright (C) 2024-2025 LittleOrange666 (orangeminecraft123@gmail.com)
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+"""
+
 import math
 import multiprocessing
 import time
@@ -141,7 +160,7 @@ def run_problem(pid: str, dat_id: int) -> None:
             dat.completed = True
             datas.add(dat)
             return
-    tl = int(problem_info.timelimit)
+    tl = int(problem_info.timelimit) * problem_info.language_multipliers.get(dat.language, 1)
     ml = int(problem_info.memorylimit)
     int_exec = []
     if problem_info.is_interact:
