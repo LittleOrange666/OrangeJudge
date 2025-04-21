@@ -52,6 +52,18 @@ judge server的token默認是自動生成的，可能比較不穩定，最好是
 
 即可
 
+### TOKEN
+
+judge backend的secret key用於保護登入狀態，默認是自動生成的，會導致重啟時丟失登入狀態，可以是在docker-compose.yml裡面設定一下固定的secret key
+
+在judge_backend的environment裡面加上
+
+```yaml
+- FLASK_SECRET_KEY=your_secret
+```
+
+即可
+
 ## 手動安裝
 
 若有修改程式之需求(Ex. 增加可用語言)，可以把這個repo跟[OrangeJudge_Judger](https://github.com/LittleOrange666/OrangeJudge_Judger) clone下來
