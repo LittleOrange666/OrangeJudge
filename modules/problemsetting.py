@@ -1011,7 +1011,12 @@ def public_problem(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Re
 @actions.bind
 def save_languages(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Response:
     for k in executing.langs.keys():
+        mul = form.get("lang_mul_" + k, "1")
+        if not mul.isdigit() or int(mul) < 1 or int(mul) > 100:
+            abort(400)
+    for k in executing.langs.keys():
         dat.languages[k] = (form.get("lang_check_" + k, "off") == "on")
+        dat.language_multipliers[k] = int(form.get("lang_mul_" + k, "1"))
     return "languages"
 
 

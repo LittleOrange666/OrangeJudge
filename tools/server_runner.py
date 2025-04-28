@@ -32,13 +32,16 @@ def main():
 
     def start():
         nonlocal process
-        pids = subprocess.check_output("lsof -ti :8080", shell=True).decode().split()
-        for pid in pids:
-            try:
-                os.kill(int(pid), signal.SIGTERM)
-                print("Kill process", pid)
-            except Exception as e:
-                print("Error while killing process:", e)
+        try:
+            pids = subprocess.check_output("lsof -ti :8080", shell=True).decode().split()
+            for pid in pids:
+                try:
+                    os.kill(int(pid), signal.SIGTERM)
+                    print("Kill process", pid)
+                except Exception as e:
+                    print("Error while killing process:", e)
+        except:
+            pass
         process = subprocess.Popen(main_cmd, shell=True, preexec_fn=os.setsid, env=os.environ.copy() | envs)
     start()
 
