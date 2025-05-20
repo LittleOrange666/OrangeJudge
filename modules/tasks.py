@@ -160,7 +160,7 @@ def run_problem(pid: str, dat_id: int) -> None:
             dat.completed = True
             datas.add(dat)
             return
-    tl = int(problem_info.timelimit) * problem_info.language_multipliers.get(dat.language, 1)
+    tl = int(problem_info.timelimit) * problem_info.language_multipliers.get(language, 1)
     ml = int(problem_info.memorylimit)
     int_exec = []
     if problem_info.is_interact:

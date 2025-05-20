@@ -39,7 +39,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from werkzeug.datastructures import ImmutableMultiDict, MultiDict
 from werkzeug.utils import secure_filename
 
-from . import executing, tools, constants, createhtml, datas, objs, judge
+from . import executing, tools, constants, createhtml, datas, objs, judge, createhtml2
 from .constants import tmp_path, preparing_problem_path, testlib, problem_path
 from .judge import SandboxPath, SandboxUser
 from .objs import ProgramType, GenType
@@ -645,7 +645,7 @@ def render_statement(dat: Problem):
         full += "\n## Note\n" + obj.note
     tools.write(full, dat.path / "statement.md")
     createhtml.parse.dirname = dat.pid
-    tools.write(createhtml.run_markdown(full), dat.path / "statement.html")
+    tools.write(createhtml2.run_markdown(full), dat.path / "statement.html")
 
 
 @make_important
