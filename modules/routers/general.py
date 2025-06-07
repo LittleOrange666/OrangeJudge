@@ -20,8 +20,11 @@ import csv
 import datetime
 import json
 import os
+import traceback
 import uuid
+from io import TextIOWrapper, BytesIO
 
+import loguru
 from flask import abort, render_template, redirect, request, jsonify
 from flask_login import login_required, current_user
 from openpyxl import load_workbook
@@ -335,18 +338,24 @@ def update_user():
 
 def parse_user():
     file = request.files.get("file")
-    if not file:
+    if not file or file.filename == "":
         return "No file provided", 400
     ext = os.path.splitext(file.filename)[1].lower()
     if ext not in (".xlsx", ".csv"):
         return "Unsupported file type", 400
-    if ext == ".xlsx":
-        wb = load_workbook(file.stream, data_only=True)
-        ws = wb.active
-        arr = [[cell.value for cell in row] for row in ws.iter_rows()]
-    else:
-        reader = csv.reader(file.stream)
-        arr = [[cell for cell in row] for row in reader]
+    try:
+        in_memory_file = BytesIO(file.stream.read())
+        if ext == ".xlsx":
+            wb = load_workbook(in_memory_file, data_only=True)
+            ws = wb.active
+            arr = [[str(cell.value) for cell in row] for row in ws.iter_rows()]
+        else:
+            wrapper = TextIOWrapper(in_memory_file, encoding="utf-8")
+            reader = csv.reader(wrapper)
+            arr = [[cell for cell in row] for row in reader]
+    except Exception as e:
+        traceback.print_exception(e)
+        return "Failed to read file", 400
     if len(arr) < 1:
         return "No data found", 400
     title = [cell.lower() for cell in arr[0]]
@@ -380,7 +389,7 @@ def parse_user():
         if datas.count(datas.User, username=username) > 0 or (email and datas.count(datas.User, email=email) > 0):
             existed.append([username, email])
             continue
-        out.append([email, username, password, display_name])
+        out.append([username, password, email, display_name])
     if len(out) < 1:
         return "No valid user data found", 400
     return jsonify({"users": out, "existed": existed}), 200
