@@ -22,3 +22,4 @@ loguru
 psycopg2-binary
 markdown_del_ins
 mistune
+openpyxl

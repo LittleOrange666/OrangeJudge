@@ -50,7 +50,29 @@
             <p>此功能尚未實裝</p>
         </div>
         <div id="make_users" class="tab-pane fade">
-            <p>此功能尚未實裝</p>
+            <p>請上傳有 username, password, email(Optional), display_name(Optional)欄位的表格</p>
+            <div class="mb-3">
+                <input type="file" class="form-control" accept=".csv, .xlsx" name="files" id="user_info_file">
+            </div>
+            <div class="mb-3">
+                <button class="btn btn-primary" id="parse_user_info">上傳檔案</button>
+            </div>
+            <table class="table table-hover table-striped">
+                <thead>
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Username</th>
+                    <th scope="col">password</th>
+                    <th scope="col">email</th>
+                    <th scope="col">Display_name</th>
+                </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+            <div class="mb-3">
+                <button class="btn btn-primary" id="submit_user_info">確認提交</button>
+            </div>
         </div>
     </div>
     <div class="modal fade" id="user_manage" tabindex="-1" aria-labelledby="Modal" aria-hidden="true">

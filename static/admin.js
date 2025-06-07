@@ -36,4 +36,25 @@ $(function () {
             }
         })
     });
+    $("#parse_user_info").click(function(){
+        let form = new FormData();
+        form.append("action", "parse_user");
+        form.append("files", $("#user_info_file")[0].files[0]);
+        let res = fetch("/admin", {
+            method: "POST",
+            headers: {"x-csrf-token": $("#csrf_token").val()},
+            body: form
+        });
+        res.then(response => {
+            if (response.ok) {
+                return response.text();
+            } else {
+                throw new Error("Network response was not ok");
+            }
+        }).then(data => {
+            show_modal("成功", "成功解析使用者資訊: " + data);
+        }).catch(error => {
+            show_modal("失敗", "Error: " + error.message);
+        });
+    });
 });

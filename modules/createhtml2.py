@@ -56,6 +56,8 @@ class HighlightRenderer(mistune.HTMLRenderer):
 
         formatter = HtmlFormatter()
         return highlight(code, lexer, formatter)
+
+
 def plugin_math_tex_v2_full(md):
     # 行內公式：\(...\)
     backslash_inline = re.compile(r'\\\((.+?)\\\)')

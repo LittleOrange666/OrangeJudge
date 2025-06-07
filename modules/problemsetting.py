@@ -645,7 +645,7 @@ def render_statement(dat: Problem):
         full += "\n## Note\n" + obj.note
     tools.write(full, dat.path / "statement.md")
     createhtml.parse.dirname = dat.pid
-    tools.write(createhtml2.run_markdown(full), dat.path / "statement.html")
+    tools.write(createhtml.run_markdown(full), dat.path / "statement.html")
 
 
 @make_important
