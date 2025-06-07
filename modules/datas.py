@@ -44,13 +44,12 @@ if all(k in os.environ for k in ("POSTGRES_DB", "POSTGRES_USER", "POSTGRES_PASSW
     PASSWORD = os.environ["POSTGRES_PASSWORD"]
     HOST = os.environ["POSTGRES_HOST"]
     postgres_url = f"postgresql+psycopg2://{USER}:{PASSWORD}@{HOST}/{DB}"
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SQLALCHEMY_DATABASE_URI'] = postgres_url
 else:
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
     app.config['SQLALCHEMY_DATABASE_URI'] = sqlite_url
 db = SQLAlchemy(app)
-SessionFactory: sessionmaker[Session] | None = None
 _current_session: ContextVar = ContextVar("current_session", default=None)
 
 
@@ -481,9 +480,7 @@ class Announcement(db.Model):
 
 
 def init():
-    global SessionFactory
     db.create_all()
-    SessionFactory = sessionmaker(bind=db.engine)
 
 
 T = TypeVar('T')
@@ -508,7 +505,7 @@ def SessionContext():
     elif _current_session.get() is not None:
         yield _current_session.get()
     else:
-        session = SessionFactory()
+        session = sessionmaker(bind=db.engine)()
         token = _current_session.set(session)
         try:
             yield session
@@ -676,7 +673,13 @@ def filter_by(model_class: Type[T], **kwargs) -> Query[T]:
 
 def get_all(model_class: Type[T], **kwargs) -> list[T]:
     session = get_session()
-    return session.query(model_class).filter_by(**kwargs).all()
+    if kwargs:
+        if session.query(model_class).filter_by(**kwargs).count() > 0:
+            return session.query(model_class).filter_by(**kwargs).all()
+    else:
+        if session.query(model_class).count() > 0:
+            return session.query(model_class).all()
+    return []
 
 
 def count(model_class: Type[T], **kwargs) -> int:
@@ -694,7 +697,10 @@ def count(model_class: Type[T], **kwargs) -> int:
         int: The count of records that match the given criteria.
     """
     session = get_session()
-    return session.query(model_class).filter_by(**kwargs).count()
+    if kwargs:
+        return session.query(model_class).filter_by(**kwargs).count()
+    else:
+        return session.query(model_class).count()
 
 
 def first(model_class: Type[T], **kwargs) -> T | None:
@@ -712,8 +718,12 @@ def first(model_class: Type[T], **kwargs) -> T | None:
         T | None: The first record that matches the given criteria, or None if no match is found.
     """
     session = get_session()
-    if session.query(model_class).filter_by(**kwargs).count() > 0:
-        return session.query(model_class).filter_by(**kwargs).first()
+    if kwargs:
+        if session.query(model_class).filter_by(**kwargs).count() > 0:
+            return session.query(model_class).filter_by(**kwargs).first()
+    else:
+        if session.query(model_class).count() > 0:
+            return session.query(model_class).first()
     return None
 
 
