@@ -18,7 +18,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import os
-import traceback
 from contextlib import contextmanager
 from contextvars import ContextVar
 from datetime import datetime
@@ -29,7 +28,6 @@ from flask import has_request_context
 from flask_sqlalchemy import SQLAlchemy
 from flask_sqlalchemy.query import Query
 from flask_sqlalchemy.session import Session
-from loguru import logger
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -60,7 +58,7 @@ _current_session: ContextVar = ContextVar("current_session", default=None)
 def teardown_request(exception=None):
     if exception:
         db.session.rollback()
-    else:
+    elif db.session.new or db.session.dirty or db.session.deleted:
         db.session.commit()
 
 
@@ -510,13 +508,12 @@ def SessionContext():
     elif _current_session.get() is not None:
         yield _current_session.get()
     else:
-        # logger.info("Creating new session")
-        # traceback.print_stack()
         session = SessionFactory()
         token = _current_session.set(session)
         try:
             yield session
-            session.commit()
+            if session.new or session.dirty or session.deleted:
+                session.commit()
         except Exception:
             session.rollback()
             raise

@@ -36,6 +36,27 @@ $(function () {
             }
         })
     });
+    $("#submit_user_info").click(function (){
+        let users = [];
+        $("#user_infos tr").each(function () {
+            let username = $(this).find("td:nth-child(2)").text();
+            let password = $(this).find("td:nth-child(3)").text();
+            let email = $(this).find("td:nth-child(4)").text();
+            let display_name = $(this).find("td:nth-child(5)").text();
+            users.push([username, password, email, display_name]);
+        });
+        post("/admin", {
+            "action": "create_users",
+            "users": JSON.stringify(users)
+        }, function (content, status, xhr) {
+            if (content === "OK") {
+                $("#user_infos").empty();
+                show_modal("成功", "成功建立使用者");
+            } else {
+                show_modal("失敗", "Error: " + status);
+            }
+        })
+    });
     $("#parse_user_info").click(function(){
         let form = new FormData();
         form.append("action", "parse_user");
