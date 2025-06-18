@@ -48,7 +48,7 @@ class User(UserMixin):
             name (str): The username of the user.
         """
         self.id = secure_filename(name.lower())
-        self.data: datas.User = datas.filter_by(datas.User, username=name).first()
+        self.data: datas.User = datas.first(datas.User, username=name)
 
     def save(self):
         """

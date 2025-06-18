@@ -688,6 +688,7 @@ class ProblemInfo(metaclass=DataMeta):
         library (list[str]): The list of libraries for the problem.
         versions (list[ProblemVersion]): The list of versions for the problem.
         top_score (int): The top score for the problem.
+        ac_info (str): AC information about the problem.
     """
     name: str = "unknown"
     timelimit: str = "1000"

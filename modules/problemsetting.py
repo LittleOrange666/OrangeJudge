@@ -586,6 +586,7 @@ def action_not_found(*args):
 @actions.bind
 def save_general_info(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Response:
     dat.name = form["title"]
+    dat.ac_info = form["ac_info"]
     ml = form["memorylimit"]
     tl = form["timelimit"]
     show_testcase = form["show_testcase"]

@@ -28,6 +28,7 @@ from flask import has_request_context
 from flask_sqlalchemy import SQLAlchemy
 from flask_sqlalchemy.query import Query
 from flask_sqlalchemy.session import Session
+from sqlalchemy import text
 from sqlalchemy.exc import InvalidRequestError, PendingRollbackError
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.attributes import flag_modified
@@ -47,6 +48,9 @@ if all(k in os.environ for k in ("POSTGRES_DB", "POSTGRES_USER", "POSTGRES_PASSW
     postgres_url = f"postgresql+psycopg2://{USER}:{PASSWORD}@{HOST}/{DB}"
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SQLALCHEMY_DATABASE_URI'] = postgres_url
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        "pool_pre_ping": True
+    }
 else:
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
     app.config['SQLALCHEMY_DATABASE_URI'] = sqlite_url
@@ -529,10 +533,11 @@ def SessionContext():
 
 
 def check_session(session: Session) -> None:
-    try:
-        session.execute("SELECT 1")  # 簡單測試 session 狀態
-    except (InvalidRequestError, PendingRollbackError):
-        session.rollback()
+    pass
+    # try:
+    #     session.execute(text("SELECT 1"))  # 簡單測試 session 狀態
+    # except Exception:
+    #     session.rollback()
 
 
 def get_session() -> Session:
