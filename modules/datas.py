@@ -28,8 +28,6 @@ from flask import has_request_context
 from flask_sqlalchemy import SQLAlchemy
 from flask_sqlalchemy.query import Query
 from flask_sqlalchemy.session import Session
-from sqlalchemy import text
-from sqlalchemy.exc import InvalidRequestError, PendingRollbackError
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -40,7 +38,18 @@ from .objs import ContestData, ProblemInfo, SubmissionData, SubmissionResult
 datafile = Path.cwd() / "data" / "data.sqlite"
 sqlite_url = 'sqlite:///' + str(datafile)
 app = server.app
-if all(k in os.environ for k in ("POSTGRES_DB", "POSTGRES_USER", "POSTGRES_PASSWORD", "POSTGRES_HOST")):
+if all(k in os.environ for k in ("MYSQL_DB", "MYSQL_USER", "MYSQL_PASSWORD", "MYSQL_HOST")):
+    DB = os.environ["MYSQL_DB"]
+    USER = os.environ["MYSQL_USER"]
+    PASSWORD = os.environ["MYSQL_PASSWORD"]
+    HOST = os.environ["MYSQL_HOST"]
+    mysql_url = f"mysql+pymysql://{USER}:{PASSWORD}@{HOST}/{DB}"
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['SQLALCHEMY_DATABASE_URI'] = mysql_url
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        "pool_pre_ping": True
+    }
+elif all(k in os.environ for k in ("POSTGRES_DB", "POSTGRES_USER", "POSTGRES_PASSWORD", "POSTGRES_HOST")):
     DB = os.environ["POSTGRES_DB"]
     USER = os.environ["POSTGRES_USER"]
     PASSWORD = os.environ["POSTGRES_PASSWORD"]

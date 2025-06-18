@@ -404,7 +404,7 @@ def queue_receiver():
         except Exception as e:
             logger.error(f"Error in queue receiver: {e}")
             logger.debug(traceback.format_exc())
-            time.sleep(60)
+            time.sleep(30)
 
 
 def enqueue(idx: int) -> int:

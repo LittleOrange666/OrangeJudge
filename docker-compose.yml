@@ -4,17 +4,31 @@ services:
         restart: always
         volumes:
             - ./data/redis:/data
-    judge_postgres:
-        image: postgres:15-alpine
+        healthcheck:
+          test: ["CMD", "redis-cli", "ping"]
+          interval: 5s
+          timeout: 3s
+          retries: 5
+    judge_mariadb:
+        image: mariadb:11.8
         restart: always
-        volumes:
-           - ./data/postgres:/var/lib/postgresql/data
         environment:
-            - POSTGRES_DB=orangejudge
-            - POSTGRES_USER=orangejudgeuser
-            - POSTGRES_PASSWORD=orangejudgepassword
+          - MYSQL_ROOT_PASSWORD=orangejudgerootpassword
+          - MYSQL_DATABASE=orangejudge
+          - MYSQL_USER=orangejudgeuser
+          - MYSQL_PASSWORD=orangejudgepassword
+        ports:
+          - "3306:3306"
+        volumes:
+          - ./data/mariadb:/var/lib/mysql
+        healthcheck:
+          test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+          start_period: 10s
+          interval: 10s
+          timeout: 5s
+          retries: 5
     judge_server:
-        image: littleorange666/judge_server:1.3.0
+        image: littleorange666/judge_server:1.4.0
         read_only: true
         restart: on-failure
         cap_drop:
@@ -33,14 +47,22 @@ services:
             - SERVICE_URL=http://judge-server:9134
         ports:
             - "0.0.0.0:9132:8000"
+        healthcheck:
+          test: ["CMD", "curl", "-f", "http://localhost:9132/health_check"]
+          interval: 10s
+          timeout: 3s
+          retries: 5
     judge_backend:
-        image: littleorange666/orange_judge:1.4.5
+        image: littleorange666/orange_judge:1.5.0
         read_only: true
         restart: on-failure
         depends_on:
-            - judge_server
-            - judge_redis
-            - judge_postgres
+            judge_server:
+                condition: service_healthy
+            judge_redis:
+                condition: service_healthy
+            judge_mariadb:
+                condition: service_healthy
         cap_drop:
             - SETPCAP
             - MKNOD
@@ -58,10 +80,10 @@ services:
         environment:
             - JUDGER_URL=http://judge_server:8000
             - REDIS_HOST=judge_redis
-            - POSTGRES_DB=orangejudge
-            - POSTGRES_USER=orangejudgeuser
-            - POSTGRES_PASSWORD=orangejudgepassword
-            - POSTGRES_HOST=judge_postgres:5432
+            - MYSQL_DB=orangejudge
+            - MYSQL_USER=orangejudgeuser
+            - MYSQL_PASSWORD=orangejudgepassword
+            - MYSQL_HOST=judge_mariadb:3306
         ports:
             - "0.0.0.0:8080:8080"
 volumes:
