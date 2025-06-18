@@ -717,6 +717,7 @@ class ProblemInfo(metaclass=DataMeta):
     library: list[str] = field(default_factory=list)
     versions: list[ProblemVersion] = field(default_factory=list)
     top_score: int = 100
+    ac_info: str = ""
 
     def update(self, new_data: dict):
         """

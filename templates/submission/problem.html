@@ -18,6 +18,10 @@
 
     <div class="test-case">Lang: {{ lang }}</div>
 
+    {% if ac_info %}
+        <div class="test-case">{{ ac_info }}</div>
+    {% endif %}
+
     <div class="test-case">
         <div>Source:</div>
         {{ source|safe }}

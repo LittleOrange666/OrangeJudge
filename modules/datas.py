@@ -28,6 +28,7 @@ from flask import has_request_context
 from flask_sqlalchemy import SQLAlchemy
 from flask_sqlalchemy.query import Query
 from flask_sqlalchemy.session import Session
+from sqlalchemy.exc import InvalidRequestError, PendingRollbackError
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -528,7 +529,9 @@ def SessionContext():
 
 
 def check_session(session: Session) -> None:
-    if not session.is_active or not session._is_clean():
+    try:
+        session.execute("SELECT 1")  # 簡單測試 session 狀態
+    except (InvalidRequestError, PendingRollbackError):
         session.rollback()
 
 

@@ -162,6 +162,9 @@ def submission(idx: str):
         if not current_user.has(Permission.admin) and dat.user_id != current_user.data.id and current_user.id not in \
                 problem_info.users:
             abort(403)
+        ac_info = ""
+        if "AC" in dat.simple_result:
+            ac_info = problem_info.ac_info
         super_access = current_user.has(Permission.admin) or current_user.id in problem_info.users
         result = {}
         see_cc = False
@@ -209,7 +212,8 @@ def submission(idx: str):
                               group_results=group_results, link=link, pos=tasks.get_queue_position(dat),
                               ce_msg=ce_msg, je=submit_info.JE, logid=submit_info.log_uuid,
                               super_access=super_access, contest=contest, cid=cid, protected=protected,
-                              checker_protected=checker_protected, see_cc=see_cc, cc=cc, results=results)
+                              checker_protected=checker_protected, see_cc=see_cc, cc=cc, results=results,
+                              ac_info=ac_info)
     return ret
 
 
