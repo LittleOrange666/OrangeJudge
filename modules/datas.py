@@ -61,6 +61,13 @@ def teardown_request(exception=None):
         db.session.commit()
 
 
+@app.teardown_appcontext
+def shutdown_session(exception=None):
+    if exception:
+        db.session.rollback()
+    db.session.remove()
+
+
 class User(db.Model):
     """
     Represents a user in the database.
@@ -520,6 +527,11 @@ def SessionContext():
         # logger.info("Session closed")
 
 
+def check_session(session: Session) -> None:
+    if not session.is_active or not session._is_clean():
+        session.rollback()
+
+
 def get_session() -> Session:
     """
     Retrieve the current SQLAlchemy session.
@@ -535,10 +547,12 @@ def get_session() -> Session:
         RuntimeError: If no session is found in a non-request context.
     """
     if has_request_context():
+        check_session(db.session)
         return db.session
     session = _current_session.get()
     if session is None:
         raise RuntimeError("No session found in non-request context. Use SessionContext.")
+    check_session(session)
     return session
 
 

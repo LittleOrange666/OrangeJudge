@@ -34,7 +34,7 @@ services:
         ports:
             - "0.0.0.0:9132:8000"
     judge_backend:
-        image: littleorange666/orange_judge:1.4.2
+        image: littleorange666/orange_judge:1.4.3
         read_only: true
         restart: on-failure
         depends_on:
