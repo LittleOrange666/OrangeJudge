@@ -48,7 +48,7 @@ services:
         ports:
             - "0.0.0.0:9132:8000"
         healthcheck:
-          test: ["CMD", "curl", "-f", "http://localhost:9132/health_check"]
+          test: ["CMD", "python3", "-c", "import http.client; c=http.client.HTTPConnection('localhost', 8000); c.request('GET', '/health_check'); r=c.getresponse(); exit(0) if r.status < 400 else exit(1)"]
           interval: 10s
           timeout: 3s
           retries: 5
