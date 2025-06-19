@@ -20,10 +20,10 @@ ask2 = """Server is not running:
 number: """
 
 envs = {
-    "POSTGRES_DB": "orangejudge",
-    "POSTGRES_USER": "orangejudgeuser",
-    "POSTGRES_PASSWORD": "orangejudgepassword",
-    "POSTGRES_HOST": "localhost:5432"
+    "MYSQL_DB": "orangejudge",
+    "MYSQL_USER": "orangejudgeuser",
+    "MYSQL_PASSWORD": "orangejudgepassword",
+    "MYSQL_HOST": "localhost:3306"
 }
 
 

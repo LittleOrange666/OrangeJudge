@@ -242,12 +242,13 @@ def exist(user_id: str) -> bool:
 def create_account(email: str, user_id: str, password: str | None, display_name: str | None = None) -> None:
     if display_name is None:
         display_name = user_id
-    obj = datas.User(username=user_id.lower(),
-                     display_name=display_name,
-                     email=email,
-                     password_sha256_hex=try_hash(password),
-                     permissions="")
-    datas.add(obj)
+    with datas.SessionContext():
+        obj = datas.User(username=user_id.lower(),
+                         display_name=display_name,
+                         email=email,
+                         password_sha256_hex=try_hash(password),
+                         permissions="")
+        datas.add(obj)
 
 
 def has_permission(key: Permission) -> bool:

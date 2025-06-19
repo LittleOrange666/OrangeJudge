@@ -58,7 +58,7 @@ user_id_reg: Pattern = re.compile("^[A-Za-z0-9_]{2,80}$")
 
 problem_id_reg: Pattern = re.compile("^[A-Za-z0-9_]{1,20}$")
 
-email_subject: str = "Subject: OrangeJudge verification code ({0})"
+email_subject: str = "OrangeJudge verification code ({0})"
 
 email_content: str = """Your verification code is: {0}
 This verification code is valid within 10 minutes"""

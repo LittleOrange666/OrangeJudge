@@ -84,10 +84,11 @@ def signup():
     if need_verify and not use_code(email, verify):
         return "驗證碼錯誤", 400
     login.create_account(email, user_id, password)
-    user, msg = login.try_login(user_id, password)
-    if user is None:
-        return "註冊失敗: " + msg, 400
-    login_user(user)
+    with datas.SessionContext():
+        user, msg = login.try_login(user_id, password)
+        if user is None:
+            return "註冊失敗: " + msg, 400
+        login_user(user)
     return "OK", 200
 
 

@@ -521,17 +521,14 @@ def SessionContext():
     Raises:
         Exception: If an error occurs during the session, it rolls back the transaction.
     """
-    if has_request_context():
-        yield db.session
-    elif _current_session.get() is not None:
+    if _current_session.get() is not None:
         yield _current_session.get()
     else:
         session = sessionmaker(bind=db.engine)()
         token = _current_session.set(session)
         try:
             yield session
-            if session.new or session.dirty or session.deleted:
-                session.commit()
+            session.commit()
         except Exception:
             session.rollback()
             raise
@@ -563,12 +560,12 @@ def get_session() -> Session:
     Raises:
         RuntimeError: If no session is found in a non-request context.
     """
-    if has_request_context():
-        check_session(db.session)
-        return db.session
     session = _current_session.get()
     if session is None:
-        raise RuntimeError("No session found in non-request context. Use SessionContext.")
+        if has_request_context():
+            session = db.session
+        else:
+            raise RuntimeError("No session found in non-request context. Use SessionContext.")
     check_session(session)
     return session
 

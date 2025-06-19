@@ -1,19 +1,26 @@
 services:
-    judge_postgres:
-        image: postgres:15-alpine
+    judge_mariadb:
+        image: mariadb:11.8
         restart: always
-        volumes:
-           - ./data/postgres:/var/lib/postgresql/data
         environment:
-            - POSTGRES_DB=orangejudge
-            - POSTGRES_USER=orangejudgeuser
-            - POSTGRES_PASSWORD=orangejudgepassword
+          - MYSQL_ROOT_PASSWORD=orangejudgerootpassword
+          - MYSQL_DATABASE=orangejudge
+          - MYSQL_USER=orangejudgeuser
+          - MYSQL_PASSWORD=orangejudgepassword
         ports:
-            - "0.0.0.0:5432:5432"
+          - "3306:3306"
+        volumes:
+          - ./data/mariadb:/var/lib/mysql
+        healthcheck:
+          test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+          start_period: 10s
+          interval: 10s
+          timeout: 5s
+          retries: 5
     judge_server:
-        image: littleorange666/judge_server:1.3.0
+        image: littleorange666/judge_server:1.4.0
         read_only: true
-        restart: always
+        restart: on-failure
         cap_drop:
             - SETPCAP
             - MKNOD
@@ -27,6 +34,11 @@ services:
             - ./sandbox:/sandbox
             - ./langs:/langs:ro
         environment:
-            - SERVICE_URL=http://judge-server:9132
+            - SERVICE_URL=http://judge-server:9134
         ports:
             - "0.0.0.0:9132:8000"
+        healthcheck:
+          test: ["CMD", "python3", "-c", "import http.client; c=http.client.HTTPConnection('localhost', 8000); c.request('GET', '/health_check'); r=c.getresponse(); exit(0) if r.status < 400 else exit(1)"]
+          interval: 10s
+          timeout: 3s
+          retries: 5
