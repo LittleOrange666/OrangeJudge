@@ -71,7 +71,7 @@ _current_session: ContextVar = ContextVar("current_session", default=None)
 def teardown_request(exception=None):
     if exception:
         db.session.rollback()
-    elif db.session.new or db.session.dirty or db.session.deleted:
+    else:
         db.session.commit()
 
 
