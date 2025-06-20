@@ -460,6 +460,7 @@ class Statement(metaclass=DataMeta):
     scoring: str = ""
     interaction: str = ""
     note: str = ""
+    full: str = ""
     type: StatementType = StatementType.md
 
 

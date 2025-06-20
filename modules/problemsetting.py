@@ -616,12 +616,16 @@ def create_version(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Re
 @actions.bind
 def save_statement(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Response:
     dat.manual_samples = [objs.ManualSample(*o) for o in tools.form_json(form["samples"])]
-    dat.statement.main = form["statement_main"]
-    dat.statement.input = form["statement_input"]
-    dat.statement.output = form["statement_output"]
-    dat.statement.interaction = form["statement_interaction"]
-    dat.statement.scoring = form["statement_scoring"]
-    dat.statement.note = form["statement_note"]
+    if "statement_full" in form and form["statement_full"]:
+        dat.statement.full = form["statement_full"]
+    else:
+        dat.statement.full = ""
+        dat.statement.main = form["statement_main"]
+        dat.statement.input = form["statement_input"]
+        dat.statement.output = form["statement_output"]
+        dat.statement.interaction = form["statement_interaction"]
+        dat.statement.scoring = form["statement_scoring"]
+        dat.statement.note = form["statement_note"]
     dat.statement.type = objs.StatementType[form.get("statement_type", "md")]
     render_statement(dat)
     return "statement"
@@ -633,17 +637,20 @@ def render_statement(dat: Problem):
         obj.main, obj.input, obj.output, obj.interaction, obj.scoring, obj.note = \
             createhtml.run_latex(dat.pid,
                                  [obj.main, obj.input, obj.output, obj.interaction, obj.scoring, obj.note])
-    full = "# 題目敘述\n" + obj.main
-    if obj.input:
-        full += "\n## 輸入說明\n" + obj.input
-    if obj.output:
-        full += "\n## 輸出說明\n" + obj.output
-    if obj.interaction:
-        full += "\n## 互動說明\n" + obj.interaction
-    if obj.scoring:
-        full += "\n## 配分\n" + obj.scoring
-    if obj.note:
-        full += "\n## Note\n" + obj.note
+    if obj.full:
+        full = obj.full
+    else:
+        full = "# 題目敘述\n" + obj.main
+        if obj.input:
+            full += "\n## 輸入說明\n" + obj.input
+        if obj.output:
+            full += "\n## 輸出說明\n" + obj.output
+        if obj.interaction:
+            full += "\n## 互動說明\n" + obj.interaction
+        if obj.scoring:
+            full += "\n## 配分\n" + obj.scoring
+        if obj.note:
+            full += "\n## Note\n" + obj.note
     tools.write(full, dat.path / "statement.md")
     createhtml.parse.dirname = dat.pid
     tools.write(createhtml.run_markdown(full), dat.path / "statement.html")

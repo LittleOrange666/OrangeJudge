@@ -88,6 +88,7 @@ $(function () {
         let interaction = $("#statement_interaction_area").val();
         let scoring = $("#statement_scoring_area").val();
         let note = $("#statement_note_area").val();
+        let full = $("#statement_full_area").val();
         let samples = [];
         $("#manual_samples").find(".row").each(function () {
             samples.push([$(this).find("textarea").eq(0).val(), $(this).find("textarea").eq(1).val()]);
@@ -101,6 +102,7 @@ $(function () {
             "statement_interaction": interaction,
             "statement_scoring": scoring,
             "statement_note": note,
+            "statement_full": full,
             "samples": JSON.stringify(samples)
         }, function (data, status, xhr) {
             let btn = $("#save_statement");

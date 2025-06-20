@@ -81,19 +81,19 @@ def run(lang: executing.Language, file: Path, env: executing.Environment, stdin:
     if res.result == "JE":
         return "JE: " + res.error
     if res.result == "TLE":
-        return "TLE: 測試執行時間超過限制(10秒)"
+        return "TLE: The custom test execution time exceeded the 10 second limit"
     tools.copy(err_file.full, Path(file).parent / "stderr.txt")
     if res.result == "RE":
         exit_code = str(res.exit_code)
         msg = constants.exit_codes.get(exit_code, exit_code)
         if res.signal == 31:
-            return "RF: 違反了 seccomp 規則: " + res.seccomp_info
+            return "RF: Violation of seccomp rules: " + res.seccomp_info
         sig_name = str(res.signal)
         if sig_name in constants.signal_names:
             sig_name = f"{sig_name} ({constants.signal_names[sig_name]})"
         return f"RE: {msg}: signal {sig_name}"
     if res.result == "MLE":
-        return "MLE: 測試執行記憶體超過限制(1GB)"
+        return "MLE: The custom test execution memory exceeded the 1GB limit"
     env.get_file(stdout, out_file)
     time_usage = max(0.0, res.cpu_time - lang.base_time)
     memusage = max(0.0, res.memory - lang.base_memory)
@@ -282,18 +282,18 @@ def run_problem(pid: str, dat_id: int) -> None:
             if res.result == "JE":
                 ret = (TaskResult.JE, res.error)
             elif res.result == "TLE":
-                ret = (TaskResult.TLE, "執行時間過長")
+                ret = (TaskResult.TLE, "Execution time is too long")
             elif res.result == "MLE":
-                ret = (TaskResult.MLE, "記憶體占用過大")
+                ret = (TaskResult.MLE, "Memory usage is too large")
             elif exit_code == "153":
-                ret = (TaskResult.OLE, "輸出過大")
+                ret = (TaskResult.OLE, "Output too large")
             elif res.result == "RE":
                 if res.signal == 31:
-                    ret = (TaskResult.RF, "違反了 seccomp 規則")
+                    ret = (TaskResult.RF, "Violation of seccomp rules")
                 elif exit_code in constants.exit_codes:
                     ret = (TaskResult.RE, constants.exit_codes[exit_code])
                 else:
-                    ret = (TaskResult.RE, "執行期間錯誤")
+                    ret = (TaskResult.RE, "Runtime Error")
             elif ret[0] is TaskResult.OK:  # skip code below if interactor return with non-zero return code
                 time_usage = max(0, math.ceil(res.cpu_time - lang.base_time))
                 memusage = math.ceil(max(0.0, res.memory - lang.base_memory) / 1024)
