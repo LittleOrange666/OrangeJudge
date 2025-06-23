@@ -163,14 +163,15 @@ def submission(idx: str):
                 problem_info.users:
             abort(403)
         ac_info = ""
-        if "AC" in dat.simple_result:
-            ac_info = problem_info.ac_info
         super_access = current_user.has(Permission.admin) or current_user.id in problem_info.users
         result = {}
         see_cc = False
         testcase_path = dat.path / "testcases"
         result_data = dat.results
         results = result_data.results
+        if ("AC" in dat.simple_result and dat.completed and result_data.total_score >= problem_info.top_score and
+                not dat.just_pretest):
+            ac_info = problem_info.ac_info
         if completed and not submit_info.JE:
             result["CE"] = result_data.CE
             result["protected"] = protected = ((not problem_info.public_testcase or bool(dat.period_id))
