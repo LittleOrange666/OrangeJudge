@@ -50,6 +50,7 @@ services:
         healthcheck:
           test: ["CMD", "python3", "-c", "import http.client; c=http.client.HTTPConnection('localhost', 8000); c.request('GET', '/health_check'); r=c.getresponse(); exit(0) if r.status < 400 else exit(1)"]
           interval: 10s
+          start_period: 10s
           timeout: 3s
           retries: 5
     judge_backend:
@@ -86,5 +87,11 @@ services:
             - MYSQL_HOST=judge_mariadb:3306
         ports:
             - "0.0.0.0:8080:8080"
+        healthcheck:
+          test: ["CMD", "python3", "-c", "import http.client; c=http.client.HTTPConnection('localhost', 8080); c.request('GET', '/'); r=c.getresponse(); exit(0) if r.status < 400 else exit(1)"]
+          interval: 10s
+          start_period: 10s
+          timeout: 3s
+          retries: 5
 volumes:
     sandbox:
