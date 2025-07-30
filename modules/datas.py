@@ -550,12 +550,12 @@ def get_session() -> Session:
     """
     Retrieve the current SQLAlchemy session.
 
-    This function returns the current SQLAlchemy session. If the context is within a Flask request,
-    it uses the Flask session. Otherwise, it retrieves the session from the context variable.
-    If no session is found in a non-request context, it raises a RuntimeError.
+    This function retrieves the current session from the context variable. If no session is found,
+    it checks if the function is being called within a Flask request context. If so, it uses the Flask session.
+    Otherwise, it raises a RuntimeError.
 
     Returns:
-        SQLAlchemy session: The current database session.
+        Session: The current SQLAlchemy session.
 
     Raises:
         RuntimeError: If no session is found in a non-request context.

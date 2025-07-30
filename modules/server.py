@@ -32,7 +32,7 @@ from flask_session import Session
 from flask_wtf import CSRFProtect
 from loguru import logger
 
-from . import tools, config
+from . import tools, config, objs
 from .constants import log_path
 
 app = Flask(__name__, static_url_path='/static', static_folder="../static/", template_folder="../templates/")
@@ -66,7 +66,7 @@ limiter = Limiter(
 if config.server.admin_fast:
     @limiter.request_filter
     def admin_fast():
-        return current_user.is_authenticated and current_user.has("admin")
+        return current_user.is_authenticated and current_user.has(objs.Permission.admin)
 
 
 @app.errorhandler(400)

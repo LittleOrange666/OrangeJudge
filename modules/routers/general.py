@@ -494,5 +494,5 @@ def rejudge_all():
         status = datas.filter_by(datas.Submission, problem_id=prob.id, contest_id=None, completed=True)
     for a_submit in status:
         tasks.rejudge(a_submit, "wait for rejudge")
-        datas.add(submission)
+        datas.add(a_submit)
     return "OK", 200
