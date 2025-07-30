@@ -18,7 +18,7 @@ services:
           timeout: 5s
           retries: 5
     judge_server:
-        image: littleorange666/judge_server:1.4.0
+        image: littleorange666/judge_server:1.5.0
         read_only: true
         restart: on-failure
         cap_drop:

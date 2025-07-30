@@ -680,6 +680,7 @@ def upload_zip(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Respon
             abort(400)
         fps = [(o.in_file, o.out_file) for o in dat.testcases]
         testcases = dat.path / "testcases"
+        ps.sort(key=lambda x: x[0].filename)
         for o in ps:
             f0 = secure_filename(o[0].filename)
             f1 = secure_filename(o[1].filename)
@@ -719,6 +720,17 @@ def remove_testcase(form: ImmutableMultiDict[str, str], dat: Problem) -> str | R
     obj = dat.testcases.pop(idx)
     (dat.path / "testcases" / obj.in_file).unlink()
     (dat.path / "testcases" / obj.out_file).unlink()
+    return "tests"
+
+
+@actions.bind
+def remove_all_testcase(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Response:
+    if len(dat.testcases) == 0:
+        abort(400)
+    for obj in dat.testcases:
+        (dat.path / "testcases" / obj.in_file).unlink()
+        (dat.path / "testcases" / obj.out_file).unlink()
+    dat.testcases.clear()
     return "tests"
 
 

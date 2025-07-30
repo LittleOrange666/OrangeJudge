@@ -350,6 +350,37 @@ function posting(url, data) {
         body: objectToFormData(data)
     });
 }
+function double_check(title){
+    return new Promise((resolve, reject) => {
+        const modelElement = document.getElementById('checkingModal');
+        const checkModal = bootstrap.Modal.getOrCreateInstance(modelElement);
+        const titleElement = document.getElementById('checkingModalTitle');
+        const textElement = document.getElementById('checkingModalText');
+        titleElement.textContent = title;
+        textElement.textContent = "請確認是否要繼續進行此操作。";
+        let closed = false;
+        const enterButton = document.getElementById('checkingModalEnter');
+        const cleanUp = () => {
+            enterButton.removeEventListener("click", enterClickHandler);
+            modelElement.removeEventListener('hidden.bs.modal', cancelClickHandler);
+        };
+        const enterClickHandler = () => {
+            if (closed) return;
+            closed = true;
+            cleanUp();
+            resolve(true);
+            checkModal.hide();
+        };
+        const cancelClickHandler = () => {
+            if (closed) return;
+            closed = true;
+            cleanUp();
+            resolve(false);
+        };
+        enterButton.addEventListener("click", enterClickHandler);
+        modelElement.addEventListener('hidden.bs.modal', cancelClickHandler);
+    });
+}
 
 function resolve_submitter() {
     let spin = $('<span class="visually-hidden spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
@@ -396,6 +427,12 @@ function resolve_submitter() {
         if (!ok || $this.parents("form")[0].onsubmit && !$this.parents("form")[0].onsubmit()) {
             show_modal("錯誤", bads.join("\n"));
             return;
+        }
+        if ($this.data("double-check")) {
+            let success = await double_check(action_name);
+            if (!success) {
+                return;
+            }
         }
         $this.find("span").removeClass("visually-hidden");
         let modals = $this.parents(".modal");

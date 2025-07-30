@@ -578,10 +578,10 @@
                     <div class="mb-3">
                         <div class="row">
                             <div class="col">
-                                <input name="input_ext" placeholder="輸入檔名後綴" required>
+                                <input name="input_ext" placeholder="輸入檔名後綴" value=".in" required>
                             </div>
                             <div class="col">
-                                <input name="output_ext" placeholder="輸出檔名後綴" required>
+                                <input name="output_ext" placeholder="輸出檔名後綴" value=".out" required>
                             </div>
                             <div class="col"></div>
                             <div class="col"></div>
@@ -634,6 +634,9 @@
                 <h4>一般測資</h4>
                 <div class="edit-detector"></div>
                 <div class="update-checker" hidden></div>
+                <form the_action="remove_all_testcase">
+                    <button class="btn btn-danger submitter" data-double-check="true">全部刪除</button>
+                </form>
                 <table class="table table-hover">
                     <thead>
                     <tr>
