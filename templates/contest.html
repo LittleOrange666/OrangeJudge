@@ -297,6 +297,22 @@
                     <input type="text" class="form-control" placeholder="使用者id" id="status_filter_username">
                 </div>
                 <div class="col-auto">
+                    <select class="form-select" id="status_filter_lang">
+                        <option value="">(語言)</option>
+                        {% for lang in languages %}
+                            <option value="{{ lang }}">{{ lang }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <select class="form-select" id="status_filter_result">
+                        <option value="">(結果)</option>
+                        {% for key, val in can_filter_results %}
+                            <option value="{{ key }}">{{ val }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-auto">
                     <button class="btn btn-primary" id="status_filter">刷新</button>
                 </div>
                 {% if can_edit %}
@@ -334,6 +350,22 @@
                             <option value="" selected>所有</option>
                             {% for k in data.problems %}
                                 <option value="{{ k }}">{{ k }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-auto">
+                        <select class="form-select" id="my_status_filter_lang">
+                            <option value="">(語言)</option>
+                            {% for lang in languages %}
+                                <option value="{{ lang }}">{{ lang }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-auto">
+                        <select class="form-select" id="my_status_filter_result">
+                            <option value="">(結果)</option>
+                            {% for key, val in can_filter_results %}
+                                <option value="{{ key }}">{{ val }}</option>
                             {% endfor %}
                         </select>
                     </div>

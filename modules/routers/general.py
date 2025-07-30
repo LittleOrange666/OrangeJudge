@@ -81,7 +81,7 @@ def test_submit():
     dat = datas.Submission(source=fn, time=datetime.datetime.now(), user=current_user.data,
                            problem=datas.first(datas.Problem, pid="test"), language=lang,
                            data={"infile": "in.txt", "outfile": "out.txt"}, pid="test", simple_result="waiting",
-                           queue_position=0)
+                           queue_position=0, simple_result_flag=objs.TaskResult.PENDING.name)
     datas.add(dat)
     datas.flush()
     idx = str(dat.id)
@@ -112,7 +112,7 @@ def submit():
     fn = constants.source_file_name + ext
     dat = datas.Submission(source=fn, time=datetime.datetime.now(), user=current_user.data,
                            problem=pdat, language=lang, data={}, pid=pid, simple_result="waiting",
-                           queue_position=0)
+                           queue_position=0, simple_result_flag=objs.TaskResult.PENDING.name)
     if "cid" in request.form:
         cdat: datas.Contest = datas.first_or_404(datas.Contest, cid=request.form["cid"])
         contests.check_access(cdat)
@@ -280,7 +280,8 @@ def problem_file(idx, filename):
 
 @app.route("/status", methods=["GET"])
 def all_status():
-    return render_template("status.html")
+    return render_template("status.html", languages=sorted(executing.langs.keys()),
+                           can_filter_results=constants.can_filter_results, can_edit=current_user.has(Permission.admin))
 
 
 @app.route("/status_data", methods=["POST"])
@@ -295,6 +296,11 @@ def all_status_data():
             status = status.filter_by(user=user)
     if "pid" in request.form and len(request.form["pid"]):
         status = status.filter_by(pid=request.form["pid"])
+    if "result" in request.form and request.form["result"] in objs.TaskResult.__members__:
+        result = objs.TaskResult[request.form["result"]]
+        status = status.filter_by(simple_result_flag=result.name)
+    if "lang" in request.form and request.form["lang"] in executing.langs:
+        status = status.filter_by(language=request.form["lang"])
     got_data, page_cnt, page_idx, show_pages = tools.pagination(status)
     out = []
     for obj in got_data:
@@ -492,6 +498,11 @@ def rejudge_all():
         if not current_user.has(Permission.admin) and current_user.id != prob.user.username:
             abort(403)
         status = datas.filter_by(datas.Submission, problem_id=prob.id, contest_id=None, completed=True)
+    if "result" in request.form and request.form["result"] in objs.TaskResult.__members__:
+        result = objs.TaskResult[request.form["result"]]
+        status = status.filter_by(simple_result_flag=result.name)
+    if "lang" in request.form and request.form["lang"] in executing.langs:
+        status = status.filter_by(language=request.form["lang"])
     for a_submit in status:
         tasks.rejudge(a_submit, "wait for rejudge")
         datas.add(a_submit)

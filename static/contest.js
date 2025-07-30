@@ -21,6 +21,8 @@ $(function () {
         let user_key = $this.my ? "#username" : "#status_filter_username";
         fd.append("user", $(user_key).val().toLowerCase());
         fd.append("pid", $this.pid);
+        fd.append("lang", $this.lang);
+        fd.append("result", $this.result);
         fetch("/contest/" + cid + "/status/" + page, {
             method: "POST",
             headers: {"x-csrf-token": $("#csrf_token").val()},
@@ -106,7 +108,9 @@ $(function () {
         let obj = {
             my: my,
             current_page: 1,
-            pid: ""
+            pid: "",
+            lang: "",
+            result: ""
         }
         obj.change_page = changing_page.bind(obj);
         let pf = obj.my ? "#my_status" : "#status";
@@ -121,6 +125,8 @@ $(function () {
         if (location.hash === pf) $(pf+"_tab").click();
         $(pf+"_filter").click(function () {
             obj.pid = $(pf+"_filter_pid").val();
+            obj.lang = $(pf+"_filter_lang").val();
+            obj.result = $(pf+"_filter_result").val();
             obj.change_page(obj.current_page);
         });
     }
@@ -130,7 +136,11 @@ $(function () {
         let fd = new FormData();
         fd.append("user", $("#status_filter_username").val().toLowerCase());
         let pid = $("status_filter_pid").val();
+        let lang = $("#status_filter_lang").val();
+        let result = $("#status_filter_result").val();
         if (pid) fd.append("pid", pid);
+        if (lang) fd.append("lang", lang);
+        if (result) fd.append("result", result);
         fd.append("cid", cid);
         let res = await fetch("/rejudge_all", {
             method: "POST",

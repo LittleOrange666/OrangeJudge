@@ -114,6 +114,7 @@ def run_test(dat_id: int) -> None:
         result = run(lang, source, env, in_file, out_file, dat)
         dat.results = objs.SubmissionResult()
         dat.simple_result = result
+        dat.simple_result_flag = result.split(":")[0]
         dat.completed = True
         datas.add(dat)
 
@@ -157,6 +158,7 @@ def run_problem(pid: str, dat_id: int) -> None:
             out_info.CE = True
             dat.results = out_info
             dat.simple_result = "CE"
+            dat.simple_result_flag = objs.TaskResult.CE.name
             dat.completed = True
             datas.add(dat)
             return
@@ -219,11 +221,17 @@ def run_problem(pid: str, dat_id: int) -> None:
             dat = datas.get_by_id(datas.Submission, dat_id)
             dat.results = out_info
             simple_result_ = simple_result
+            simple_result_flag = objs.TaskResult.OK.name
             if simple_result_ == "NA":
                 simple_result_ = "/".join(sorted(appeared_result))
+                if len(appeared_result) == 1:
+                    simple_result_flag = list(appeared_result)[0]
+                else:
+                    simple_result_flag = objs.TaskResult.PARTIAL.name
                 if completed:
                     simple_result_ += f" {total_score}%"
             dat.simple_result = simple_result_
+            dat.simple_result_flag = simple_result_flag
             dat.completed = completed
             datas.add(dat)
 
@@ -414,6 +422,7 @@ def enqueue(idx: int) -> int:
 
 def rejudge(dat: datas.Submission, msg: str = "wait system test"):
     dat.simple_result = msg
+    dat.simple_result_flag = objs.TaskResult.PENDING.name
     dat.completed = False
     dat.running = False
     dat.queue_position = enqueue(dat.id)

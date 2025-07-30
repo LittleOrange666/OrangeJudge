@@ -349,6 +349,7 @@ def get_standing(cid: str):
 
 def reject(dat: datas.Submission):
     dat.simple_result = "ignored"
+    dat.simple_result_flag = objs.TaskResult.SKIP.name
     res = dat.results
     res.total_score = 0
     for k in res.group_results:

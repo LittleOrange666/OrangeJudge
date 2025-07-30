@@ -173,6 +173,7 @@ class Submission(db.Model):
     pid = db.Column(db.String(20), nullable=False)
     just_pretest = db.Column(db.Boolean, default=False)
     simple_result = db.Column(db.String(40), nullable=True)
+    simple_result_flag = db.Column(db.String(20), nullable=False)
     queue_position = db.Column(db.Integer, nullable=False)
 
     def __init__(self, **kwargs):

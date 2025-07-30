@@ -52,6 +52,21 @@ checker_exit_codes: dict[int, TaskResult] = {
     7: TaskResult.POINTS
 }
 
+can_filter_results: list[tuple[str, str]] = [
+    ("OK", "通過"),
+    ("WA", "錯誤答案"),
+    ("PE", "格式錯誤"),
+    ("TLE", "超時"),
+    ("MLE", "記憶體超限"),
+    ("RE", "執行期間錯誤"),
+    ("CE", "編譯錯誤"),
+    ("FAIL", "評測失敗"),
+    ("PARTIAL", "部分正確"),
+    ("PENDING", "等待中"),
+    ("JE", "系統錯誤"),
+    ("RF", "評測被拒絕")
+]
+
 email_reg: Pattern = re.compile("^[\\w\\-.]+@([\\w\\-]+\\.)+[\\w-]{2,4}$")
 
 user_id_reg: Pattern = re.compile("^[A-Za-z0-9_]{2,80}$")

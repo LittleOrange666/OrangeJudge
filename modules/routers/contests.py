@@ -25,7 +25,7 @@ from flask_login import login_required, current_user
 from sqlalchemy.orm.attributes import flag_modified
 
 from .general import render_problem
-from .. import server, login, contests, datas, tools, executing
+from .. import server, login, contests, datas, tools, executing, objs, constants
 from ..objs import Permission
 
 app = server.app
@@ -65,7 +65,8 @@ def contest_page(idx):
         user_data = current_user.data if current_user.is_authenticated else None
         questions = reversed(dat.announcements.filter_by(question=True, user=user_data).all())
     return render_template("contest.html", cid=idx, data=info, can_edit=can_edit, can_see=can_see, target=target,
-                           status=status, announcements=announcements, questions=questions, cur_time=time.time())
+                           status=status, announcements=announcements, questions=questions, cur_time=time.time(),
+                           languages=sorted(executing.langs.keys()), can_filter_results=constants.can_filter_results)
 
 
 @app.route("/contest/<cid>/problem/<pid>", methods=["GET"])
@@ -94,6 +95,11 @@ def contest_status(cid, page_str):
         if request.form["pid"] not in info.problems:
             abort(404)
         status = status.filter_by(pid=info.problems[request.form["pid"]].pid)
+    if "result" in request.form and request.form["result"] in objs.TaskResult.__members__:
+        result = objs.TaskResult[request.form["result"]]
+        status = status.filter_by(simple_result_flag=result.name)
+    if "lang" in request.form and request.form["lang"] in executing.langs:
+        status = status.filter_by(language=request.form["lang"])
     got_data, page_cnt, page_idx, show_pages = tools.pagination(status, True, page_str)
     out = []
     for obj in got_data:
