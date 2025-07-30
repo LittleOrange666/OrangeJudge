@@ -31,6 +31,7 @@ from . import executing, constants, tools, locks, datas, config, judge, objs
 from .constants import log_path
 from .judge import SandboxUser
 from .objs import TaskResult
+from .server import app
 
 last_judged = locks.Counter()
 
@@ -370,48 +371,50 @@ def get_queue_position(dat: datas.Submission) -> int:
 
 
 def runner(dat_id: int, pid: str):
-    logger.info(f"get {dat_id} with problem {pid!r}")
-    try:
-        if pid == "test":
-            run_test(dat_id)
-        else:
-            run_problem(pid, dat_id)
-    except Exception as e:
-        traceback.print_exception(e)
-        with datas.SessionContext():
-            dat = datas.get_by_id(datas.Submission, dat_id)
-            info = dat.datas
-            info.JE = True
-            log_uuid = tools.random_string()
-            info.log_uuid = log_uuid
-            dat.datas = info
-            tools.write("".join(traceback.format_exception(e)), log_path / (log_uuid + ".log"))
-            dat.completed = True
-            dat.running = False
-            datas.add(dat)
+    with app.app_context():
+        logger.info(f"get {dat_id} with problem {pid!r}")
+        try:
+            if pid == "test":
+                run_test(dat_id)
+            else:
+                run_problem(pid, dat_id)
+        except Exception as e:
+            traceback.print_exception(e)
+            with datas.SessionContext():
+                dat = datas.get_by_id(datas.Submission, dat_id)
+                info = dat.datas
+                info.JE = True
+                log_uuid = tools.random_string()
+                info.log_uuid = log_uuid
+                dat.datas = info
+                tools.write("".join(traceback.format_exception(e)), log_path / (log_uuid + ".log"))
+                dat.completed = True
+                dat.running = False
+                datas.add(dat)
 
 
 def queue_receiver():
-    while True:
-        try:
-            dat_id = None
-            pid = None
-            with datas.SessionContext():
-                dat = datas.first(datas.Submission, completed=False, running=False)
-                if dat is not None:
-                    dat.running = True
-                    dat_id = dat.id
-                    pid = dat.pid
-                    datas.add(dat)
-                    last_judged.inc()
-            if dat_id is None:
-                time.sleep(config.judge.period)
-            else:
-                executor.submit(runner, dat_id, pid)
-        except Exception as e:
-            logger.error(f"Error in queue receiver: {e}")
-            logger.debug(traceback.format_exc())
-            time.sleep(30)
+    with app.app_context():
+        while True:
+            try:
+                dat_id = None
+                pid = None
+                with datas.SessionContext():
+                    dat = datas.first(datas.Submission, completed=False, running=False)
+                    if dat is not None:
+                        dat.running = True
+                        dat_id = dat.id
+                        pid = dat.pid
+                        datas.add(dat)
+                        last_judged.inc()
+                if dat_id is None:
+                    time.sleep(config.judge.period)
+                else:
+                    executor.submit(runner, dat_id, pid)
+            except Exception as e:
+                logger.error(f"Error in queue receiver: {e}")
+                logger.debug(traceback.format_exc())
+                time.sleep(30)
 
 
 def enqueue(idx: int) -> int:
