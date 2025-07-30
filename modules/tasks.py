@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import math
+import queue
 import threading
 import time
 import traceback
@@ -373,6 +374,7 @@ def get_queue_position(dat: datas.Submission) -> int:
 def runner(dat_id: int, pid: str):
     with app.app_context():
         logger.info(f"get {dat_id} with problem {pid!r}")
+        judge.lazy_queue.set(queue.Queue())
         try:
             if pid == "test":
                 run_test(dat_id)

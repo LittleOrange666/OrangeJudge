@@ -23,6 +23,7 @@ import queue
 import re
 import secrets
 import subprocess
+from contextvars import ContextVar
 from enum import Enum
 from pathlib import Path
 
@@ -148,17 +149,21 @@ def send_request(op: str, dat: dict):
     return res.json()
 
 
-lazy_queue = queue.Queue()
+lazy_queue: ContextVar[queue.Queue] = ContextVar("lazy_queue", default=None)
 
 
 def lazy_call(cmd: list[str]):
-    lazy_queue.put(json.dumps(list(map(str, cmd))))
+    if lazy_queue.get() is None:
+        lazy_queue.set(queue.Queue())
+    lazy_queue.get().put(json.dumps(list(map(str, cmd))))
 
 
 def collect_lazy_queue() -> list[list[str]]:
     ret = []
-    while not lazy_queue.empty():
-        ret.append(json.loads(lazy_queue.get()))
+    q = lazy_queue.get()
+    if q:
+        while not q.empty():
+            ret.append(json.loads(q.get()))
     return ret
 
 
