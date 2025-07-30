@@ -18,9 +18,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import math
-import multiprocessing
+import threading
 import time
 import traceback
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from pathlib import Path
 
@@ -35,7 +36,7 @@ last_judged = locks.Counter()
 
 queue_position = locks.Counter()
 
-check_lock = multiprocessing.Lock()
+executor = ThreadPoolExecutor(max_workers=config.judge.workers)
 
 
 def run(lang: executing.Language, file: Path, env: executing.Environment, stdin: Path, stdout: Path,
@@ -395,20 +396,18 @@ def queue_receiver():
         try:
             dat_id = None
             pid = None
-            with check_lock:
-                with datas.SessionContext():
-                    dat = datas.first(datas.Submission, completed=False, running=False)
-                    if dat is not None:
-                        dat.running = True
-                        dat_id = dat.id
-                        pid = dat.pid
-                        datas.add(dat)
-                        last_judged.inc()
+            with datas.SessionContext():
+                dat = datas.first(datas.Submission, completed=False, running=False)
+                if dat is not None:
+                    dat.running = True
+                    dat_id = dat.id
+                    pid = dat.pid
+                    datas.add(dat)
+                    last_judged.inc()
             if dat_id is None:
                 time.sleep(config.judge.period)
             else:
-                runner(dat_id, pid)
-                time.sleep(1)
+                executor.submit(runner, dat_id, pid)
         except Exception as e:
             logger.error(f"Error in queue receiver: {e}")
             logger.debug(traceback.format_exc())
@@ -430,9 +429,8 @@ def rejudge(dat: datas.Submission, msg: str = "wait system test"):
 
 def init():
     with datas.SessionContext():
-        for submission in datas.get_all(datas.Submission, completed=False):
+        for submission in datas.get_all(datas.Submission, completed=False, running=True):
             submission.running = False
             datas.add(submission)
             enqueue(submission.id)
-    for _ in range(config.judge.workers):
-        multiprocessing.Process(target=queue_receiver).start()
+    threading.Thread(target=queue_receiver, daemon=True).start()
