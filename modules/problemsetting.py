@@ -716,7 +716,7 @@ def upload_testcase(form: ImmutableMultiDict[str, str], dat: Problem) -> str | R
 def remove_testcase(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Response:
     idx = tools.to_int(form["idx"])
     if idx < 0 or idx >= len(dat.testcases):
-        abort(400)
+        abort(404)
     obj = dat.testcases.pop(idx)
     (dat.path / "testcases" / obj.in_file).unlink()
     (dat.path / "testcases" / obj.out_file).unlink()
@@ -726,7 +726,7 @@ def remove_testcase(form: ImmutableMultiDict[str, str], dat: Problem) -> str | R
 @actions.bind
 def remove_all_testcase(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Response:
     if len(dat.testcases) == 0:
-        abort(400)
+        abort(409)
     for obj in dat.testcases:
         (dat.path / "testcases" / obj.in_file).unlink()
         (dat.path / "testcases" / obj.out_file).unlink()

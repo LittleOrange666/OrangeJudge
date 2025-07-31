@@ -379,6 +379,7 @@ function double_check(title){
         };
         enterButton.addEventListener("click", enterClickHandler);
         modelElement.addEventListener('hidden.bs.modal', cancelClickHandler);
+        checkModal.show();
     });
 }
 

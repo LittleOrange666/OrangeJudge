@@ -33,6 +33,7 @@ def main():
     def start():
         nonlocal process
         try:
+            os.system("docker-compose -f docker-compose-nobackend.yml up -d")
             pids = subprocess.check_output("lsof -ti :8080", shell=True).decode().split()
             for pid in pids:
                 try:
