@@ -48,6 +48,14 @@
         </div>
         <div id="config" class="tab-pane fade">
             <p>部分設定可能要重啟後才生效</p>
+            <p>以下按鈕可以停止伺服器，若設置正確則會自動重啟</p>
+            <form action="/admin" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="stop_server">
+                <div class="mb-3">
+                    <button class="btn btn-danger submitter" data-double-check="true">停止伺服器</button>
+                </div>
+            </form>
             {% for category in config_fields %}
                 <div class="card">
                     <div class="card-body">

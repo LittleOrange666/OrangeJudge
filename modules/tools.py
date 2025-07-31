@@ -19,7 +19,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import io
 import json
+import os
 import shutil
+import signal
 import subprocess
 import uuid
 from datetime import datetime
@@ -426,3 +428,7 @@ def copy(src: Path, dst: Path):
 def delete(target: Path):
     logger.debug(f"Deleting {str(target)!r}")
     target.unlink()
+
+
+def stop_server():
+    os.killpg(os.getpgid(os.getpid()), signal.SIGTERM)

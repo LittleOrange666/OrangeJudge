@@ -19,6 +19,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import csv
 import json
 import os
+import threading
+import time
 import traceback
 import uuid
 from io import BytesIO, TextIOWrapper
@@ -211,6 +213,14 @@ def update_config():
     return "OK", 200
 
 
+def stop_server():
+    def stop():
+        time.sleep(3)
+        tools.stop_server()
+    threading.Thread(target=stop, daemon=True).start()
+    return "OK", 200
+
+
 @app.route('/admin', methods=['GET', 'POST'])
 @login_required
 def admin():
@@ -230,4 +240,6 @@ def admin():
             return create_users()
         if request.form["action"] == "update_config":
             return update_config()
+        if request.form["action"] == "stop_server":
+            return stop_server()
         abort(404)

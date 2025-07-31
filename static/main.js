@@ -410,7 +410,7 @@ function resolve_submitter() {
             show_modal("錯誤", bads.join("\n"));
             return;
         }
-        if ($this.data("double-check")) {
+        if (!!$this.data("double-check")) {
             let success = await double_check(action_name);
             if (!success) {
                 return;
