@@ -44,6 +44,14 @@
                     <li class="nav-item">
                         <a class="nav-link active" aria-current="page" href="/status">解題動態</a>
                     </li>
+                    <li class="nav-item dropdown">
+                      <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        關於
+                      </a>
+                      <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+                        <li><a class="dropdown-item" href="/about_judge">評測系統</a></li>
+                      </ul>
+                    </li>
                     {% block navbar %}{% endblock %}
                 </ul>
                 <ul class="navbar-nav navbar-text">
@@ -128,7 +136,11 @@
     });
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js"></script>
+{% if csrf_token is defined %}
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" id="csrf_token">
+{% else %}
+<input type="hidden" name="csrf_token" value="CSRF_TOKEN" id="csrf_token">
+{% endif %}
 <script>{% block script %}{% endblock %}</script>
 <script src="/static/main.js"></script>
 </body>

@@ -47,7 +47,67 @@
             </table>
         </div>
         <div id="config" class="tab-pane fade">
-            <p>此功能尚未實裝</p>
+            <p>部分設定可能要重啟後才生效</p>
+            {% for category in config_fields %}
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ category['title'] }}</h5>
+                        {% for slot in category['slots'] %}
+                            {% if slot['type']=='str' %}
+                                <div class="mb-3">
+                                    <label for="config_{{ category['name'] }}_{{ slot['name'] }}"
+                                           class="form-label">{{ slot['title'] }}</label>
+                                    <input type="text" class="form-control config-input"
+                                           id="config_{{ category['name'] }}_{{ slot['name'] }}"
+                                           value="{{ slot['value'] }}">
+                                </div>
+                            {% endif %}
+                            {% if slot['type']=='int' %}
+                                <div class="mb-3">
+                                    <label for="config_{{ category['name'] }}_{{ slot['name'] }}"
+                                           class="form-label">{{ slot['title'] }}</label>
+                                    <input type="number" class="form-control config-input"
+                                           id="config_{{ category['name'] }}_{{ slot['name'] }}"
+                                           value="{{ slot['value'] }}" min="1" step="1">
+                                </div>
+                            {% endif %}
+                            {% if slot['type']=='bool' %}
+                                <div class="form-check">
+                                    <input class="form-check-input config-input" type="checkbox" value="true"
+                                           id="config_{{ category['name'] }}_{{ slot['name'] }}"
+                                           data-checked="{{ slot['value'] }}">
+                                    <label class="form-check-label"
+                                           for="config_{{ category['name'] }}_{{ slot['name'] }}">
+                                        {{ slot['title'] }}
+                                    </label>
+                                </div>
+                            {% endif %}
+                            {% if slot['type']=='limit' %}
+                                <label for="config_{{ category['name'] }}_{{ slot['name'] }}"
+                                       class="form-label">{{ slot['title'] }}</label>
+                                <div class="input-group mb-3 limit-input" id="config_{{ category['name'] }}_{{ slot['name'] }}"
+                                     data-value="{{ slot['value'] }}">
+                                </div>
+                            {% endif %}
+                            {% if slot['type']=='limits' %}
+                                <div class="card card-body">
+                                    {% for i,limit in enumerate(slot['value']) %}
+                                        <label for="config_{{ category['name'] }}_{{ slot['name'] }}_{{ i }}"
+                                               class="form-label">{{ slot['title'] }}{{ i + 1 }}</label>
+                                        <div class="input-group mb-3 limit-input" id="config_{{ category['name'] }}_{{ slot['name'] }}_{{ i }}"
+                                             data-value="{{ limit }}">
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+                <br>
+            {% endfor %}
+            <div class="mb-3">
+                <button class="btn btn-primary" id="submit_config">確認儲存</button>
+            </div>
         </div>
         <div id="make_users" class="tab-pane fade">
             <p>請上傳有 username, password, email(Optional), display_name(Optional)欄位的表格</p>

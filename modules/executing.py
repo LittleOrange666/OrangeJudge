@@ -286,6 +286,17 @@ class Language:
             self.seccomp_rule = judge.SeccompRule[self.data["seccomp_rule"]]
         else:
             self.seccomp_rule = judge.SeccompRule.general
+        sample_comp_cmd = []
+        if self.data["require_compile"]:
+            sample_comp_cmd = self.data["compile_cmd"][:]
+            for i in range(len(sample_comp_cmd)):
+                sample_comp_cmd[i] = sample_comp_cmd[i].format("{src_path}", "{exe_path}", **self.kwargs)
+        self.sample_compile_cmd: list[str] = sample_comp_cmd
+        sample_exec_cmd = self.data["exec_cmd"][:]
+        for i in range(len(sample_exec_cmd)):
+            sample_exec_cmd[i] = sample_exec_cmd[i].format("{exe_path}", "{exe_stem}", folder="{exe_dir}",
+                                                           **self.kwargs)
+        self.sample_exec_cmd: list[str] = sample_exec_cmd
 
     def compile(self, filename: SandboxPath, env: Environment, runner_filename: SandboxPath | None = None) -> \
             tuple[SandboxPath, str]:

@@ -211,55 +211,36 @@ $(".time-string").each(function () {
     $(this).text((d > 0 ? d + ':' : '') + (h < 10 ? "0" : "") + h + ":" + (m < 10 ? "0" : "") + m);
 });
 const myModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('myModal'));
-let current_modal_session = "";
+
+function async_show_modal(title, text, timeout) {
+    return new Promise((resolve, reject) => {
+        document.getElementById('myModal').focus();
+        $("#myModalTitle").text(title);
+        $("#myModalText").text(text);
+        let hideHandler = () => resolve();
+        if (timeout) {
+            let close_evt = myModal.hide;
+            let timeout_id = window.setTimeout(close_evt, timeout);
+            document.addEventListener("keypress", close_evt);
+            hideHandler = () => {
+                window.clearTimeout(timeout_id);
+                document.removeEventListener("keypress", close_evt);
+                resolve();
+            };
+        }
+        myModal.show();
+        $("#myModal").one('hide.bs.modal', hideHandler);
+    });
+}
 
 function show_modal(title, text, refresh, next_page, skip) {
-    document.getElementById('myModal').focus();
-    $("#myModalTitle").text(title);
-    $("#myModalText").text(text);
-    let session_id = +new Date() + "" + Math.random();
-    current_modal_session = session_id;
-    if (skip) {
-        if (next_page) {
-            location.href = next_page;
-        } else {
-            location.reload();
-        }
-        return;
+    let timeout = title === "成功"? 3000 : null;
+    function end_up(){
+        if (next_page) location.href = next_page;
+        else if (refresh) location.reload();
     }
-    if (next_page) {
-        $("#myModal").on("hidden.bs.modal", function () {
-            if (session_id === current_modal_session) {
-                location.href = next_page;
-            }
-        });
-    } else if (refresh) {
-        $("#myModal").on("hidden.bs.modal", function () {
-            if (session_id === current_modal_session) {
-                location.reload();
-            }
-        });
-    }
-    myModal.show();
-    if (title === "成功") {
-        let timeout_id = window.setTimeout(function () {
-            myModal.hide();
-        }, 3000);
-        let close_evt = function () {
-            myModal.hide();
-        };
-        document.addEventListener("keypress", close_evt);
-        $("#myModal").on("hidden.bs.modal", function () {
-            if (timeout_id !== -1) {
-                window.clearTimeout(timeout_id);
-                timeout_id = -1;
-            }
-            if (close_evt) {
-                document.removeEventListener("keypress", close_evt);
-                close_evt = null;
-            }
-        });
-    }
+    if (skip) end_up();
+    else async_show_modal(title, text, timeout).then(end_up);
 }
 
 $("input[data-checked]").each(function () {
@@ -350,14 +331,14 @@ function posting(url, data) {
         body: objectToFormData(data)
     });
 }
-function double_check(title){
+function double_check(title, subtitle){
     return new Promise((resolve, reject) => {
         const modelElement = document.getElementById('checkingModal');
         const checkModal = bootstrap.Modal.getOrCreateInstance(modelElement);
         const titleElement = document.getElementById('checkingModalTitle');
         const textElement = document.getElementById('checkingModalText');
         titleElement.textContent = title;
-        textElement.textContent = "請確認是否要繼續進行此操作。";
+        textElement.textContent = subtitle || "請確認是否要繼續進行此操作。";
         let closed = false;
         const enterButton = document.getElementById('checkingModalEnter');
         const cleanUp = () => {

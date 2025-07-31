@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}評測系統{% endblock %}
+
+{% block main %}
+    <div class="container">
+        <h1>編譯與執行參數</h1>
+        {% for lang in langs %}
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">{{ lang["name"] }}</h5>
+                    {% if lang["compile"] %}
+                        <h6 class="card-subtitle mb-2 text-muted">編譯指令</h6>
+                        <p class="card-text">{{ lang["compile"] }}</p>
+                    {% endif %}
+                    <h6 class="card-subtitle mb-2 text-muted">執行指令</h6>
+                    <p class="card-text">{{ lang["run"] }}</p>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% endblock %}

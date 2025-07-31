@@ -50,11 +50,14 @@ def save_config():
         yaml.dump(as_dict(config), file)
 
 
-def ConfigProperty(name: str, _type: Type[T], _default_val: T):
+def ConfigProperty(name: str, _type: Type[T], _default_val: T, _type_info: str = None):
+    if _type_info is None:
+        _type_info = _type.__name__
+
     def factory():
         return _type(deepcopy(_default_val))
 
-    return field(default_factory=factory, metadata={"name": name, "type": _type})
+    return field(default_factory=factory, metadata={"name": name, "type": _type, "type_info": _type_info})
 
 
 def ConfigCategory(name: str, _type: Type[T]):
@@ -82,7 +85,7 @@ class SmtpConfig(metaclass=DataMeta):
     user: str = ConfigProperty("SMTP使用者名稱(email)", str, "user@gmail.com")
     password: str = ConfigProperty("SMTP使用者密碼", str, "password")
     enabled: bool = ConfigProperty("SMTP是否啟用", bool, False)
-    limit: str = ConfigProperty("驗證碼頻率限制", str, "1 per 20 second")
+    limit: str = ConfigProperty("驗證碼頻率限制", str, "1 per 20 second", "limit")
 
 
 @my_dataclass
@@ -100,8 +103,8 @@ class ServerConfig(metaclass=DataMeta):
     port: int = ConfigProperty("此伺服器的連接埠", int, 8080)
     workers: int = ConfigProperty("WSGI並行數量", int, 4)
     timeout: int = ConfigProperty("WSGI超時時間", int, 120)
-    limits: list[str] = ConfigProperty("請求頻率限制列表", list, ("30 per 30 second", "3 per 1 second"))
-    file_limit: str = ConfigProperty("檔案下載頻率限制", str, "30 per 5 second")
+    limits: list[str] = ConfigProperty("請求頻率限制列表", list, ("30 per 30 second", "3 per 1 second"), "limits")
+    file_limit: str = ConfigProperty("檔案下載頻率限制", str, "30 per 5 second", "limit")
     admin_fast: bool = ConfigProperty("管理員可無視請求頻率限制", bool, False)
 
 
@@ -121,7 +124,7 @@ class JudgeConfig(metaclass=DataMeta):
     """
     workers: int = ConfigProperty("評測系統並行數量", int, 1)
     period: int = ConfigProperty("評測系統掃描週期(s)", int, 3)
-    limit: str = ConfigProperty("提交頻率限制", str, "1 per 10 second")
+    limit: str = ConfigProperty("提交頻率限制", str, "1 per 10 second", "limit")
     pending_limit: int = ConfigProperty("等待中提交數量限制", int, 1)
     file_size: int = ConfigProperty("檔案大小限制(KB)", int, 100)
     save_period: int = ConfigProperty("評測系統儲存週期(每完成幾筆測資更新狀態)", int, 3)
@@ -184,10 +187,30 @@ def init():
     pass
 
 
+# types: bool, int, limit, limits, str
+
+
 def get_fields():
     categories = fields(config)
     ret = []
+    with config_file.open() as f:
+        _config_data = yaml.load(f, yaml.loader.SafeLoader)
+    _config = Config(**_config_data)
     for category in categories:
+        cat_val = getattr(_config, category.name)
+        slots = []
         for slot in fields(category.type):
-            ret.append((category.name + "." + slot.name, category.metadata["name"], slot.metadata["name"], slot.type))
+            slot_info = {
+                "name": slot.name,
+                "title": slot.metadata["name"],
+                "type": slot.metadata["type_info"],
+                "value": getattr(cat_val, slot.name),
+            }
+            slots.append(slot_info)
+        cur = {
+            "name": category.name,
+            "title": category.metadata["name"],
+            "slots": slots
+        }
+        ret.append(cur)
     return ret

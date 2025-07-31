@@ -328,125 +328,6 @@ def all_status_data():
     return jsonify(ret)
 
 
-def update_user():
-    user: datas.User = datas.first_or_404(datas.User, username=request.form["username"])
-    user.display_name = request.form["display_name"]
-    if len(request.form["password"]) > 1:
-        user.password_sha256_hex = login.try_hash(request.form["password"])
-    perms = user.permission_list()
-    new_perms = request.form["permissions"].split(";")
-    for perm_name in ("admin", "make_problems"):
-        if perm_name in new_perms:
-            if perm_name not in perms:
-                perms.append(perm_name)
-        else:
-            if perm_name in perms:
-                perms.remove(perm_name)
-    user.permissions = ";".join(perms)
-    datas.add(user)
-    return "OK", 200
-
-
-def parse_user():
-    file = request.files.get("file")
-    if not file or file.filename == "":
-        return "No file provided", 400
-    ext = os.path.splitext(file.filename)[1].lower()
-    if ext not in (".xlsx", ".csv"):
-        return "Unsupported file type", 400
-    try:
-        in_memory_file = BytesIO(file.stream.read())
-        if ext == ".xlsx":
-            wb = load_workbook(in_memory_file, data_only=True)
-            ws = wb.active
-            arr = [[str(cell.value) for cell in row] for row in ws.iter_rows()]
-        else:
-            wrapper = TextIOWrapper(in_memory_file, encoding="utf-8")
-            reader = csv.reader(wrapper)
-            arr = [[cell for cell in row] for row in reader]
-    except Exception as e:
-        traceback.print_exception(e)
-        return "Failed to read file", 400
-    if len(arr) < 1:
-        return "No data found", 400
-    title = [cell.lower() for cell in arr[0]]
-    i0 = 0
-    i1 = 1
-    i2 = 2
-    i3 = 3
-    if "username" in title and "password" in title:
-        i0 = title.index("username")
-        i1 = title.index("password")
-        if "email" in title:
-            i2 = title.index("email")
-        else:
-            i2 = -1
-        if "display_name" in title:
-            i3 = title.index("display_name")
-        else:
-            i3 = -1
-        arr = arr[1:]
-    out = []
-    existed = []
-    for row in arr:
-        if len(row) < 2:
-            continue
-        username = row[i0].strip().lower() if len(row) > i0 else ""
-        password = row[i1].strip() if len(row) > i1 else ""
-        email = row[i2].strip() if 0 <= i2 < len(row) else ""
-        display_name = row[i3].strip() if 0 <= i3 < len(row) else username
-        if not username or not password:
-            continue
-        if datas.count(datas.User, username=username) > 0 or (email and datas.count(datas.User, email=email) > 0):
-            existed.append([username, email])
-            continue
-        out.append([username, password, email, display_name])
-    if len(out) < 1:
-        return "No valid user data found", 400
-    return jsonify({"users": out, "existed": existed}), 200
-
-
-def create_users():
-    dat = request.form["users"]
-    try:
-        users = json.loads(dat)
-    except json.JSONDecodeError:
-        return "Invalid JSON data", 400
-    if not isinstance(users, list) or len(users) < 1:
-        return "No valid user data found", 400
-    for user in users:
-        if len(user) < 2:
-            continue
-        username = user[0].strip().lower()
-        password = user[1].strip()
-        email = user[2].strip() if len(user) > 2 else uuid.uuid5(uuid.NAMESPACE_DNS, username).hex + "@placeholder.com"
-        display_name = user[3].strip() if len(user) > 3 else username
-        if not username or not password:
-            continue
-        if datas.count(datas.User, username=username) > 0 or (email and datas.count(datas.User, email=email) > 0):
-            continue
-        login.create_account(email, username, password, display_name)
-    return "OK", 200
-
-
-@app.route('/admin', methods=['GET', 'POST'])
-@login_required
-def admin():
-    if not current_user.has(Permission.admin):
-        abort(403)
-    if request.method == 'GET':
-        users = datas.query(datas.User).all()
-        return render_template("admin.html", users=users)
-    else:
-        if request.form["action"] == "update_user":
-            return update_user()
-        if request.form["action"] == "parse_user":
-            return parse_user()
-        if request.form["action"] == "create_users":
-            return create_users()
-        abort(404)
-
-
 @app.route('/preferences', methods=['GET'])
 def preferences():
     return render_template("preferences.html")
@@ -507,3 +388,12 @@ def rejudge_all():
         tasks.rejudge(a_submit, "wait for rejudge")
         datas.add(a_submit)
     return "OK", 200
+
+
+@app.route('/about_judge', methods=['GET'])
+def about_judge():
+    out = []
+    for lang in executing.langs.values():
+        out.append({"name": lang.branch, "compile": " ".join(lang.sample_compile_cmd),
+                    "run": " ".join(lang.sample_exec_cmd)})
+    return render_template("about_judge.html", langs=out)
