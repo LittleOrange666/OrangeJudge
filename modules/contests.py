@@ -16,21 +16,23 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-
+import csv
 import multiprocessing
 import time
 import traceback
 from datetime import datetime, timedelta
+from io import BytesIO, TextIOWrapper
 from multiprocessing import Process
 from time import sleep
 
 from cachetools import TTLCache, cached
-from flask import abort
+from flask import abort, request
 from flask_login import current_user
 from loguru import logger
+from openpyxl.reader.excel import load_workbook
 from werkzeug.datastructures import ImmutableMultiDict
 
-from . import tools, datas, tasks, objs
+from . import tools, datas, tasks, objs, server
 from .objs import Permission
 
 actions = tools.Switcher()
@@ -55,6 +57,7 @@ def create_contest(name: str, user: datas.User) -> str:
                        contest_id=dat.id,
                        is_virtual=False)
     datas.add(dat, per)
+    datas.flush()  # 重要 !!!
     dat.main_period_id = per.id
     datas.add(dat)
     dat.path.mkdir(parents=True, exist_ok=True)
@@ -105,6 +108,55 @@ def add_participant(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat
 
 
 @actions.bind
+def add_participants(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: objs.ContestData) -> str:
+    file = request.files["file"]
+    if not file or file.filename == "":
+        abort(400)
+    ext = file.filename.rsplit(".", 1)[-1].lower()
+    if ext not in ("xlsx", "csv"):
+        abort(400)
+    try:
+        in_memory_file = BytesIO(file.stream.read())
+        if ext == ".xlsx":
+            wb = load_workbook(in_memory_file, data_only=True)
+            ws = wb.active
+            arr = [[str(cell.value) for cell in row] for row in ws.iter_rows()]
+        else:
+            wrapper = TextIOWrapper(in_memory_file, encoding="utf-8")
+            reader = csv.reader(wrapper)
+            arr = [[cell for cell in row] for row in reader]
+    except Exception as e:
+        server.custom_abort(400, "Failed to read file: " + str(e))
+        return "participants"
+    if len(arr) < 1:
+        server.custom_abort(400, "No data found in file")
+    if "username" not in arr[0]:
+        out = [line[0].strip() for line in arr if len(line) > 0 and line[0].strip() != ""]
+    else:
+        i0 = arr[0].index("username")
+        out = [line[i0].strip() for line in arr if len(line) > i0 and line[i0].strip() != ""]
+    if len(out) < 1:
+        server.custom_abort(400, "No valid usernames found in file")
+    bad_usernames = []
+    for username in out:
+        username = username.lower()
+        if username in dat.participants:
+            continue
+        user: datas.User = datas.first(datas.User, username=username)
+        if user is None:
+            bad_usernames.append(username)
+    if len(bad_usernames) > 0:
+        server.custom_abort(400, "The following usernames do not exist: " + ", ".join(bad_usernames))
+        return "participants"
+    for username in out:
+        username = username.lower()
+        if username in dat.participants:
+            continue
+        dat.participants.append(username)
+    return "participants"
+
+
+@actions.bind
 def remove_participant(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: objs.ContestData) -> str:
     user: datas.User = datas.first_or_404(datas.User, username=form["username"].lower())
     if user.username not in dat.participants:
@@ -141,6 +193,9 @@ def change_settings(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat
     show_standing = form["show_standing"]
     if show_standing not in ("no", "yes"):
         abort(400)
+    show_contest = form["show_contest"]
+    if show_contest not in ("no", "yes"):
+        abort(400)
     if not form["freeze_time"].isdigit():
         abort(400)
     freeze_time = int(form["freeze_time"])
@@ -160,6 +215,7 @@ def change_settings(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat
     dat.pretest = pretest_type
     dat.practice = practice_type
     dat.can_register = (register_type == "yes")
+    cdat.hidden = (show_contest == "no")
     dat.standing = objs.StandingsData(public=(show_standing == "yes"), start_freeze=freeze_time,
                                       end_freeze=unfreeze_time)
     dat.penalty = penalty

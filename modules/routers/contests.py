@@ -34,6 +34,8 @@ app = server.app
 @app.route("/contests", methods=["GET"])
 def contests_list():
     public_contests = datas.Contest.query
+    if not login.has_permission(Permission.admin):
+        public_contests = public_contests.filter_by(hidden=False)
     got_data, page_cnt, page_idx, show_pages = tools.pagination(public_contests)
     contests_data = [(contest.cid, contest.name, contest.datas, contest.can_virtual()) for contest in got_data]
     return render_template("contests.html", contests=contests_data, page_cnt=page_cnt, page_idx=page_idx,
@@ -53,7 +55,9 @@ def create_contest():
 
 @app.route("/contest/<idx>", methods=["GET"])
 def contest_page(idx):
-    dat: datas.Contest = datas.first_or_404(datas.Contest, cid=idx)
+    dat: datas.Contest = datas.first(datas.Contest, cid=idx)
+    if dat is None:
+        server.custom_abort(404, "未找到比賽")
     status, target, can_see = contests.check_status(dat)
     info = dat.datas
     can_edit = contests.check_super_access(dat)
@@ -64,9 +68,10 @@ def contest_page(idx):
     else:
         user_data = current_user.data if current_user.is_authenticated else None
         questions = reversed(dat.announcements.filter_by(question=True, user=user_data).all())
+    displayed = not dat.hidden
     return render_template("contest.html", cid=idx, data=info, can_edit=can_edit, can_see=can_see, target=target,
                            status=status, announcements=announcements, questions=questions, cur_time=time.time(),
-                           languages=sorted(executing.langs.keys()), can_filter_results=constants.can_filter_results)
+                           languages=sorted(executing.langs.keys()), can_filter_results=constants.can_filter_results, displayed=displayed)
 
 
 @app.route("/contest/<cid>/problem/<pid>", methods=["GET"])

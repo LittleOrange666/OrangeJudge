@@ -243,14 +243,10 @@ class PretestType(Enum):
         all (str): Represents all submissions will be rejudged.
         last (str): Represents the last submission will be rejudged.
         no (str): Represents pretests is disabled.
-        fake_all (str): Represents all submissions are counted into score, but hide results before ended.
-        fake_last (str): Represents the last submission is counted into score, and hide results before ended.
     """
     all = "all"
     last = "last"
     no = "no"
-    fake_all = "fake_all"
-    fake_last = "fake_last"
 
 
 class CodecheckerMode(Enum):

@@ -25,18 +25,13 @@ import traceback
 import uuid
 from io import BytesIO, TextIOWrapper
 
-from flask import abort, render_template, redirect, request, jsonify
+from flask import abort, render_template, request, jsonify
 from flask_login import login_required, current_user
 from limits import parse
 from openpyxl import load_workbook
-from pygments import highlight, lexers
-from pygments.formatters import HtmlFormatter
-from werkzeug.utils import secure_filename
 
-from .. import tools, server, constants, executing, tasks, datas, contests, login, config, objs
-from ..constants import problem_path, preparing_problem_path
+from .. import tools, server, datas, login, config
 from ..objs import Permission
-from ..server import sending_file
 
 app = server.app
 

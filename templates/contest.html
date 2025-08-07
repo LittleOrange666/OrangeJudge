@@ -446,6 +446,23 @@
                                placeholder="持續時間"
                                value="{{ data.elapsed }}" required>
                     </div>
+                    <div class="radio-selector" data-value="{{ 'yes' if displayed else 'no' }}">
+                        <h4>比賽可見</h4>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="show_contest" id="show_contest1"
+                                   value="yes">
+                            <label class="form-check-label" for="show_contest1">
+                                是
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="show_contest" id="show_contest2"
+                                   value="no">
+                            <label class="form-check-label" for="show_contest2">
+                                否
+                            </label>
+                        </div>
+                    </div>
                     <div class="radio-selector" data-value="{{ data.type.name }}">
                         <h4>計分規則</h4>
                         <div class="form-check">
@@ -578,6 +595,16 @@
                             <button class="btn btn-primary submitter" data-msg-404="找不到該使用者id"
                                     data-msg-409="該使用者已被添加">添加參賽者
                             </button>
+                        </div>
+                    </div>
+                </form>
+                <form the_action="add_participants">
+                    <div class="row">
+                        <div class="col-auto">
+                            <input type="file" class="form-control" accept=".csv, .xlsx" name="file">
+                        </div>
+                        <div class="col-auto">
+                            <button class="btn btn-primary submitter">批次添加參賽者</button>
                         </div>
                     </div>
                 </form>

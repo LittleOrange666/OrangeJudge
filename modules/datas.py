@@ -368,6 +368,7 @@ class Contest(db.Model):
     data = db.Column(db.JSON, nullable=False)
     main_period_id = db.Column(db.Integer, nullable=True)
     announcements = db.relationship('Announcement', backref='contest', lazy='dynamic')
+    hidden = db.Column(db.Boolean, default=False, nullable=False)
 
     def can_virtual(self) -> bool:
         """
