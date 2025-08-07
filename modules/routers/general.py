@@ -16,23 +16,16 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-import csv
 import datetime
 import json
-import os
-import traceback
-import uuid
-from io import TextIOWrapper, BytesIO
 
-import loguru
 from flask import abort, render_template, redirect, request, jsonify
 from flask_login import login_required, current_user
-from openpyxl import load_workbook
 from pygments import highlight, lexers
 from pygments.formatters import HtmlFormatter
 from werkzeug.utils import secure_filename
 
-from .. import tools, server, constants, executing, tasks, datas, contests, login, config, objs
+from .. import tools, server, constants, executing, tasks, datas, contests, config, objs, submitting
 from ..constants import problem_path, preparing_problem_path
 from ..objs import Permission
 from ..server import sending_file
@@ -72,23 +65,7 @@ def test_submit():
     lang = request.form["lang"]
     code = request.form["code"].replace("\n\n", "\n")
     inp = request.form["input"]
-    if not inp.endswith("\n"):
-        inp += "\n"
-    if lang not in executing.langs:
-        abort(404)
-    ext = executing.langs[lang].source_ext
-    fn = constants.source_file_name + ext
-    dat = datas.Submission(source=fn, time=datetime.datetime.now(), user=current_user.data,
-                           problem=datas.first(datas.Problem, pid="test"), language=lang,
-                           data={"infile": "in.txt", "outfile": "out.txt"}, pid="test", simple_result="waiting",
-                           queue_position=0, simple_result_flag=objs.TaskResult.PENDING.name)
-    datas.add(dat)
-    datas.flush()
-    idx = str(dat.id)
-    tools.write(code, dat.path / fn)
-    tools.write(inp, dat.path / "in.txt")
-    dat.queue_position = tasks.enqueue(dat.id)
-    datas.add(dat)
+    idx = submitting.test_submit(lang, code, inp, current_user)
     return "/submission/" + idx, 200
 
 
@@ -96,38 +73,11 @@ def test_submit():
 @submit_limit
 @login_required
 def submit():
-    if datas.count(datas.Submission, user=current_user.data, completed=False) >= config.judge.pending_limit:
-        return "Too many uncompleted submissions", 409
     lang = request.form["lang"]
     code = request.form["code"].replace("\n\n", "\n")
-    if len(code) > config.judge.file_size * 1024:
-        abort(400)
     pid = request.form["pid"]
-    pdat: datas.Problem = datas.first_or_404(datas.Problem, pid=pid)
-    if lang not in executing.langs:
-        abort(404)
-    if not pdat.lang_allowed(lang):
-        abort(400)
-    ext = executing.langs[lang].source_ext
-    fn = constants.source_file_name + ext
-    dat = datas.Submission(source=fn, time=datetime.datetime.now(), user=current_user.data,
-                           problem=pdat, language=lang, data={}, pid=pid, simple_result="waiting",
-                           queue_position=0, simple_result_flag=objs.TaskResult.PENDING.name)
-    if "cid" in request.form:
-        cdat: datas.Contest = datas.first_or_404(datas.Contest, cid=request.form["cid"])
-        contests.check_access(cdat)
-        per_id = contests.check_period(cdat)
-        dat.contest = cdat
-        if per_id:
-            dat.period_id = per_id
-            if cdat.datas.pretest != objs.PretestType.no:
-                dat.just_pretest = True
-    datas.add(dat)
-    datas.flush()
-    idx = str(dat.id)
-    tools.write(code, dat.path / fn)
-    dat.queue_position = tasks.enqueue(dat.id)
-    datas.add(dat)
+    cid = request.form.get("cid")
+    idx = submitting.submit(lang, pid, code, cid, current_user)
     return "/submission/" + idx
 
 

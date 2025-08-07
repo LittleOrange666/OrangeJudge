@@ -6,6 +6,10 @@
 
 ## 安裝
 
+建議用 https://github.com/LittleOrange666/OrangeJudgeDeploy 來輔助安裝
+
+但也可以照以下步驟手動來
+
 先想辦法裝好docker和docker-compose後
 
 下載docker-compos.yml
@@ -30,11 +34,13 @@ docker-compose up -d
 
 沙盒伺服器會在9132 port開一個測試用的接口，可以改docker-compose.yml來關掉
 
+資料庫會在3306 port開一個管理用的接口，也可以改docker-compose.yml來關掉
+
 要注意初次執行會建立帳密都是root的管理者帳號，記得改密碼
 
 然後資料會被存在 \[跑上面那個指令的資料夾\]/data
 
-部分系統設置在 data/config.yaml，要重啟才生效
+部分系統設置在 data/config.yaml，也可以在伺服器上的管理頁面改，要重啟才生效
 
 剩下請自行通靈
 
@@ -66,7 +72,7 @@ judge backend的secret key用於保護登入狀態，默認是自動生成的，
 
 ## 手動安裝
 
-若有修改程式之需求(Ex. 增加可用語言)，可以把這個repo跟[OrangeJudge_Judger](https://github.com/LittleOrange666/OrangeJudge_Judger) clone下來
+若有修改程式之需求，可以把這個repo跟[OrangeJudge_Judger](https://github.com/LittleOrange666/OrangeJudge_Judger) clone下來
 
 改好之後分別執行
 

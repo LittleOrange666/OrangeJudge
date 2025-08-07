@@ -690,6 +690,7 @@ class ProblemInfo(metaclass=DataMeta):
         versions (list[ProblemVersion]): The list of versions for the problem.
         top_score (int): The top score for the problem.
         ac_info (str): AC information about the problem.
+        default_code (dict[str, str]): The default code for the problem in different languages.
     """
     name: str = "unknown"
     timelimit: str = "1000"
@@ -720,6 +721,7 @@ class ProblemInfo(metaclass=DataMeta):
     versions: list[ProblemVersion] = field(default_factory=list)
     top_score: int = 100
     ac_info: str = ""
+    default_code: dict[str, str] = field(default_factory=dict)
 
     def update(self, new_data: dict):
         """
