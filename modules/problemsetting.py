@@ -892,6 +892,18 @@ def choose_runner(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Res
 
 
 @actions.bind
+def choose_sample(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Response:
+    for k in executing.langs.keys():
+        name = secure_filename(form["my_sample_" + k])
+        if not any(o.name == name for o in dat.files):
+            if k in dat.default_code:
+                del dat.default_code[k]
+        else:
+            dat.default_code[k] = name
+    return "judge"
+
+
+@actions.bind
 def add_library(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Response:
     name = form["library"]
     if not any(o.name == name for o in dat.files):

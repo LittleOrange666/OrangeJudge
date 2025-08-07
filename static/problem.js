@@ -1,4 +1,11 @@
 const lang_opt = $("#langoption");
+function update_default_code(){
+    let lang = lang_opt.val();
+    let code = default_code[lang];
+    if (code) {
+        $("#codeTextarea").text(code);
+    }
+}
 $("#uploadfile").on("change", function () {
     let files = $(this).prop("files");
     if (!files.length) {
@@ -16,7 +23,9 @@ $("#uploadfile").on("change", function () {
 lang_opt.on("change", function () {
     $("#uploadfile").prop("accept", lang_exts[lang_opt.val()]);
     localStorage.lang = lang_opt.val();
+    update_default_code();
 });
 if (localStorage.lang && lang_opt.find("option[value='" + localStorage.lang + "']").length) {
     lang_opt.val(localStorage.lang).trigger("change");
 }
+update_default_code();

@@ -181,7 +181,13 @@ def problem_page(idx):
         if not current_user.has(Permission.admin) and current_user.id not in dat.users:
             abort(403)
     langs = [lang for lang in executing.langs.keys() if pdat.lang_allowed(lang)]
-    return render_problem(dat, idx, langs, is_contest=False)
+    default_code = dat.default_code
+    files = [f for f in default_code.values() if f and f.strip()]
+    content_map = {}
+    for f in files:
+        content_map[f] = (pdat.path / "file" / f).open(encoding="utf-8").read()
+    default_code = {k: content_map.get(v,"") for k, v in default_code.items()}
+    return render_problem(dat, idx, langs, is_contest=False, default_code=default_code)
 
 
 def render_problem(dat: objs.ProblemInfo, idx: str, langs: list[str], preview: bool = False, **kwargs):

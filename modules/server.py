@@ -21,6 +21,7 @@ import os
 import secrets
 import socket
 import traceback
+from datetime import timedelta
 from pathlib import Path
 
 import redis
@@ -50,11 +51,11 @@ app.config['SESSION_USE_SIGNER'] = True
 app.config['SESSION_REDIS'] = redis.StrictRedis(host=redis_host)
 app.config['SESSION_KEY_PREFIX'] = 'session:'
 app.config['SESSION_PERMANENT'] = True
-app.config["PERMANENT_SESSION_LIFETIME"] = 200000
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(hours=12)
+app.config['WTF_CSRF_TIME_LIMIT'] = 43200
+app.config['WTF_CSRF_ENABLED'] = not config.debug.disable_csrf
 Session(app)
-csrf: CSRFProtect | None = None
-if not config.debug.disable_csrf:
-    csrf = CSRFProtect(app)
+csrf = CSRFProtect(app)
 limiter = Limiter(
     get_remote_address,
     app=app,

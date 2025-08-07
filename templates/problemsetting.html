@@ -429,6 +429,36 @@
             </div>
             <br>
             <div class="container-fluid">
+                <h4>範例程式</h4>
+                <form the_action="choose_sample" id="choose_sample">
+                    {% for lang in langs %}
+                        <div class="row">
+                            <div class="col-auto">
+                                <p>{{ lang }}: </p>
+                            </div>
+                            <div class="col-auto">
+                                {% if lang in dat.default_code %}
+                                    <p>{{ dat.default_code[lang] }}</p>
+                                {% else %}
+                                    <p>無</p>
+                                {% endif %}
+                            </div>
+                            <div class="col-auto">
+                                <select class="form-select" name="my_sample_{{ lang }}"
+                                        data-value="{{ dat.default_code[lang] }}">
+                                    <option selected>選擇檔案</option>
+                                    {% for file in dat.files %}
+                                        <option value="{{ file.name }}">{{ file.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    {% endfor %}
+                    <button class="btn btn-primary submitter" data-no-refresh="true">儲存範例程式設定</button>
+                </form>
+            </div>
+            <br>
+            <div class="container-fluid">
                 <h4>輔助檔案</h4>
                 {% for file in dat.library %}
                     <form the_action="remove_library">
