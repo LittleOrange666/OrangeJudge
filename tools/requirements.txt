@@ -4,6 +4,7 @@ flask_session
 flask_wtf
 flask_sqlalchemy
 flask_limiter
+flask_migrate
 pygments
 pyzipper
 markdown

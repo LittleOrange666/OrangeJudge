@@ -28,6 +28,8 @@ from modules import contests, constants, datas, executing, locks, login, problem
     judge
 import modules.routers
 
+app = server.app
+
 
 class StandaloneApplication(BaseApplication):
 
@@ -61,7 +63,7 @@ def main():
         redis_host = os.environ.get("REDIS_HOST", "localhost")
         if not server.check_port(redis_host, 6379):
             subprocess.Popen("redis-server")
-        with server.app.app_context():  # following need sqlalchemy
+        with app.app_context():  # following need sqlalchemy
             datas.init()
             login.init()
             tasks.init()
@@ -76,7 +78,7 @@ def main():
         'workers': config.server.workers,
         'timeout': config.server.timeout,
     }
-    StandaloneApplication(server.app, options).run()
+    StandaloneApplication(app, options).run()
 
 
 if __name__ == '__main__':

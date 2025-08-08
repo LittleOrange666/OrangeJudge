@@ -28,6 +28,7 @@ from flask import has_request_context
 from flask_sqlalchemy import SQLAlchemy
 from flask_sqlalchemy.query import Query
 from flask_sqlalchemy.session import Session
+from flask_migrate import Migrate
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -64,6 +65,8 @@ else:
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
     app.config['SQLALCHEMY_DATABASE_URI'] = sqlite_url
 db = SQLAlchemy(app)
+migrate = Migrate(app, db)
+
 _current_session: ContextVar = ContextVar("current_session", default=None)
 
 
