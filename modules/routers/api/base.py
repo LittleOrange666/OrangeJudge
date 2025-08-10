@@ -16,13 +16,16 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
+import traceback
 
 from flask import Blueprint, request, abort, jsonify
 from flask_login import current_user
 from flask_wtf.csrf import validate_csrf
 from werkzeug.exceptions import BadRequestKeyError
+from loguru import logger
 
-from ... import server, login, objs
+from ...constants import log_path
+from ... import server, login, objs, tools
 
 app = server.app
 
@@ -44,7 +47,73 @@ def handle_missing_param(e):
 
 @blueprint.errorhandler(server.CustomHTTPException)
 def custom_http_exception(error: server.CustomHTTPException):
-    return jsonify({"status": "error", "error_code": error.code, "description": error.description}), error.code
+    return jsonify({"status": "error",
+                    "error_code": error.code,
+                    "description": error.description}
+                   ), error.code
+
+
+@blueprint.errorhandler(403)
+def error_403(error):
+    return jsonify({"status": "error",
+                    "error_code": 403,
+                    "description": "403 Forbidden"
+                    }), 403
+
+
+@blueprint.errorhandler(404)
+def error_404(error):
+    return jsonify({"status": "error",
+                    "error_code": 404,
+                    "description": "404 Not Found"
+                    }), 404
+
+
+@blueprint.errorhandler(405)
+def error_405(error):
+    return jsonify({"status": "error",
+                    "error_code": 405,
+                    "description": "405 Method Not Allowed"
+                    }), 405
+
+
+@blueprint.errorhandler(409)
+def error_409(error):
+    return jsonify({"status": "error",
+                    "error_code": 409,
+                    "description": "409 Conflict"
+                    }), 409
+
+
+@blueprint.errorhandler(429)
+def error_429(error):
+    return jsonify({"status": "error",
+                    "error_code": 429,
+                    "description": "429 Too Many Request"
+                    }), 429
+
+
+@blueprint.errorhandler(503)
+def error_503(error):
+    return jsonify({"status": "error",
+                    "error_code": 503,
+                    "description": "503 Service Unavailable"
+                    }), 503
+
+
+@blueprint.errorhandler(Exception)
+def error_500(error: Exception):
+    target = tools.random_string()
+    log_file = (log_path / f"{target}.log")
+    with log_file.open("w") as f:
+        traceback.print_exception(error, file=f)
+    log_content = log_file.read_text()
+    logger.warning(f"Error: {log_content}")
+    return jsonify({"status": "error",
+                    "error_code": 500,
+                    "description": "500 Internal Server Error",
+                    "log_uid": target
+                    }), 500
 
 
 def verify_csrf() -> bool:

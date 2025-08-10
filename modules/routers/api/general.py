@@ -17,10 +17,10 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from flask import request
+from flask import request, abort
 
 from .base import blueprint, get_api_user
-from ... import submitting
+from ... import submitting, datas, objs, tools
 
 
 @blueprint.route("/submit", methods=["POST"])
@@ -36,3 +36,54 @@ def submit():
     else:
         idx = submitting.submit(lang, pid, code, cid, user)
     return {"status": "success", "submission_id": idx}, 200
+
+
+@blueprint.route("/submission", methods=["GET"])
+def submission():
+    user = get_api_user(request.form["username"])
+    idx = tools.to_int(request.args["submission_id"])
+    dat = datas.first_or_404(datas.Submission, id=idx)
+    if not user.has(objs.Permission.admin) and dat.user_id != user.id:
+        abort(403)
+    lang = dat.language
+    source = tools.read(dat.path / dat.source)
+    completed = dat.completed
+    ce_msg = dat.ce_msg
+    pdat: datas.Problem = dat.problem
+    ret = {"status": "success",
+           "submission_id": idx,
+           "lang": lang,
+           "source_code": source,
+           "completed": completed,
+           "ce_msg": ce_msg}
+    info = dat.datas
+    if pdat.pid == "test":
+        ret["result"] = dat.simple_result or "unknown"
+        ret["input"] = tools.read_default(dat.path / info.infile)
+        ret["output"] = tools.read_default(dat.path / info.outfile)
+    else:
+        result_data = dat.results
+        results = result_data.results
+        group_results = {}
+        result = {}
+        if completed and not info.JE:
+            result["CE"] = result_data.CE
+            gpr = result_data.group_results
+            if len(gpr) > 0 and type(next(iter(gpr.values()))) is objs.GroupResult:
+                group_results = {k: {"result": v.result.name,
+                                     "gained_score": v.gained_score,
+                                     "time": v.time,
+                                     "mem": v.mem} for k, v in gpr}
+            detail = []
+            for res in results:
+                detail.append({
+                    "result": res.result.name,
+                    "time": res.time,
+                    "mem": res.mem,
+                    "score": res.score
+                })
+            result["total_score"] = result_data.total_score
+            result["group_result"] = group_results
+            result["detail"] = detail
+        ret["result"] = result
+    return ret, 200
