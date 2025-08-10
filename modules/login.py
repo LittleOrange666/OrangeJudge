@@ -66,6 +66,15 @@ class User(UserMixin):
         """
         return f"accounts/{self.id}/"
 
+    def valid(self):
+        """
+        Check if the user data is valid.
+
+        Returns:
+            bool: True if the user data is valid, False otherwise.
+        """
+        return self.data is not None and self.data.username == self.id
+
     def has_str(self, key: str) -> bool:
         """
         Check if the user has a specific permission using a string key.

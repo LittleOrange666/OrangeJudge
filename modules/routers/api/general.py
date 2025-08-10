@@ -19,7 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from flask import request, abort
 
-from .base import blueprint, get_api_user
+from .base import blueprint, get_api_user, api_response
 from ... import submitting, datas, objs, tools
 
 
@@ -35,12 +35,12 @@ def submit():
         idx = submitting.test_submit(lang, code, inp, user)
     else:
         idx = submitting.submit(lang, pid, code, cid, user)
-    return {"status": "success", "submission_id": idx}, 200
+    return api_response({"submission_id": idx})
 
 
 @blueprint.route("/submission", methods=["GET"])
 def submission():
-    user = get_api_user(request.form["username"])
+    user = get_api_user(request.args["username"])
     idx = tools.to_int(request.args["submission_id"])
     dat = datas.first_or_404(datas.Submission, id=idx)
     if not user.has(objs.Permission.admin) and dat.user_id != user.id:
@@ -50,9 +50,7 @@ def submission():
     completed = dat.completed
     ce_msg = dat.ce_msg
     pdat: datas.Problem = dat.problem
-    ret = {"status": "success",
-           "submission_id": idx,
-           "lang": lang,
+    ret = {"lang": lang,
            "source_code": source,
            "completed": completed,
            "ce_msg": ce_msg}
@@ -86,4 +84,4 @@ def submission():
             result["group_result"] = group_results
             result["detail"] = detail
         ret["result"] = result
-    return ret, 200
+    return api_response(ret)

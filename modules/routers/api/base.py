@@ -18,7 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 import traceback
 
-from flask import Blueprint, request, abort, jsonify
+from flask import Blueprint, request, abort, jsonify, Response
 from flask_login import current_user
 from flask_wtf.csrf import validate_csrf
 from werkzeug.exceptions import BadRequestKeyError
@@ -164,21 +164,37 @@ def get_api_user(username: str, required: objs.Permission | None = None) -> logi
         403: If the API key is missing, invalid, or the user lacks the required permissions.
         405: If the request method is not GET or POST.
     """
+    user = login.User(username)
+    if not user.valid():
+        server.custom_abort(404, "User not found")
     if current_user.is_authenticated and current_user.username == username and verify_csrf():
         return current_user
-    if request.method == "GET":
+    if "x-api-key" in request.headers:
+        key = request.headers.get("x-api-key")
+    elif request.method == "GET":
         if "key" not in request.args:
             server.custom_abort(403, "Missing API key")
         key = request.args.get("key")
-    elif request.method == "POST":
+    else:
         if "key" not in request.form:
             server.custom_abort(403, "Missing API key")
         key = request.form.get("key")
-    else:
-        abort(405)
-    user = login.User(username)
     if not user.check_api_key(key):
         server.custom_abort(403, "API key not match")
     if required is not None and not user.has(required):
         server.custom_abort(403, f"Required '{required.name}' permission")
     return user
+
+
+def api_response(data: dict, status_code: int = 200) -> tuple[Response, int]:
+    """
+    Create a standardized JSON response.
+
+    Args:
+        data (dict): The data to include in the response.
+        status_code (int): The HTTP status code for the response. Defaults to 200.
+
+    Returns:
+        tuple[dict, int]: A tuple containing the response data and the status code.
+    """
+    return jsonify(status="success", data=data), status_code
