@@ -181,13 +181,7 @@ def problem_page(idx):
         if not current_user.has(Permission.admin) and current_user.id not in dat.users:
             abort(403)
     langs = [lang for lang in executing.langs.keys() if pdat.lang_allowed(lang)]
-    default_code = dat.default_code
-    files = [f for f in default_code.values() if f and f.strip()]
-    content_map = {}
-    for f in files:
-        content_map[f] = (pdat.path / "file" / f).open(encoding="utf-8").read()
-    default_code = {k: content_map.get(v, "") for k, v in default_code.items()}
-    return render_problem(dat, idx, langs, is_contest=False, default_code=default_code)
+    return render_problem(dat, idx, langs, is_contest=False)
 
 
 def render_problem(dat: objs.ProblemInfo, idx: str, langs: list[str], preview: bool = False, **kwargs):
@@ -204,9 +198,15 @@ def render_problem(dat: objs.ProblemInfo, idx: str, langs: list[str], preview: b
     samples.extend([objs.ManualSample(tools.read(path / "testcases_gen" / o.in_file),
                                       tools.read(path / "testcases_gen" / o.out_file))
                     for o in dat.testcases_gen if o.sample])
+    default_code = dat.default_code
+    files = [f for f in default_code.values() if f and f.strip()]
+    content_map = {}
+    for f in files:
+        content_map[f] = (path / "file" / f).open(encoding="utf-8").read()
+    default_code = {k: content_map.get(v, "") for k, v in default_code.items()}
     return render_template("problem.html", dat=dat, statement=statement,
                            langs=langs, lang_exts=lang_exts, pid=idx,
-                           preview=preview, samples=enumerate(samples), **kwargs)
+                           preview=preview, samples=enumerate(samples), **kwargs, default_code=default_code)
 
 
 @app.route("/problem_file/<idx>/<filename>", methods=['GET'])
