@@ -9,3 +9,4 @@ sandbox/
 tools/inited
 *.pyc
 venv/
+/import_tools/qindaou_info.json

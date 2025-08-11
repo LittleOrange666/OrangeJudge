@@ -44,7 +44,7 @@ from .constants import tmp_path, preparing_problem_path, testlib, problem_path
 from .judge import SandboxPath, SandboxUser
 from .objs import ProgramType, GenType
 from .routers.general import render_problem
-from .server import sending_file
+from .server import sending_file, custom_abort
 from .tools import TempFile
 
 worker_queue = Queue()
@@ -1120,14 +1120,23 @@ def import_problem(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Re
         with AESZipFile(tmp.path, "r") as zf:
             for file in zf.filelist:
                 file: AESZipInfo
+                if file.filename == "info.json":
+                    users = dat.users
+                    public_testcase = dat.public_testcase
+                    json_data = json.loads(zf.read(file).decode())
+                    try:
+                        new_dat = objs.ProblemInfo(**json_data)
+                    except ValueError:
+                        custom_abort(400, "Invalid JSON data in info.json")
+                    dat.update(json_data)
+                    dat.users = users
+                    dat.public_testcase = public_testcase
+            for file in zf.filelist:
+                file: AESZipInfo
                 if file.filename in files:
                     zf.extract(file, dat.path)
                 elif file.filename == "info.json":
-                    users = dat.users
-                    public_testcase = dat.public_testcase
-                    dat.update(json.loads(zf.read(file).decode()))
-                    dat.users = users
-                    dat.public_testcase = public_testcase
+                    pass
                 else:
                     dir_name = Path(file.filename).parent.name
                     if dir_name in dirs:

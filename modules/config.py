@@ -106,6 +106,7 @@ class ServerConfig(metaclass=DataMeta):
     limits: list[str] = ConfigProperty("請求頻率限制列表", list, ("30 per 30 second", "3 per 1 second"), "limits")
     file_limit: str = ConfigProperty("檔案下載頻率限制", str, "30 per 5 second", "limit")
     admin_fast: bool = ConfigProperty("管理員可無視請求頻率限制", bool, False)
+    server_name: str = ConfigProperty("伺服器名稱", str, "OrangeJudge")
 
 
 @my_dataclass

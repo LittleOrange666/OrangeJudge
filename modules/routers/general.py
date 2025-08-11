@@ -87,7 +87,8 @@ def submission(idx: str):
     dat: datas.Submission = datas.get_or_404(datas.Submission, int_idx)
     lang = dat.language
     source = tools.read(dat.path / dat.source)
-    source = highlight(source, prepares[executing.langs.get(lang, executing.langs["PlainText"]).name], HtmlFormatter())
+    lang_name = executing.langs[lang].name if lang in executing.langs else "text"
+    source = highlight(source, prepares[lang_name], HtmlFormatter())
     completed = dat.completed
     ce_msg = dat.ce_msg
     pdat: datas.Problem = dat.problem

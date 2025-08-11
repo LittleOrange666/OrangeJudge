@@ -90,3 +90,8 @@ textarea {
 #myModalText {
     white-space: pre-line;
 }
+
+.footer {
+    text-align: center;
+    font-size: small;
+}

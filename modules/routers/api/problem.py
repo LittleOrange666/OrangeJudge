@@ -16,10 +16,24 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-from . import general, base, problem
-from ... import server
 
-app = server.app
-blueprint = base.blueprint
+from flask import request, abort
 
-app.register_blueprint(blueprint)
+from .base import blueprint, get_api_user, api_response
+from ... import submitting, datas, objs, tools, problemsetting
+
+
+@blueprint.route("/problem", methods=["POST"])
+def create_problem():
+    user = get_api_user(request.form["username"], objs.Permission.admin)
+    pid = request.form.get("pid", "")
+    name = request.form["name"]
+    idx = problemsetting.create_problem(name, pid, user.data)
+    res = {"pid": idx}
+    if "zip_file" in request.files:
+        with problemsetting.Problem(idx) as problem:
+            problemsetting.import_problem(request.form, problem)
+            problemsetting.create_version({
+                "description": "Initial version"
+            }, problem)
+    return api_response(res)

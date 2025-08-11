@@ -12,6 +12,9 @@
     },
     "C11": {
       "arg": "-std=c11"
+    },
+    "C17": {
+      "arg": "-std=c17"
     }
   },
   "default_branch": "C99",

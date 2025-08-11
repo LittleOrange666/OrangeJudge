@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     {% block head %}{% endblock %}
-    <title>OrangeJudge - {% block title %}{% endblock %}</title>
+    <title>{{ site_name }} | {% block title %}{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.1/dist/css/bootstrap.min.css" rel="stylesheet"
           integrity="sha384-F3w7mX95PdgyTmZZMECAngseQB83DfGTowi0iMjiWaeVhAn4FJkqJByhZMI3AhiU" crossorigin="anonymous">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.1/dist/js/bootstrap.bundle.min.js"
@@ -21,7 +21,7 @@
 <div id="top_area" class="toc">
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
         <div class="container-fluid">
-            <a class="navbar-brand" href="/">OrangeJudge</a>
+            <a class="navbar-brand" href="/">{{ site_name }}</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
                     data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
                     aria-expanded="false" aria-label="Toggle navigation">
@@ -97,6 +97,10 @@
 </div>
 <div id="main_area">
     {% block main %}{% endblock %}
+</div>
+<div class="footer">
+    <p>{{ site_name }}</p>
+    <p>Powered by <a href="https://github.com/LittleOrange666/OrangeJudge">OrangeJudge</a> {{ version_info }}</p>
 </div>
 <div class="modal fade" id="myModal" tabindex="-1" aria-labelledby="myModalTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">

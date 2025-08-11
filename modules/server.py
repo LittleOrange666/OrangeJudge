@@ -71,6 +71,17 @@ if config.server.admin_fast:
         return current_user.is_authenticated and current_user.has(objs.Permission.admin)
 
 
+@app.context_processor
+def inject_global_variables():
+    version_info = ""
+    if "ORANGEJUDGE_VERSION" in os.environ:
+        version_info = "Version: "+os.environ["ORANGEJUDGE_VERSION"]
+    return {
+        'site_name': config.server.server_name,
+        'version_info': version_info,
+    }
+
+
 class CustomHTTPException(HTTPException):
     """
     Custom HTTP Exception class to handle specific HTTP errors.
