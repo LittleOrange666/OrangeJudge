@@ -507,7 +507,8 @@ class RunningTestcaseGroup(metaclass=DataMeta):
         time (int): The maximum time used in the group.
         mem (int): The maximum memory used in group.
         gained_score (float): The score gained by the group.
-        cnt (int): The count of test cases in the group.
+        cnt (int): The count of completed test cases in the group.
+        target_cnt (int): The target count of test cases in the group.
     """
     score: int = 100
     rule: TestcaseRule = TestcaseRule.min

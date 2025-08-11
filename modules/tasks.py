@@ -218,7 +218,7 @@ def run_problem(pid: str, dat_id: int) -> None:
 
     def save_result(completed: bool):
         out_info.results = results
-        out_info.group_results = {k: v.to_result() for k, v in groups.items()}
+        out_info.group_results = {k: v.to_result() for k, v in groups.items() if v.target_cnt > 0}
         out_info.total_score = total_score
         with datas.SessionContext():
             dat = datas.get_by_id(datas.Submission, dat_id)

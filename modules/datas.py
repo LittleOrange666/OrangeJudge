@@ -385,7 +385,7 @@ class Contest(db.Model):
         if not self.main_period_id:
             return False
         per: Period = get_by_id(Period, self.main_period_id)
-        return (self.datas.practice == "public") and per is not None and per and per.is_over()
+        return (self.datas.practice == objs.PracticeType.public) and per is not None and per and per.is_over()
 
     @property
     def path(self) -> Path:
