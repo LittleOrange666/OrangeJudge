@@ -18,14 +18,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 import traceback
 
-from flask import Blueprint, request, abort, jsonify, Response
+from flask import Blueprint, request, jsonify, Response
 from flask_login import current_user
 from flask_wtf.csrf import validate_csrf
-from werkzeug.exceptions import BadRequestKeyError
 from loguru import logger
+from werkzeug.exceptions import BadRequestKeyError
 
-from ...constants import log_path
 from ... import server, login, objs, tools
+from ...constants import log_path
 
 app = server.app
 

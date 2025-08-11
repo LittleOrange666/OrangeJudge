@@ -39,7 +39,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from werkzeug.datastructures import ImmutableMultiDict, MultiDict
 from werkzeug.utils import secure_filename
 
-from . import executing, tools, constants, createhtml, datas, objs, judge, createhtml2
+from . import executing, tools, constants, createhtml, datas, objs, judge
 from .constants import tmp_path, preparing_problem_path, testlib, problem_path
 from .judge import SandboxPath, SandboxUser
 from .objs import ProgramType, GenType

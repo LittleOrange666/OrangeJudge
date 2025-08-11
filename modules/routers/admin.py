@@ -212,6 +212,7 @@ def stop_server():
     def stop():
         time.sleep(3)
         tools.stop_server()
+
     threading.Thread(target=stop, daemon=True).start()
     return "OK", 200
 

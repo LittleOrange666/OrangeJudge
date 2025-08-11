@@ -134,7 +134,7 @@ def run_problem(pid: str, dat_id: int) -> None:
         p_path = pdat.path
         problem_info = pdat.datas
         protected = ((not problem_info.public_testcase or bool(dat.period_id))
-                              and dat.user.username not in problem_info.users)
+                     and dat.user.username not in problem_info.users)
         language = dat.language
     for fn in problem_info.library:
         env.send_file(pdat.path / "file" / fn, env.executable)

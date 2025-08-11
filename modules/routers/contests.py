@@ -71,7 +71,8 @@ def contest_page(idx):
     displayed = not dat.hidden
     return render_template("contest.html", cid=idx, data=info, can_edit=can_edit, can_see=can_see, target=target,
                            status=status, announcements=announcements, questions=questions, cur_time=time.time(),
-                           languages=sorted(executing.langs.keys()), can_filter_results=constants.can_filter_results, displayed=displayed)
+                           languages=sorted(executing.langs.keys()), can_filter_results=constants.can_filter_results,
+                           displayed=displayed)
 
 
 @app.route("/contest/<cid>/problem/<pid>", methods=["GET"])

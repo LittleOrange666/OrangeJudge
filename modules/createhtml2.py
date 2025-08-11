@@ -20,11 +20,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import html as html_
 import re
 import shutil
-from html.parser import HTMLParser
 
-import markdown
-import mdx_math
-from pygments import highlight, lexers
+import mistune
+from mistune.plugins import footnotes, \
+    table, url, \
+    task_lists, def_list, abbr, spoiler, formatting
+from pygments import highlight
 from pygments.formatters import HtmlFormatter
 from pygments.lexers import get_lexer_by_name, guess_lexer
 from pygments.util import ClassNotFound
@@ -32,10 +33,6 @@ from pygments.util import ClassNotFound
 from . import tools, constants
 from .constants import preparing_problem_path
 from .constants import tmp_path
-import mistune
-from mistune.plugins import footnotes, \
-    table, url, \
-    task_lists, def_list, abbr, spoiler, math as math_plugin, formatting
 
 the_headers = ("h1", "h2", "h3")
 the_contents = ("h1", "h2", "h3", "h4", "h5", "h6", "p", "pre", "ol", "ul")

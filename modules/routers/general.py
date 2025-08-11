@@ -16,7 +16,6 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-import datetime
 import json
 
 from flask import abort, render_template, redirect, request, jsonify
@@ -186,7 +185,7 @@ def problem_page(idx):
     content_map = {}
     for f in files:
         content_map[f] = (pdat.path / "file" / f).open(encoding="utf-8").read()
-    default_code = {k: content_map.get(v,"") for k, v in default_code.items()}
+    default_code = {k: content_map.get(v, "") for k, v in default_code.items()}
     return render_problem(dat, idx, langs, is_contest=False, default_code=default_code)
 
 

@@ -25,10 +25,10 @@ from pathlib import Path
 from typing import TypeVar, Type
 
 from flask import has_request_context
+from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from flask_sqlalchemy.query import Query
 from flask_sqlalchemy.session import Session
-from flask_migrate import Migrate
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.attributes import flag_modified
 
