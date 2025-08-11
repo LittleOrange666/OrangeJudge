@@ -213,6 +213,7 @@ def virtual_register(cid):
                                   contest=dat,
                                   is_virtual=True)
             datas.add(nw_per)
+            datas.flush()
             idx = nw_per.id
         info.virtual_participants[current_user.id] = idx
         flag_modified(dat, "data")
