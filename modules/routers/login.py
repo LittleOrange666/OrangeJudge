@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import random
 import time
+from urllib.parse import urlparse
 
 from flask import abort, render_template, redirect, request, Response
 from flask_login import login_required, current_user, login_user, logout_user
@@ -47,6 +48,9 @@ def log(uid):
 def do_login():
     if request.method == 'GET':
         if current_user.is_authenticated:
+            o = urlparse(request.referrer)
+            if o.path.startswith("/login"):
+                return redirect("/")
             return redirect(request.referrer)
         return render_template("login.html")
     name = request.form.get('user_id')
