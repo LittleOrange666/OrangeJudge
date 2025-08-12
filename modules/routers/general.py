@@ -24,7 +24,7 @@ from pygments import highlight, lexers
 from pygments.formatters import HtmlFormatter
 from werkzeug.utils import secure_filename
 
-from .. import tools, server, constants, executing, tasks, datas, contests, config, objs, submitting
+from .. import tools, server, constants, executing, tasks, datas, contests, config, objs, submitting, login
 from ..constants import problem_path, preparing_problem_path
 from ..objs import Permission
 from ..server import sending_file
@@ -237,7 +237,8 @@ def problem_file(idx, filename):
 @app.route("/status", methods=["GET"])
 def all_status():
     return render_template("status.html", languages=sorted(executing.langs.keys()),
-                           can_filter_results=constants.can_filter_results, can_edit=current_user.has(Permission.admin))
+                           can_filter_results=constants.can_filter_results,
+                           can_edit=login.has_permission(Permission.admin))
 
 
 @app.route("/status_data", methods=["POST"])
@@ -332,7 +333,7 @@ def rejudge_all():
         if pid == "test":
             return "不允許Rejudge測試題目", 400
         prob = datas.first_or_404(datas.Problem, pid=pid)
-        if not current_user.has(Permission.admin) and current_user.id != prob.user.username:
+        if not login.has_permission(Permission.admin) and current_user.id != prob.user.username:
             abort(403)
         status = datas.filter_by(datas.Submission, problem_id=prob.id, contest_id=None, completed=True)
     if "result" in request.form and request.form["result"] in objs.TaskResult.__members__:
