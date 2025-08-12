@@ -115,6 +115,7 @@ def run_test(dat_id: int) -> None:
         in_file = dat.path / info.infile
         out_file = dat.path / info.outfile
         result = run(lang, source, env, in_file, out_file, dat)
+        tools.create_truncated(out_file, out_file)
         dat.results = objs.SubmissionResult()
         dat.simple_result = result
         dat.simple_result_flag = result.split(":")[0]
