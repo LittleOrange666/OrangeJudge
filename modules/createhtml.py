@@ -67,7 +67,7 @@ class Codehightlighter(HTMLParser):
                     self.prepare = v
                     break
             else:
-                self.prepare = "language-bash"
+                self.prepare = "language-text"
         # if tag in constants.danger_html_tags and not (tag == "script" and attrs["type"] == "math/tex"):
         #    tag = "div"
         if self.prepare == "":
@@ -102,7 +102,8 @@ class Codehightlighter(HTMLParser):
         if self.prepare == "":
             self.text.append(data)
         else:
-            self.text.append(highlight(data, prepares[self.prepare](), HtmlFormatter()))
+            # self.text.append(highlight(data, prepares[self.prepare], HtmlFormatter()))
+            self.text.append(data)
 
     def solve(self, text: str):
         self.text = []

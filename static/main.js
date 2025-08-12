@@ -22,7 +22,8 @@ function add_copy() {
     });
 }
 
-$("div.highlight").addClass("codehilite").removeClass("highlight").each(add_copy);
+$("div.highlight").addClass("codehilite").removeClass("highlight");
+$("div.codehilite").each(add_copy);
 $("pre.can-copy").each(add_copy);
 $("pdf-file").each(function () {
     $(this).append('<embed src="' + $(this).attr("src") + '" type="application/pdf" width="100%" height="100%">')
