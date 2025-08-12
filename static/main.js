@@ -193,10 +193,11 @@ $(".countdown-timer").each(function () {
         if (min.length < 2) min = "0" + min;
         $this.text(hr + ":" + min + ":" + sec);
         if (!is_zero && (delta <= 0)) {
+            is_zero = true;
             window.clearInterval(interval_id);
-            location.reload();
+            window.setTimeout(location.reload, 1000);
         }
-    }, 100);
+    }, 500);
 });
 $("select[data-value]").each(function () {
     let val = $(this).data("value");

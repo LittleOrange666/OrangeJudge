@@ -43,7 +43,7 @@ def submission():
     user = get_api_user(request.args["username"])
     idx = tools.to_int(request.args["submission_id"])
     dat = datas.first_or_404(datas.Submission, id=idx)
-    if not user.has(objs.Permission.admin) and dat.user_id != user.id:
+    if not user.has(objs.Permission.admin) and dat.user_id != user.data.id:
         abort(403)
     lang = dat.language
     source = tools.read(dat.path / dat.source)

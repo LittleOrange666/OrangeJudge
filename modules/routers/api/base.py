@@ -167,7 +167,7 @@ def get_api_user(username: str, required: objs.Permission | None = None) -> logi
     user = login.User(username)
     if not user.valid():
         server.custom_abort(404, "User not found")
-    if current_user.is_authenticated and current_user.username == username and verify_csrf():
+    if current_user.is_authenticated and current_user.id == username and verify_csrf():
         return current_user
     if "x-api-key" in request.headers:
         key = request.headers.get("x-api-key")

@@ -646,26 +646,35 @@ def get_by_id(model_class: Type[T], _id: int) -> T | None:
     return session.get(model_class, _id)
 
 
-def get_or_404(model_class: Type[T], _id: int) -> T:
+def get_or_404(model_class: Type[T], _id: int, msg: str | None = None) -> T:
     """
     Retrieve an object by its ID or raise a 404 error.
 
-    This function retrieves the current SQLAlchemy session and returns the object of the specified model class with the given ID.
-    If no match is found, it raises a 404 error.
+    This function retrieves an object of the specified model class by its ID. If the object
+    is not found, it raises a 404 error with an optional custom message. This function can
+    only be used within a Flask request context.
 
     Args:
         model_class (Type[T]): The model class of the object to retrieve.
         _id (int): The ID of the object to retrieve.
+        msg (str | None, optional): A custom error message to display if the object is not found. Defaults to None.
 
     Returns:
         T: The object of the specified model class with the given ID.
 
     Raises:
-        RuntimeError: If not in a request context.
+        RuntimeError: If called outside of a Flask request context.
+        error 404: If the object is not found.
     """
     if not has_request_context():
         raise RuntimeError("get_or_404 can only be used in a request context.")
-    return db.get_or_404(model_class, _id)
+    if msg is None:
+        return db.get_or_404(model_class, _id)
+    else:
+        res = db.get(model_class, _id)
+        if res is None:
+            server.custom_abort(404, msg)
+        return res
 
 
 def do_filter(model_class: Type[T], *args) -> Query[T]:
@@ -760,7 +769,7 @@ def first(model_class: Type[T], **kwargs) -> T | None:
     return None
 
 
-def first_or_404(model_class: Type[T], **kwargs) -> T:
+def first_or_404(model_class: Type[T], msg: str | None = None, **kwargs) -> T:
     """
     Retrieve the first record that matches the given criteria or raise a 404 error.
 
@@ -770,6 +779,7 @@ def first_or_404(model_class: Type[T], **kwargs) -> T:
 
     Args:
         model_class (Type[T]): The model class to query.
+        msg (str | None, optional): A custom error message to display if no record is found. Defaults to None.
         **kwargs: Keyword arguments for filtering the query.
 
     Returns:
@@ -780,4 +790,10 @@ def first_or_404(model_class: Type[T], **kwargs) -> T:
     """
     if not has_request_context():
         raise RuntimeError("first_or_404 can only be used in a request context.")
-    return db.session.query(model_class).filter_by(**kwargs).first_or_404()
+    if msg is None:
+        return db.session.query(model_class).filter_by(**kwargs).first_or_404()
+    else:
+        res = first(model_class, **kwargs)
+        if res is None:
+            server.custom_abort(404, msg)
+        return res
