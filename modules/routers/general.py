@@ -189,6 +189,8 @@ def render_problem(dat: objs.ProblemInfo, idx: str, langs: list[str], preview: b
         path = preparing_problem_path / idx
     else:
         path = problem_path / idx
+    if not (path / "statement.html").exists():
+        server.custom_abort(404, "Problem statement not found")
     statement = tools.read(path / "statement.html")
     lang_exts = json.dumps({k: v.source_ext for k, v in executing.langs.items()})
     samples = dat.manual_samples

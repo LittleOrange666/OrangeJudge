@@ -112,8 +112,8 @@ $(function () {
                 btn.trigger("saved_data");
             } else {
                 show_modal("失敗", "Error Code: " + xhr.status);
-                $("#create_version").prop("disabled", false);
             }
+            $("#create_version").prop("disabled", false);
         });
     });
 
@@ -168,8 +168,8 @@ $(function () {
                 show_modal("成功", "成功刪除公開檔案\"" + filename + "\"", true);
             } else {
                 show_modal("失敗", "Error Code: " + xhr.status);
-                $("#create_version").prop("disabled", false);
             }
+            $("#create_version").prop("disabled", false);
         });
     });
     $(".remove_file").click(function () {
@@ -185,8 +185,8 @@ $(function () {
                 show_modal("成功", "成功刪除程式檔案\"" + filename + "\"", true);
             } else {
                 show_modal("失敗", "Error Code: " + xhr.status);
-                $("#create_version").prop("disabled", false);
             }
+            $("#create_version").prop("disabled", false);
         });
     });
     $(".collapse_file_edit").each(function () {
@@ -280,8 +280,8 @@ $(function () {
                 }
             } else {
                 show_modal("失敗", "Error Code: " + xhr.status);
-                $("#create_version").prop("disabled", false);
             }
+            $("#create_version").prop("disabled", false);
         });
     });
     $("#save_testcase_gen").click(function () {
@@ -303,8 +303,8 @@ $(function () {
                 }
             } else {
                 show_modal("失敗", "Error Code: " + xhr.status);
-                $("#create_version").prop("disabled", false);
             }
+            $("#create_version").prop("disabled", false);
         });
     });
     $("#create_group").click(function () {
