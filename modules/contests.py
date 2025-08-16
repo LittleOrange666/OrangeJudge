@@ -310,6 +310,8 @@ def check_access(dat: datas.Contest):
         abort(409)
     if check_super_access(dat):
         return
+    if dat.hidden:
+        abort(404)
     if current_user.is_authenticated:
         if current_user.id in info.participants:
             if per.is_running():

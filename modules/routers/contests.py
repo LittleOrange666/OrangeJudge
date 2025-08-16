@@ -58,9 +58,11 @@ def contest_page(idx):
     dat: datas.Contest = datas.first(datas.Contest, cid=idx)
     if dat is None:
         server.custom_abort(404, "未找到比賽")
+    can_edit = contests.check_super_access(dat)
+    if not can_edit and dat.hidden:
+        server.custom_abort(404, "未找到比賽")
     status, target, can_see = contests.check_status(dat)
     info = dat.datas
-    can_edit = contests.check_super_access(dat)
     can_see = can_see or can_edit
     announcements = reversed(dat.announcements.filter_by(public=True).all())
     if can_edit:

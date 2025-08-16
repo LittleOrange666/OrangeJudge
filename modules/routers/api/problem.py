@@ -17,23 +17,42 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from flask import request, abort
+from flask import request
+from flask_restx import Resource, fields, reqparse
 
-from .base import blueprint, get_api_user, api_response
-from ... import submitting, datas, objs, tools, problemsetting
+from .base import get_api_user, api_response, api, marshal_with
+from ... import objs, problemsetting
+
+ns = api.namespace("problem", path="/problem", description="Problem-related API endpoints")
+
+problem_post_input = reqparse.RequestParser()
+problem_post_input.add_argument("username", type=str, required=True,
+                                   help="Username of the user submitting the problem")
+problem_post_input.add_argument("name", type=str, required=True, help="Title of the problem")
+problem_post_input.add_argument("pid", type=str, required=False, help="Target pid of the problem")
+problem_post_input.add_argument("zip_file", type=lambda x: x, required=False,
+                                   help="content of the problem in zip file", location="files")
+problem_post_output = ns.model("SubmissionOutput", {
+    "pid": fields.String(description="ID of the problem created")
+})
 
 
-@blueprint.route("/problem", methods=["POST"])
-def create_problem():
-    user = get_api_user(request.form["username"], objs.Permission.admin)
-    pid = request.form.get("pid", "")
-    name = request.form["name"]
-    idx = problemsetting.create_problem(name, pid, user.data)
-    res = {"pid": idx}
-    if "zip_file" in request.files:
-        with problemsetting.Problem(idx) as problem:
-            problemsetting.import_problem(request.form, problem)
-            problemsetting.create_version({
-                "description": "Initial version"
-            }, problem)
-    return api_response(res)
+@ns.route("/")
+class ProblemIndex(Resource):
+    @ns.doc("create_problem")
+    @ns.expect(problem_post_input)
+    @marshal_with(ns, problem_post_output)
+    def post(self):
+        args = problem_post_input.parse_args()
+        user = get_api_user(args["username"], objs.Permission.admin)
+        pid = args.get("pid", "")
+        name = args["name"]
+        idx = problemsetting.create_problem(name, pid, user.data)
+        res = {"pid": idx}
+        if args.get("zip_file"):
+            with problemsetting.Problem(idx) as problem:
+                problemsetting.import_problem(request.form, problem)
+                problemsetting.create_version({
+                    "description": "Initial version"
+                }, problem)
+        return api_response(res)

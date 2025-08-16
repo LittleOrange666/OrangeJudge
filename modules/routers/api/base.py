@@ -17,12 +17,14 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 import traceback
+from functools import wraps
 
 from flask import Blueprint, request, jsonify, Response
 from flask_login import current_user
+from flask_restx import Api, fields, Namespace
 from flask_wtf.csrf import validate_csrf
 from loguru import logger
-from werkzeug.exceptions import BadRequestKeyError
+from werkzeug.exceptions import BadRequestKeyError, HTTPException
 
 from ... import server, login, objs, tools
 from ...constants import log_path
@@ -31,6 +33,21 @@ app = server.app
 
 blueprint = Blueprint("api", __name__, url_prefix="/api")
 server.csrf_exempt(blueprint)
+
+api = Api(blueprint, title="OrangeJudge API", description="API for OrangeJudge, a competitive programming platform",
+          doc="/api-docs")
+
+
+@api.errorhandler(BadRequestKeyError)
+def handle_missing_param(e):
+    missing_key = e.args[0] if e.args else "unknown"
+    msg = "missing parameter" if request.method == "GET" else "missing form parameter"
+    return {
+        "status": "error",
+        "description": msg,
+        "missing": missing_key,
+        "error_code": 400
+    }, 400
 
 
 @blueprint.errorhandler(BadRequestKeyError)
@@ -45,12 +62,28 @@ def handle_missing_param(e):
     }), 400
 
 
+@api.errorhandler(server.CustomHTTPException)
+def custom_http_exception(error: server.CustomHTTPException):
+    return {"status": "error",
+            "error_code": error.code,
+            "description": error.description
+            }, error.code
+
+
 @blueprint.errorhandler(server.CustomHTTPException)
 def custom_http_exception(error: server.CustomHTTPException):
     return jsonify({"status": "error",
                     "error_code": error.code,
                     "description": error.description}
                    ), error.code
+
+
+@api.errorhandler(HTTPException)
+def api_http_exception(error: HTTPException):
+    return {"status": "error",
+            "error_code": error.code,
+            "description": error.description
+            }, error.code
 
 
 @blueprint.errorhandler(403)
@@ -99,6 +132,21 @@ def error_503(error):
                     "error_code": 503,
                     "description": "503 Service Unavailable"
                     }), 503
+
+
+@api.errorhandler(Exception)
+def error_500_(error: Exception):
+    target = tools.random_string()
+    log_file = (log_path / f"{target}.log")
+    with log_file.open("w") as f:
+        traceback.print_exception(error, file=f)
+    log_content = log_file.read_text()
+    logger.warning(f"Error: {log_content}")
+    return {"status": "error",
+            "error_code": 500,
+            "description": "500 Internal Server Error",
+            "log_uid": target
+            }, 500
 
 
 @blueprint.errorhandler(Exception)
@@ -186,7 +234,7 @@ def get_api_user(username: str, required: objs.Permission | None = None) -> logi
     return user
 
 
-def api_response(data: dict, status_code: int = 200) -> tuple[Response, int]:
+def api_response(data: dict, status_code: int = 200) -> tuple[dict, int]:
     """
     Create a standardized JSON response.
 
@@ -197,4 +245,34 @@ def api_response(data: dict, status_code: int = 200) -> tuple[Response, int]:
     Returns:
         tuple[dict, int]: A tuple containing the response data and the status code.
     """
-    return jsonify(status="success", data=data), status_code
+    return {"status": "success", "data": data}, status_code
+
+
+def marshal_with(ns: Namespace, success_model):
+    error_model = ns.model("ErrorResponse", {
+        "status": fields.String(required=True, example="error"),
+        "error_code": fields.Integer(required=True, example=400),
+        "description": fields.String(required=True, example="Bad Request"),
+    })
+
+    true_success_model = ns.model("Full" + success_model.name, {
+        "status": fields.String(required=True, example="success"),
+        "data": fields.Nested(success_model)
+    })
+
+    def decorator(func):
+        f = ns.response(model=error_model, code=400, description="Bad Request")(func)
+        f = ns.response(model=error_model, code=403, description="Forbidden")(f)
+        f = ns.response(model=error_model, code=404, description="Not Found")(f)
+        f = ns.response(model=error_model, code=409, description="Conflict")(f)
+        f = ns.response(model=error_model, code=500, description="Internal Server Error")(f)
+        f = ns.response(model=error_model, code=503, description="Service Unavailable")(f)
+        f = ns.marshal_with(true_success_model, code=200, description="Success")(f)
+
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            return f(*args, **kwargs)
+
+        return wrapper
+
+    return decorator

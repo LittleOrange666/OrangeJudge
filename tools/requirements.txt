@@ -5,6 +5,7 @@ flask_wtf
 flask_sqlalchemy
 flask_limiter
 flask_migrate
+flask_restx
 pygments
 pyzipper
 markdown
