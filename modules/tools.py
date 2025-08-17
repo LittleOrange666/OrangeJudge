@@ -391,6 +391,7 @@ def pagination(sql_obj, rev: bool = True, page: int | str | None = None, page_si
         tuple: A tuple containing the paginated results, the total number of pages,
             the current page number, and a list of valid page numbers for navigation.
     """
+    page_size = min(max(1, page_size), constants.max_page_size)
     cnt = sql_obj.count()
     page_cnt = max(1, (cnt - 1) // page_size + 1)
     if page is None:

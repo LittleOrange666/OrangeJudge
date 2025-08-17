@@ -16,25 +16,24 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-from flask_restx import Resource, fields, reqparse, abort
-from .base import get_api_user, api_response, api, marshal_with
+from flask_restx import Resource, fields, abort
+
+from .base import get_api_user, api_response, api, marshal_with, request_parser, Args, Form
 from ... import submitting, datas, objs, tools
 
 ns = api.namespace("general", path="/", description="General API endpoints")
 
-submission_post_input = reqparse.RequestParser()
-submission_post_input.add_argument("username", type=str, required=True, help="Username of the user submitting the code")
-submission_post_input.add_argument("lang", type=str, required=True, help="Programming language used for submission")
-submission_post_input.add_argument("code", type=str, required=True, help="Source code to be submitted")
-submission_post_input.add_argument("pid", type=str, required=True, help="Problem ID for the submission")
-submission_post_input.add_argument("cid", type=str, required=False, help="Contest ID if applicable")
-submission_post_input.add_argument("input", type=str, required=False, help="Input for test submissions")
+submission_post_input = request_parser(
+    Form("lang", "Programming language used for submission"),
+    Form("code", "Source code to be submitted"),
+    Form("pid", "Problem ID for the submission"),
+    Form("cid", "Contest ID if applicable", required=False),
+    Form("input", "Input for test submissions", required=False)
+)
 submission_post_output = ns.model("SubmissionOutput", {
     "submission_id": fields.String(description="ID of the submission created")
 })
-submission_get_input = reqparse.RequestParser()
-submission_get_input.add_argument("username", type=str, required=True, help="Username of the user submitted the code")
-submission_get_input.add_argument("submission_id", type=int, required=True, help="Id of the submission to retrieve")
+submission_get_input = request_parser(Args("submission_id", "Id of the submission to retrieve", int))
 submission_get_output = ns.model("SubmissionDetailsOutput", {
     "lang": fields.String(description="Programming language used for the submission"),
     "source_code": fields.String(description="Source code of the submission"),
@@ -53,7 +52,7 @@ class Submission(Resource):
     @marshal_with(ns, submission_post_output)
     def post(self):
         args = submission_post_input.parse_args()
-        user = get_api_user(args["username"])
+        user = get_api_user(args)
         lang = args["lang"]
         code = args["code"].replace("\n\n", "\n")
         pid = args["pid"]
@@ -70,7 +69,7 @@ class Submission(Resource):
     @marshal_with(ns, submission_get_output)
     def get(self):
         args = submission_get_input.parse_args()
-        user = get_api_user(args["username"])
+        user = get_api_user(args)
         idx = args["submission_id"]
         dat = datas.first_or_404(datas.Submission, id=idx)
         if not user.has(objs.Permission.admin) and dat.user_id != user.data.id:

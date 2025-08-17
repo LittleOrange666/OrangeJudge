@@ -18,26 +18,33 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 from flask import request
-from flask_restx import Resource, fields, reqparse
+from flask_restx import Resource, fields
 
-from .base import get_api_user, api_response, api, marshal_with
-from ... import objs, problemsetting
+from .base import get_api_user, api_response, api, marshal_with, request_parser, Form, File, paging, pagination
+from ... import objs, problemsetting, datas
 
 ns = api.namespace("problem", path="/problem", description="Problem-related API endpoints")
 
-problem_post_input = reqparse.RequestParser()
-problem_post_input.add_argument("username", type=str, required=True,
-                                   help="Username of the user submitting the problem")
-problem_post_input.add_argument("name", type=str, required=True, help="Title of the problem")
-problem_post_input.add_argument("pid", type=str, required=False, help="Target pid of the problem")
-problem_post_input.add_argument("zip_file", type=lambda x: x, required=False,
-                                   help="content of the problem in zip file", location="files")
-problem_post_output = ns.model("SubmissionOutput", {
+problem_post_input = request_parser(
+    Form("name", "Title of the problem"),
+    Form("pid", "Target pid of the problem", required=False),
+    File("zip_file", "Content of the problem in zip file", required=False)
+)
+problem_post_output = ns.model("CreateProblemOutput", {
     "pid": fields.String(description="ID of the problem created")
+})
+problem_get_input = request_parser(*paging())
+problem_get_output = ns.model("ProblemListOutput", {
+    "page_count": fields.Integer(description="Total number of pages"),
+    "page": fields.Integer(description="Current page index"),
+    "results": fields.List(fields.Nested(ns.model("ProblemOutput", {
+        "pid": fields.String(description="Problem ID"),
+        "name": fields.String(description="Problem name")
+    })), description="List of problems")
 })
 
 
-@ns.route("/")
+@ns.route("")
 class ProblemIndex(Resource):
     @ns.doc("create_problem")
     @ns.expect(problem_post_input)
@@ -55,4 +62,25 @@ class ProblemIndex(Resource):
                 problemsetting.create_version({
                     "description": "Initial version"
                 }, problem)
+        return api_response(res)
+
+    @ns.doc("list_problems")
+    @ns.expect(problem_get_input)
+    @marshal_with(ns, problem_get_output)
+    def get(self):
+        args = problem_get_input.parse_args()
+        public_problems = datas.filter_by(datas.Problem, is_public=True)
+        got_data, page_cnt, page_idx, show_pages = pagination(public_problems, args)
+        results = [
+            {
+                "pid": problem.pid,
+                "name": problem.name,
+            }
+            for problem in got_data
+        ]
+        res = {
+            "page_count": page_cnt,
+            "page": page_idx,
+            "results": results
+        }
         return api_response(res)

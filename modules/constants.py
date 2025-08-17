@@ -80,6 +80,8 @@ This verification code is valid within 10 minutes"""
 
 page_size: int = 12
 
+max_page_size: int = 30
+
 polygon_type: dict[str, str] = {"cpp.msys2-mingw64-9-g++17": "C++17", "cpp.g++17": "C++17", "python.3": "Python3"}
 
 polygon_statment: dict[str, str] = {"statement_main": "statement-sections/english/legend.tex",
