@@ -201,7 +201,7 @@ def render_problem(dat: objs.ProblemInfo, idx: str, langs: list[str], preview: b
                                       tools.read(path / "testcases_gen" / o.out_file))
                     for o in dat.testcases_gen if o.sample])
     default_code = dat.default_code
-    files = [f for f in default_code.values() if f and f.strip()]
+    files = {f for f in default_code.values() if f and f.strip()}
     content_map = {}
     for f in files:
         content_map[f] = (path / "file" / f).open(encoding="utf-8").read()
