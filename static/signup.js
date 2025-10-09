@@ -29,6 +29,3 @@ function validateForm() {
     }
     return true;
 }
-
-let nxt = new URL(document.referrer).origin === location.origin ? document.referrer : "/";
-$("#do_signup_btn").data("next", nxt);

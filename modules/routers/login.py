@@ -45,20 +45,23 @@ def log(uid):
     return render_template("log.html", content=tools.read(path))
 
 
+def bad_url(url):
+    o = urlparse(url)
+    return o.path.startswith("/login") or o.path.startswith("/signup") or o.netloc != request.host
+
+
 @app.route('/login', methods=['GET', 'POST'])
 def do_login():
     if request.method == 'GET':
         link = request.referrer
-        o = urlparse(link)
         if current_user.is_authenticated:
             if "referrer" in flask.session:
                 link = flask.session["referrer"]
-                o = urlparse(link)
                 del flask.session["referrer"]
-            if o.path.startswith("/login"):
+            if bad_url(link):
                 return redirect("/")
             return redirect(link)
-        if not o.path.startswith("/login") and "referrer" not in flask.session:
+        if not bad_url(link) and "referrer" not in flask.session:
             flask.session["referrer"] = request.referrer
         return render_template("login.html")
     name = request.form.get('user_id')
@@ -76,16 +79,14 @@ def signup():
     need_verify = config.smtp.enabled
     if request.method == 'GET':
         link = request.referrer
-        o = urlparse(link)
         if current_user.is_authenticated:
             if "referrer" in flask.session:
                 link = flask.session["referrer"]
-                o = urlparse(link)
                 del flask.session["referrer"]
-            if o.path.startswith("/signup"):
+            if bad_url(link):
                 return redirect("/")
             return redirect(link)
-        if not o.path.startswith("/signup") and "referrer" not in flask.session:
+        if not bad_url(link) and "referrer" not in flask.session:
             flask.session["referrer"] = request.referrer
         return render_template("signup.html", need_verify=need_verify)
     email = request.form["email"]

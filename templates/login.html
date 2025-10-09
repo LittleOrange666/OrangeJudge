@@ -19,8 +19,3 @@
         </div>
     </form>
 {% endblock %}
-
-{% block script %}
-    let nxt = new URL(document.referrer).origin === location.origin? document.referrer : "/";
-    $("#do_login_btn").data("next", nxt);
-{% endblock %}
