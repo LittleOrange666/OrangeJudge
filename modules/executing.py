@@ -41,7 +41,9 @@ class Environment:
         self.dirname: str = tools.random_string()
         self.cwd: SandboxPath = self.path("")
         self.cwd.full.mkdir(parents=True, exist_ok=True)
-        SandboxUser.judge.writeable(self.cwd)
+        judge.chown(self.cwd, SandboxUser.judge.name)
+        judge.chgrp(self.cwd, SandboxUser.compile.name)
+        judge.chmod(self.cwd, 0o731)
 
     def path(self, path: str) -> SandboxPath:
         """

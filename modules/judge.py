@@ -110,6 +110,10 @@ def chgrp(filepath: SandboxPath, group: str):
     lazy_call(["chgrp", group, filepath])
 
 
+def chown(filepath: SandboxPath, user: str):
+    lazy_call(["chown", user, filepath])
+
+
 class SandboxUser(Enum):
     root = 0
     judge = 1500
