@@ -115,12 +115,12 @@ def verify_csrf() -> bool:
 
 
 def get_api_user(args: ParseResult, required: objs.Permission | None = None) -> login.User:
+    if current_user.is_authenticated and verify_csrf():
+        return current_user
     username = args["username"]
     user = login.User(username)
     if not user.valid():
         server.custom_abort(404, "User not found")
-    if current_user.is_authenticated and current_user.id == username and verify_csrf():
-        return current_user
     key = args.get("api-key")
     if not key and request.headers.get("api-key"):
         key = request.headers.get("api-key")

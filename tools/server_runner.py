@@ -23,7 +23,7 @@ envs = {
     "MYSQL_DB": "orangejudge",
     "MYSQL_USER": "orangejudgeuser",
     "MYSQL_PASSWORD": "orangejudgepassword",
-    "MYSQL_HOST": "localhost:3306"
+    "MYSQL_HOST": "localhost:3307"
 }
 
 

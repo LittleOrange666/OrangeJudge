@@ -175,7 +175,7 @@ class Submission(db.Model):
     data = db.Column(db.JSON)
     pid = db.Column(db.String(20), nullable=False)
     just_pretest = db.Column(db.Boolean, default=False)
-    simple_result = db.Column(db.String(100), nullable=True)
+    simple_result = db.Column(db.String(300), nullable=True)
     simple_result_flag = db.Column(db.String(20), nullable=False)
     queue_position = db.Column(db.Integer, nullable=False)
 

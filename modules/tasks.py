@@ -274,9 +274,9 @@ def run_problem(pid: str, dat_id: int) -> None:
         else:
             in_path = env.send_rand_file(in_file)
             out_path = env.send_rand_file(out_file)
+            SandboxUser.judge.readable(in_path)
+            SandboxUser.judge.writeable(out_path)
             if problem_info.is_interact:
-                SandboxUser.judge.readable(in_path)
-                SandboxUser.judge.writeable(out_path)
                 interr = env.path("interr.txt")
                 all_res = env.interact_run(exec_cmd, int_exec, tl, ml, in_path, out_path,
                                            user=SandboxUser.running,
@@ -286,8 +286,6 @@ def run_problem(pid: str, dat_id: int) -> None:
                 if all_res.interact_result.exit_code != 0:
                     ret = (TaskResult.WA, interr.full.read_text())
             else:
-                SandboxUser.running.readable(in_path)
-                SandboxUser.running.writeable(out_path)
                 res = env.run(exec_cmd, tl, ml, in_path, out_path, user=SandboxUser.running,
                               seccomp_rule=lang.seccomp_rule)
             exit_code = str(res.exit_code)
@@ -297,7 +295,7 @@ def run_problem(pid: str, dat_id: int) -> None:
                 ret = (TaskResult.TLE, "Execution time is too long")
             elif res.result == "MLE":
                 ret = (TaskResult.MLE, "Memory usage is too large")
-            elif exit_code == "153":
+            elif exit_code == "153" or res.signal == 25:
                 ret = (TaskResult.OLE, "Output too large")
             elif res.result == "RE":
                 if res.signal == 31:

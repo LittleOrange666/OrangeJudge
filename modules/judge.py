@@ -106,6 +106,10 @@ def chmod(filepath: SandboxPath, mode: int):
     lazy_call(["chmod", oct(mode)[2:], filepath])
 
 
+def chgrp(filepath: SandboxPath, group: str):
+    lazy_call(["chgrp", group, filepath])
+
+
 class SandboxUser(Enum):
     root = 0
     judge = 1500
@@ -114,7 +118,7 @@ class SandboxUser(Enum):
     nobody = 65534
 
     def readable(self, filepath: SandboxPath):
-        lazy_call(["chgrp", self.name, filepath])
+        chgrp(filepath, self.name)
         chmod(filepath, 0o740)
 
     def writeable(self, filepath: SandboxPath):
@@ -123,11 +127,11 @@ class SandboxUser(Enum):
             chmod(filepath.parent, 0o777)
         if not filepath.exists():
             filepath.full.touch()
-        lazy_call(["chgrp", self.name, filepath])
+        chgrp(filepath, self.name)
         chmod(filepath, 0o760)
 
     def executable(self, filepath: SandboxPath):
-        lazy_call(["chgrp", self.name, filepath])
+        chgrp(filepath, self.name)
         chmod(filepath, 0o750)
 
 
