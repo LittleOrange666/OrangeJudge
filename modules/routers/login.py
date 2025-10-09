@@ -21,6 +21,7 @@ import random
 import time
 from urllib.parse import urlparse
 
+import flask
 from flask import abort, render_template, redirect, request, Response
 from flask_login import login_required, current_user, login_user, logout_user
 from werkzeug.utils import secure_filename
@@ -47,11 +48,18 @@ def log(uid):
 @app.route('/login', methods=['GET', 'POST'])
 def do_login():
     if request.method == 'GET':
+        link = request.referrer
+        o = urlparse(link)
         if current_user.is_authenticated:
-            o = urlparse(request.referrer)
+            if "referrer" in flask.session:
+                link = flask.session["referrer"]
+                o = urlparse(link)
+                del flask.session["referrer"]
             if o.path.startswith("/login"):
                 return redirect("/")
-            return redirect(request.referrer)
+            return redirect(link)
+        if not o.path.startswith("/login") and "referrer" not in flask.session:
+            flask.session["referrer"] = request.referrer
         return render_template("login.html")
     name = request.form.get('user_id')
     user, msg = login.try_login(name, request.form.get('password'))
@@ -67,8 +75,18 @@ def signup():
         abort(503)
     need_verify = config.smtp.enabled
     if request.method == 'GET':
+        link = request.referrer
+        o = urlparse(link)
         if current_user.is_authenticated:
-            return redirect(request.referrer)
+            if "referrer" in flask.session:
+                link = flask.session["referrer"]
+                o = urlparse(link)
+                del flask.session["referrer"]
+            if o.path.startswith("/signup"):
+                return redirect("/")
+            return redirect(link)
+        if not o.path.startswith("/signup") and "referrer" not in flask.session:
+            flask.session["referrer"] = request.referrer
         return render_template("signup.html", need_verify=need_verify)
     email = request.form["email"]
     verify = request.form["verify"] if need_verify else ""
