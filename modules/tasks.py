@@ -174,6 +174,7 @@ def run_problem(pid: str, dat_id: int) -> None:
         int_lang = executing.langs[problem_info.interactor.lang]
         int_exec = int_lang.get_execmd(int_file)
     codechecker_score = top_score
+    codechecker_name = TaskResult.OK
     if problem_info.codechecker_mode != objs.CodecheckerMode.disabled:
         cc_file = env.send_file(p_path / problem_info.codechecker.name, SandboxUser.judge.executable)
         cc_lang = executing.langs[problem_info.codechecker.lang]
@@ -185,13 +186,15 @@ def run_problem(pid: str, dat_id: int) -> None:
         if res.stderr.startswith("partially correct"):
             codechecker_score = res.return_code
         else:
-            name = constants.checker_exit_codes.get(res.return_code, TaskResult.JE)
-            if name is TaskResult.OK:
+            codechecker_name = constants.checker_exit_codes.get(res.return_code, TaskResult.JE)
+            if codechecker_name is TaskResult.OK:
                 codechecker_score = top_score
-            elif name is TaskResult.POINTS:
+            elif codechecker_name is TaskResult.POINTS:
                 st = res.stderr.split(" ")
                 if len(st) > 1 and st[1].replace(".", "", 1).isdigit():
                     codechecker_score = float(st[1])
+            else:
+                codechecker_score = 0
     out_info.codechecker_msg = codechecker_msg
     checker = env.send_file(p_path / problem_info.checker.name, SandboxUser.judge.executable)
     checker_cmd = executing.langs[problem_info.checker.lang].get_execmd(checker)
@@ -336,6 +339,8 @@ def run_problem(pid: str, dat_id: int) -> None:
                     ret = (name, checker_out.stderr)
         if codechecker_score < top_score:
             score = score * codechecker_score / top_score
+            if codechecker_score == 0 and ret[0] is TaskResult.OK:
+                ret = (codechecker_name, ret[1] + f" (Codechecker {codechecker_name.name})")
         if ret[0] == TaskResult.TLE:
             time_usage = tl
         result_tp = TaskResult.PASS if just_pretest and not testcase.pretest else ret[0]
