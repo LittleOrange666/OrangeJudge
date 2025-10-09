@@ -90,20 +90,18 @@ class Codehightlighter(HTMLParser):
                 self.text.append(f"<{tag}{atl}>")
 
     def handle_endtag(self, tag):
-        # if tag in constants.danger_html_tags:
-        #    tag = "div"
         if self.prepare != "":
             self.prepare = ""
+            self.text.append(f"</code>")
         else:
-            if tag != "img":
-                self.text.append(f"</{tag}>")
+            self.text.append(f"</{tag}>")
 
     def handle_data(self, data):
         if self.prepare == "":
             self.text.append(data)
         else:
-            # self.text.append(highlight(data, prepares[self.prepare], HtmlFormatter()))
-            self.text.append(data)
+            # print(data)
+            self.text.append(highlight(data, prepares[self.prepare], HtmlFormatter()))
 
     def solve(self, text: str):
         self.text = []
@@ -117,7 +115,6 @@ parse = Codehightlighter()
 
 
 def run_markdown(source: str) -> str:
-    source = html_.escape(source)
     # 處理參數
     args: dict[str, str] = {"title": "LittleOrange's page"}
     if source.startswith("---"):
@@ -130,7 +127,6 @@ def run_markdown(source: str) -> str:
                     v = v[1:]
                 args[k] = v
         source = source[end + 4:]
-    # source = escape(source)
     # 預處理spoiler
     reg1 = re.compile("^:::spoiler(?:_template|_repeat)?\\s+(\\S+ +.*)$", re.M)
     get = reg1.search(source)
@@ -139,8 +135,7 @@ def run_markdown(source: str) -> str:
         get = reg1.search(source)
     # 主要部分
     html = markdown.markdown(source, extensions=['tables', 'md_in_html', 'fenced_code', 'attr_list', 'def_list', 'toc',
-                                                 'codehilite', 'nl2br', "markdown_del_ins",
-                                                 mdx_math.makeExtension(enable_dollar_delimiter=True)])
+                                                 'nl2br', mdx_math.makeExtension(enable_dollar_delimiter=True)])
     # spoiler轉成details
     html = html.replace("<br />", "<br>").replace("<br/>", "<br>").replace("</br>", "<br>").replace("<br>",
                                                                                                     " NEXTLINE ")

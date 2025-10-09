@@ -117,7 +117,9 @@ def verify_csrf() -> bool:
 def get_api_user(args: ParseResult, required: objs.Permission | None = None) -> login.User:
     if current_user.is_authenticated and verify_csrf():
         return current_user
-    username = args["username"]
+    username = args.get("username")
+    if not username:
+        server.custom_abort(403, "Missing username")
     user = login.User(username)
     if not user.valid():
         server.custom_abort(404, "User not found")
@@ -247,7 +249,7 @@ def paging() -> list[MyField]:
 
 def request_parser(*args: MyField) -> reqparse.RequestParser:
     parser = reqparse.RequestParser()
-    parser.add_argument("username", type=str, required=True, help="Username of the user using the api",
+    parser.add_argument("username", type=str, required=False, help="Username of the user using the api",
                         location="values")
     parser.add_argument("api-key", type=str, required=False, help="Api key to authenticate the user",
                         location=("form", "headers"))
