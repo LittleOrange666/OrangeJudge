@@ -116,20 +116,21 @@ def verify_csrf() -> bool:
 
 def get_api_user(args: ParseResult, required: objs.Permission | None = None) -> login.User:
     if current_user.is_authenticated and verify_csrf():
-        return current_user
-    username = args.get("username")
-    if not username:
-        server.custom_abort(403, "Missing username")
-    user = login.User(username)
-    if not user.valid():
-        server.custom_abort(404, "User not found")
-    key = args.get("api-key")
-    if not key and request.headers.get("api-key"):
-        key = request.headers.get("api-key")
-    if not key:
-        server.custom_abort(403, "Missing API key")
-    if not user.check_api_key(key):
-        server.custom_abort(403, "API key not match")
+        user = current_user
+    else:
+        username = args.get("username")
+        if not username:
+            server.custom_abort(403, "Missing username")
+        user = login.User(username)
+        if not user.valid():
+            server.custom_abort(404, "User not found")
+        key = args.get("api-key")
+        if not key and request.headers.get("api-key"):
+            key = request.headers.get("api-key")
+        if not key:
+            server.custom_abort(403, "Missing API key")
+        if not user.check_api_key(key):
+            server.custom_abort(403, "API key not match")
     if required is not None and not user.has(required):
         server.custom_abort(403, f"Required '{required.name}' permission")
     return user

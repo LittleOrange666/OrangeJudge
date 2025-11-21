@@ -410,8 +410,8 @@ class ContestData(metaclass=DataMeta):
         name (str): The name of the contest.
         users (list[str]): A list of users participating in the contest.
         problems (dict[str, ContestProblem]): A dictionary of problems in the contest.
-        start (int): The start time of the contest.
-        elapsed (int): The duration of the contest.
+        start (int): The start time of the contest (POSIX timestamp).
+        elapsed (int): The duration of the contest (in minute).
         type (ContestType): The type of the contest (e.g., ICPC, IOI).
         can_register (bool): Indicates if registration is allowed.
         standing (StandingsData): The standings data of the contest.
@@ -660,8 +660,8 @@ class ProblemInfo(metaclass=DataMeta):
 
     Attributes:
         name (str): The name of the problem.
-        timelimit (str): The time limit of the problem.
-        memorylimit (str): The memory limit of the problem.
+        timelimit (str): The time limit of the problem (ms).
+        memorylimit (str): The memory limit of the problem (MB).
         testcases (list[Testcase]): The list of test cases for the problem.
         testcases_gen (list[Testcase]): The list of generated test cases for the problem.
         users (list[str]): The list of owners for the problem.
@@ -813,3 +813,13 @@ class Permission(Enum):
     root = "最高管理者"
     admin = "管理者"
     make_problems = "出題者"
+
+
+class ContestStatus(Enum):
+    waiting_virtual = "waiting_virtual"
+    running_virtual = "running_virtual"
+    waiting = "waiting"
+    running = "running"
+    practice = "practice"
+    testing = "testing"
+    guest = "guest"

@@ -32,8 +32,8 @@ from loguru import logger
 from openpyxl.reader.excel import load_workbook
 from werkzeug.datastructures import ImmutableMultiDict
 
-from . import tools, datas, tasks, objs, server
-from .objs import Permission
+from . import tools, datas, tasks, objs, server, login
+from .objs import Permission, ContestStatus
 
 actions = tools.Switcher()
 
@@ -298,9 +298,11 @@ def action(form: ImmutableMultiDict[str, str], cdat: datas.Contest):
     return f"/contest/{cid}#{tp}"
 
 
-def check_super_access(dat: datas.Contest) -> bool:
-    return current_user.is_authenticated and (
-            current_user.has(Permission.admin) or current_user.id in dat.datas.users)
+def check_super_access(dat: datas.Contest, user: login.User = None) -> bool:
+    if user is None:
+        user = current_user
+    return user.is_authenticated and (
+            user.has(Permission.admin) or user.id in dat.datas.users)
 
 
 def check_access(dat: datas.Contest):
@@ -323,32 +325,55 @@ def check_access(dat: datas.Contest):
     abort(403)
 
 
-def check_status(dat: datas.Contest) -> tuple[str, int, bool]:
+def check_status(dat: datas.Contest, user: login.User = None) -> tuple[ContestStatus, int, bool]:
+    """
+    Determine the current status of a contest for a given user.
+
+    This function evaluates the contest's status based on the user's participation,
+    the contest's period, and the practice type. It handles both regular and virtual
+    participants and returns the appropriate contest status, a timestamp, and a boolean
+    indicating whether the user has access.
+
+    Args:
+        dat (datas.Contest): The contest object to check the status for.
+        user (login.User, optional): The user whose status is being checked. Defaults to the current user.
+
+    Returns:
+        tuple[ContestStatus, int, bool]: A tuple containing:
+            - ContestStatus: The current status of the contest.
+            - int: A timestamp related to the status (e.g., start or end time).
+            - bool: Whether the user has access to the contest.
+
+    Raises:
+        409: If a virtual period for the user is not found.
+    """
     per = datas.get_or_404(datas.Period, dat.main_period_id)
     info = dat.datas
-    if current_user.is_authenticated:
-        if current_user.id in info.virtual_participants:
-            vir_per: datas.Period = datas.get_by_id(datas.Period, info.virtual_participants[current_user.id])
+    if user is None:
+        user = current_user
+    if user.is_authenticated:
+        if user.id in info.virtual_participants:
+            vir_per: datas.Period = datas.get_by_id(datas.Period, info.virtual_participants[user.id])
             if vir_per is None:
                 abort(409)
             if not vir_per.is_started():
-                return "waiting_virtual", vir_per.start_time.timestamp(), False
+                return ContestStatus.waiting_virtual, vir_per.start_time.timestamp(), False
             if vir_per.is_running():
-                return "running_virtual", vir_per.end_time.timestamp(), True
-        if current_user.id in info.participants:
+                return ContestStatus.running_virtual, vir_per.end_time.timestamp(), True
+        if user.id in info.participants:
             if not per.is_started():
-                return "waiting", per.start_time.timestamp(), False
+                return ContestStatus.waiting, per.start_time.timestamp(), False
             if per.is_running():
-                return "running", per.end_time.timestamp(), True
+                return ContestStatus.running, per.end_time.timestamp(), True
             if per.is_over() and info.practice != objs.PracticeType.no:
-                return "practice", 0, True
+                return ContestStatus.practice, 0, True
         if check_super_access(dat):
-            return "testing", 0, True
+            return ContestStatus.testing, 0, True
         if per.is_over() and info.practice == objs.PracticeType.public:
-            return "practice", 0, True
+            return ContestStatus.practice, 0, True
     if info.practice == objs.PracticeType.public and per.is_over():
-        return "guest", 0, True
-    return "guest", 0, False
+        return ContestStatus.guest, 0, True
+    return ContestStatus.guest, 0, False
 
 
 def check_period(dat: datas.Contest) -> int:

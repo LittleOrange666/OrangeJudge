@@ -72,7 +72,7 @@ def contest_page(idx):
         questions = reversed(dat.announcements.filter_by(question=True, user=user_data).all())
     displayed = not dat.hidden
     return render_template("contest.html", cid=idx, data=info, can_edit=can_edit, can_see=can_see, target=target,
-                           status=status, announcements=announcements, questions=questions, cur_time=time.time(),
+                           status=status.name, announcements=announcements, questions=questions, cur_time=time.time(),
                            languages=sorted(executing.langs.keys()), can_filter_results=constants.can_filter_results,
                            displayed=displayed)
 
