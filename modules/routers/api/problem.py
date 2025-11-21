@@ -214,29 +214,6 @@ class ProblemManage(Resource):
         })
 
 
-@ns.route("/<string:pid>/manage/actions")
-class ProblemAction(Resource):
-    @ns.doc(description="Performs a management action on a problem. The 'action' field in the form data "
-                        "determines the action. Other form fields may be required. This is a wrapper around "
-                        "the internal action handler and is intended for use by the official UI.")
-    def post(self, pid: str):
-        """Performs a management action on a problem."""
-        auth_args = request_parser().parse_args()
-        user = get_api_user(auth_args)
-        pid = secure_filename(pid)
-        pdat: datas.Problem = datas.first_or_404(datas.Problem, pid=pid)
-        permission_dat = pdat.data
-        if not user.has(objs.Permission.admin) and user.id not in permission_dat.get("users", []):
-            abort(403, "You do not have permission to perform actions on this problem.")
-
-        if (problem_path / pid / "waiting").is_file() or problemsetting.check_background_action(pid) is not None:
-            abort(503, "A background action is already in progress.")
-
-        form_data = request.form.to_dict()
-        form_data['pid'] = pid
-        return problemsetting.action(form_data)
-
-
 @ns.route("/<string:pid>/manage/preview")
 class ProblemPreview(Resource):
     @ns.doc(description="Previews a problem component (e.g., statement HTML). Returns raw content.")
