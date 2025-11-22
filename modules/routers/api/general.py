@@ -100,6 +100,8 @@ rejudge_all_input = request_parser(
     Form("result", "Filter by result (e.g., AC, WA, TLE)", type=str, required=False),
     Form("lang", "Filter by programming language", type=str, required=False),
 )
+
+
 # endregion
 
 @ns.route("/submission")
@@ -209,7 +211,8 @@ class Status(Resource):
                                                  user.id == obj.user.username or
                                                  (obj.problem and obj.problem.user and
                                                   obj.problem.user.username == user.id))
-            can_rejudge = can_see and (user.has(objs.Permission.admin) or (obj.problem and obj.problem.user and obj.problem.user.username == user.id))
+            can_rejudge = can_see and (user.has(objs.Permission.admin) or (
+                        obj.problem and obj.problem.user and obj.problem.user.username == user.id))
             out.append({
                 "id": str(obj.id),
                 "time": obj.time.timestamp(),
@@ -244,7 +247,7 @@ class Rejudge(Resource):
             if dat.contest.cid != args["cid"]:
                 abort(400, "Submission does not belong to the specified contest.")
             cdat: datas.Contest = datas.first_or_404(datas.Contest, cid=args["cid"])
-            if not contests.check_super_access(cdat, user): # Assuming this is the correct permission check
+            if not contests.check_super_access(cdat, user):  # Assuming this is the correct permission check
                 abort(403, "Permission denied to rejudge in this contest.")
         else:
             if dat.contest_id is not None:
@@ -276,9 +279,9 @@ class RejudgeAll(Resource):
 
         if args["cid"]:
             cdat: datas.Contest = datas.first_or_404(datas.Contest, cid=args["cid"])
-            if not contests.check_super_access(cdat, user): # Assuming this is the correct permission check
+            if not contests.check_super_access(cdat, user):  # Assuming this is the correct permission check
                 abort(403, "Permission denied to rejudge in this contest.")
-            
+
             probs = cdat.datas.problems
             if pid not in probs:
                 abort(404, "Problem not found in contest.")
@@ -292,16 +295,16 @@ class RejudgeAll(Resource):
             if not user.has(objs.Permission.admin) and (not prob.user or user.id != prob.user.username):
                 abort(403, "Permission denied to rejudge submissions for this problem.")
             status_query = datas.filter_by(datas.Submission, problem_id=prob.id, contest_id=None, completed=True)
-        
+
         if args["result"] and args["result"] in objs.TaskResult.__members__:
             status_query = status_query.filter_by(simple_result_flag=objs.TaskResult[args["result"]].name)
         if args["lang"] and args["lang"] in executing.langs:
             status_query = status_query.filter_by(language=args["lang"])
-        
+
         for a_submit in status_query:
             tasks.rejudge(a_submit, "wait for rejudge")
             datas.add(a_submit)
-        
+
         return api_response({"message": "All matching submissions rejudged successfully."})
 
 
@@ -318,12 +321,18 @@ class JudgeInfo(Resource):
         return api_response({"langs": out})
 
 
+problem_file_input = request_parser(
+    Args("cid", "Contest ID if applicable", type=str, required=False)
+)
+
+
 @ns.route("/problem_file/<string:idx>/<string:filename>")
 class ProblemFile(Resource):
     @ns.doc("get_problem_file")
+    @ns.expect(problem_file_input)
     def get(self, idx: str, filename: str):
         """Serve a public file associated with a problem."""
-        args = request_parser(Args("cid", type=str, required=False)).parse_args()
+        args = problem_file_input.parse_args()
         user = get_api_user(args)
         idx = secure_filename(idx)
         filename = secure_filename(filename)
@@ -339,9 +348,10 @@ class ProblemFile(Resource):
                 abort(404, "Problem not found in contest.")
             # contests.check_access uses current_user, so re-implement a minimal check
             can_access_contest = contests.check_super_access(cdat, user) or \
-                                 (user.is_authenticated and (user.id in cdat.datas.participants or user.id in cdat.datas.virtual_participants))
+                                 (user.is_authenticated and (
+                                             user.id in cdat.datas.participants or user.id in cdat.datas.virtual_participants))
             if not can_access_contest:
-                 abort(403, "Access to contest required to download problem file.")
+                abort(403, "Access to contest required to download problem file.")
         else:
             pdat = datas.first_or_404(datas.Problem, pid=idx)
             dat = pdat.datas

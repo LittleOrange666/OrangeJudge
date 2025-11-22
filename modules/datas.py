@@ -48,7 +48,8 @@ if all(k in os.environ for k in ("MYSQL_DB", "MYSQL_USER", "MYSQL_PASSWORD", "MY
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SQLALCHEMY_DATABASE_URI'] = mysql_url
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-        "pool_pre_ping": True
+        "pool_pre_ping": True,
+        "pool_recycle": 3600
     }
 elif all(k in os.environ for k in ("POSTGRES_DB", "POSTGRES_USER", "POSTGRES_PASSWORD", "POSTGRES_HOST")):
     DB = os.environ["POSTGRES_DB"]
@@ -59,7 +60,8 @@ elif all(k in os.environ for k in ("POSTGRES_DB", "POSTGRES_USER", "POSTGRES_PAS
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SQLALCHEMY_DATABASE_URI'] = postgres_url
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-        "pool_pre_ping": True
+        "pool_pre_ping": True,
+        "pool_recycle": 3600
     }
 else:
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
@@ -543,14 +545,6 @@ def SessionContext():
         # logger.info("Session closed")
 
 
-def check_session(session: Session) -> None:
-    pass
-    # try:
-    #     session.execute(text("SELECT 1"))  # 簡單測試 session 狀態
-    # except Exception:
-    #     session.rollback()
-
-
 def get_session() -> Session:
     """
     Retrieve the current SQLAlchemy session.
@@ -571,7 +565,6 @@ def get_session() -> Session:
             session = db.session
         else:
             raise RuntimeError("No session found in non-request context. Use SessionContext.")
-    check_session(session)
     return session
 
 

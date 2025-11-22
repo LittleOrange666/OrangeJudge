@@ -201,6 +201,7 @@ class ContestList(Resource):
 @ns.param("cid", "The contest ID")
 class Contest(Resource):
     @ns.doc("get_contest_details")
+    @ns.expect(request_parser())
     @marshal_with(ns, contest_details_output)
     def get(self, cid: str):
         """Get details of a specific contest"""
@@ -309,6 +310,7 @@ class ContestStatus(Resource):
 @ns.param("cid", "The contest ID")
 class ContestRegister(Resource):
     @ns.doc("register_for_contest")
+    @ns.expect(request_parser())
     @marshal_with(ns, ok_output)
     def post(self, cid: str):
         """Register for a contest"""
@@ -336,6 +338,7 @@ class ContestRegister(Resource):
 @ns.param("cid", "The contest ID")
 class ContestUnregister(Resource):
     @ns.doc("unregister_from_contest")
+    @ns.expect(request_parser())
     @marshal_with(ns, ok_output)
     def post(self, cid: str):
         """Unregister from a contest"""
@@ -403,6 +406,7 @@ class ContestVirtual(Resource):
 @ns.param("cid", "The contest ID")
 class ContestStanding(Resource):
     @ns.doc("get_contest_standing")
+    @ns.expect(request_parser())
     @marshal_with(ns, standing_output)
     def get(self, cid: str):
         """Get contest standings (scoreboard)"""
@@ -454,6 +458,7 @@ class ContestQuestion(Resource):
 @ns.param("sub_id", "The submission ID")
 class RejectSubmission(Resource):
     @ns.doc("reject_submission")
+    @ns.expect(request_parser())
     @marshal_with(ns, ok_output)
     def post(self, cid: str, sub_id: int):
         """Reject a submission in a contest (requires admin/owner)"""

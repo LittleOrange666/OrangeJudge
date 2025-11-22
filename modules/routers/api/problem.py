@@ -173,6 +173,7 @@ class ProblemDetail(Resource):
 @ns.route("/<string:pid>/manage")
 class ProblemManage(Resource):
     @ns.doc("get_manageable_problem_details")
+    @ns.expect(request_parser())
     @marshal_with(ns, manageable_problem_details_model)
     def get(self, pid: str):
         """Gets detailed problem data for management and editing."""
@@ -217,6 +218,7 @@ class ProblemManage(Resource):
 @ns.route("/<string:pid>/manage/preview")
 class ProblemPreview(Resource):
     @ns.doc(description="Previews a problem component (e.g., statement HTML). Returns raw content.")
+    @ns.expect(request_parser())
     @server.limiter.limit(config.server.file_limit)
     def get(self, pid: str):
         """Previews a problem component."""

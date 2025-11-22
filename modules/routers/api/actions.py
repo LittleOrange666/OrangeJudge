@@ -38,7 +38,7 @@ class BaseProblemAction(Resource):
         pid = secure_filename(pid)
         pdat: datas.Problem = datas.first_or_404(datas.Problem, pid=pid)
         permission_dat = pdat.new_datas
-        if not user.has(objs.Permission.admin) and user.data not in permission_dat.users:
+        if not user.has(objs.Permission.admin) and user.data.username not in permission_dat.users:
             abort(403, "You do not have permission to perform this action on this problem.")
         if (problem_path / pid / "waiting").is_file() or problemsetting.check_background_action(pid) is not None:
             abort(503, "A background action is already in progress.")
