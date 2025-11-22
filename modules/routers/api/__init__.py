@@ -16,7 +16,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-from . import general, base, problem, contests, actions
+from . import general, base, problem, contests, actions, contest_actions
 from ... import server
 
 app = server.app
