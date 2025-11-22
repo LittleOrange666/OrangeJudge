@@ -118,7 +118,7 @@ class ProblemIndex(Resource):
         args = problem_get_input.parse_args()
         user = get_api_user(args)
 
-        if args['manageable'] == "true":
+        if args.get('manageable'):
             if not user.is_authenticated:
                 abort(403, "Authentication required to list manageable problems.")
 
@@ -127,7 +127,7 @@ class ProblemIndex(Resource):
             elif user.has(objs.Permission.make_problems):
                 problem_obj = user.data.problems.filter(datas.Problem.pid != "test")
             else:
-                problem_obj = datas.Problem.query.filter(datas.Problem.id < 0)  # Empty query
+                problem_obj = datas.Problem.query.filter_by(is_public=True)
         else:
             problem_obj = datas.Problem.query.filter_by(is_public=True)
 
