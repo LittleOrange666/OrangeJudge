@@ -118,7 +118,7 @@ class ProblemIndex(Resource):
         args = problem_get_input.parse_args()
         user = get_api_user(args)
 
-        if args['manageable']:
+        if args['manageable'] == "true":
             if not user.is_authenticated:
                 abort(403, "Authentication required to list manageable problems.")
 

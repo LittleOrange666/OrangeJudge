@@ -48,6 +48,13 @@ class BaseContestAction(Resource):
         dat = cdat.datas
 
         result = action_func(request.form, cdat, dat)
+        cdat.datas = dat
+        datas.add(cdat)
+        if self.action_name == "change_settings":
+            for the_per in cdat.periods:
+                the_per: datas.Period
+                the_per.end_time = the_per.start_time + timedelta(minutes=dat.elapsed)
+            datas.add(*cdat.periods)
 
         if isinstance(result, str):
             return api_response({"message": "OK", "view_hint": result})
