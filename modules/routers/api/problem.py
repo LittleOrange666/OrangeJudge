@@ -22,7 +22,7 @@ from flask import request
 from flask_restx import Resource, fields, abort
 from werkzeug.utils import secure_filename
 
-from .base import get_api_user, api_response, api, marshal_with, request_parser, Form, paging, pagination, Args
+from .base import get_api_user, api_response, api, marshal_with, request_parser, Form, paging, pagination, Args, File
 from ... import objs, problemsetting, datas, executing, constants, tools, config, server
 from ...constants import preparing_problem_path, problem_path
 
@@ -79,6 +79,7 @@ manageable_problem_details_model = ns.model("ManageableProblemDetails", {
 problem_post_input = request_parser(
     Form("name", "Title of the problem", required=True),
     Form("pid", "Target pid of the problem", required=False),
+    File("zip_file", "Content of the problem in zip file", required=False)
 )
 problem_get_input = request_parser(
     *paging(),
@@ -94,13 +95,19 @@ class ProblemIndex(Resource):
     @ns.expect(problem_post_input)
     @marshal_with(ns, problem_post_output)
     def post(self):
-        """Creates a new, empty problem."""
+        """Creates a new problem."""
         args = problem_post_input.parse_args()
         user = get_api_user(args, objs.Permission.make_problems)
         pid = args.get("pid", "")
         name = args["name"]
         idx = problemsetting.create_problem(name, pid, user.data)
         res = {"pid": idx}
+        if args.get("zip_file"):
+            with problemsetting.Problem(idx) as problem:
+                problemsetting.import_problem(request.form, problem)
+                problemsetting.create_version({
+                    "description": "Initial version"
+                }, problem)
         return api_response(res)
 
     @ns.doc("list_problems")
