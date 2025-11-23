@@ -64,8 +64,8 @@ def submit(lang: str, pid: str, code: str, cid: str | None = None, user: login.U
                            queue_position=0, simple_result_flag=objs.TaskResult.PENDING.name)
     if cid is not None:
         cdat: datas.Contest = datas.first_or_404(datas.Contest, cid=cid)
-        contests.check_access(cdat)
-        per_id = contests.check_period(cdat)
+        contests.check_access(cdat, user)
+        per_id = contests.check_period(cdat, user)
         dat.contest = cdat
         if per_id:
             dat.period_id = per_id

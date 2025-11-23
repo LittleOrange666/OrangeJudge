@@ -346,12 +346,7 @@ class ProblemFile(Resource):
                     break
             if not found_problem:
                 abort(404, "Problem not found in contest.")
-            # contests.check_access uses current_user, so re-implement a minimal check
-            can_access_contest = contests.check_super_access(cdat, user) or \
-                                 (user.is_authenticated and (
-                                             user.id in cdat.datas.participants or user.id in cdat.datas.virtual_participants))
-            if not can_access_contest:
-                abort(403, "Access to contest required to download problem file.")
+            contests.check_access(cdat, user)
         else:
             pdat = datas.first_or_404(datas.Problem, pid=idx)
             dat = pdat.datas

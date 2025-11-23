@@ -83,7 +83,8 @@ problem_post_input = request_parser(
 )
 problem_get_input = request_parser(
     *paging(),
-    Args("manageable", "List problems the user can manage", type=bool, required=False, default=False)
+    Args("manageable", "List problems the user can manage", type=str, required=False, default="false",
+         choices=["true", "false"])
 )
 problem_detail_get_input = request_parser()
 # endregion
@@ -118,7 +119,7 @@ class ProblemIndex(Resource):
         args = problem_get_input.parse_args()
         user = get_api_user(args)
 
-        if args.get('manageable'):
+        if args.get('manageable') == "true":
             if not user.is_authenticated:
                 abort(403, "Authentication required to list manageable problems.")
 

@@ -36,7 +36,7 @@ from .base import (
 from ... import contests, datas, executing, objs, tools, constants
 from ...objs import Permission
 
-ns = api.namespace("contests", path="/contests", description="Contest related API endpoints")
+ns = api.namespace("contests", path="/contest", description="Contest related API endpoints")
 
 # endregion
 

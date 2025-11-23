@@ -305,17 +305,19 @@ def check_super_access(dat: datas.Contest, user: login.User = None) -> bool:
             user.has(Permission.admin) or user.id in dat.datas.users)
 
 
-def check_access(dat: datas.Contest):
+def check_access(dat: datas.Contest, user: login.User = None):
     per: datas.Period = datas.get_by_id(datas.Period, dat.main_period_id)
+    if user is None:
+        user = current_user
     info = dat.datas
     if per is None:
         abort(409)
-    if check_super_access(dat):
+    if check_super_access(dat, user):
         return
     if dat.hidden:
         abort(404)
-    if current_user.is_authenticated:
-        if current_user.id in info.participants:
+    if user.is_authenticated:
+        if user.id in info.participants:
             if per.is_running():
                 return
             if per.is_over() and info.practice != objs.PracticeType.no:
@@ -376,13 +378,15 @@ def check_status(dat: datas.Contest, user: login.User = None) -> tuple[ContestSt
     return ContestStatus.guest, 0, False
 
 
-def check_period(dat: datas.Contest) -> int:
+def check_period(dat: datas.Contest, user: login.User = None) -> int:
+    if user is None:
+        user = current_user
     main_per = datas.get_or_404(datas.Period, dat.main_period_id)
     info = dat.datas
-    if current_user.id in info.participants and main_per.is_running():
+    if user.id in info.participants and main_per.is_running():
         return dat.main_period_id
-    if current_user.id in info.virtual_participants:
-        per_id = info.virtual_participants[current_user.id]
+    if user.id in info.virtual_participants:
+        per_id = info.virtual_participants[user.id]
         cur_per = datas.get_or_404(datas.Period, per_id)
         if cur_per.is_running():
             return per_id

@@ -415,16 +415,18 @@ class Language:
 
 langs: dict[str, Language] = {}
 
+# put her to let langs be initialized when importing executing
+for lang_file in lang_path.iterdir():
+    if lang_file.suffix != ".json":
+        continue
+    lang_name = lang_file.stem
+    dat = tools.read_json(lang_file)
+    keys = dat["branches"].keys()
+    for key in keys:
+        langs[key] = Language(lang_name, key)
+
 
 def init():
-    for lang_file in lang_path.iterdir():
-        if lang_file.suffix != ".json":
-            continue
-        lang_name = lang_file.stem
-        dat = tools.read_json(lang_file)
-        keys = dat["branches"].keys()
-        for key in keys:
-            langs[key] = Language(lang_name, key)
     if config.judge.test_langs:
         env = Environment()
         for lang in langs.values():

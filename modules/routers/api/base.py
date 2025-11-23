@@ -30,7 +30,7 @@ from loguru import logger
 from werkzeug.datastructures import FileStorage
 from werkzeug.exceptions import BadRequestKeyError, HTTPException
 
-from ... import server, login, objs, tools, constants
+from ... import server, login, objs, tools, constants, datas
 from ...constants import log_path
 
 app = server.app
@@ -118,19 +118,15 @@ def get_api_user(args: ParseResult, required: objs.Permission | None = None) -> 
     if current_user.is_authenticated and verify_csrf():
         user = current_user
     else:
-        username = args.get("username")
-        if not username:
-            server.custom_abort(403, "Missing username")
-        user = login.User(username)
-        if not user.valid():
-            server.custom_abort(404, "User not found")
         key = args.get("api-key")
         if not key and request.headers.get("api-key"):
             key = request.headers.get("api-key")
         if not key:
             server.custom_abort(403, "Missing API key")
-        if not user.check_api_key(key):
+        data_user = datas.first(datas.User, api_key=login.try_hash(key))
+        if data_user is None:
             server.custom_abort(403, "API key not match")
+        user = login.User(data_user.username)
     if required is not None and not user.has(required):
         server.custom_abort(403, f"Required '{required.name}' permission")
     return user
@@ -152,7 +148,7 @@ def api_response(data: dict, status_code: int = 200) -> tuple[dict, int]:
 
 def marshal_with(ns: Namespace, success_model):
     def error_model(code, description):
-        return code, description, ns.model("ErrorResponse"+str(code), {
+        return code, description, ns.model("ErrorResponse" + str(code), {
             "status": fields.String(required=True, example="error"),
             "error_code": fields.Integer(required=True, example=code),
             "description": fields.String(required=True, example=description),
@@ -191,48 +187,131 @@ class MyField:
 
 @dataclass
 class Form(MyField):
+    """
+    Represents a form field for parsing request data.
+
+    This class is used to define the properties of a form field, such as its name,
+    type, whether it is required, and its default value. It provides a method to
+    convert these properties into keyword arguments suitable for use with a request parser.
+
+    Attributes:
+        name (str): The name of the form field.
+        help (str | None): An optional help text describing the field. Defaults to None.
+        type (type): The data type of the field. Defaults to str.
+        required (bool): Whether the field is required. Defaults to True.
+        default (Any): The default value of the field. Defaults to None.
+        choices (list[Any] | tuple[Any] | None): A list or tuple of valid choices for the field.
+    """
+
     name: str
     help: str | None = None
     type: type = str
     required: bool = True
     default: Any = None
+    choices: list[Any] | tuple[Any] | None = None
 
     def to_kwargs(self) -> dict[str, Any]:
-        return {
+        """
+        Convert the form field properties to a dictionary of keyword arguments.
+
+        This method generates a dictionary containing the properties of the form field,
+        which can be used to configure a request parser.
+
+        Returns:
+            dict[str, Any]: A dictionary of keyword arguments representing the form field.
+        """
+        ret = {
             "type": self.type,
             "required": self.required,
             "help": self.help,
             "location": "form",
             "default": self.default
         }
+        if self.choices is not None:
+            ret["choices"] = self.choices
+        return ret
 
 
 @dataclass
 class Args(MyField):
+    """
+    Represents an argument field for parsing request data.
+
+    This class defines the properties of an argument field, such as its name,
+    type, whether it is required, and its default value. It provides a method
+    to convert these properties into keyword arguments suitable for use with
+    a request parser.
+
+    Attributes:
+        name (str): The name of the argument field.
+        help (str | None): An optional help text describing the field. Defaults to None.
+        type (type): The data type of the field. Defaults to str.
+        required (bool): Whether the field is required. Defaults to True.
+        default (Any): The default value of the field. Defaults to None.
+        choices (list[Any] | tuple[Any] | None): A list or tuple of valid choices for the field.
+    """
+
     name: str
     help: str | None = None
     type: type = str
     required: bool = True
     default: Any = None
+    choices: list[Any] | tuple[Any] | None = None
 
     def to_kwargs(self) -> dict[str, Any]:
-        return {
+        """
+        Convert the argument field properties to a dictionary of keyword arguments.
+
+        This method generates a dictionary containing the properties of the argument field,
+        which can be used to configure a request parser.
+
+        Returns:
+            dict[str, Any]: A dictionary of keyword arguments representing the argument field.
+        """
+        ret = {
             "type": self.type,
             "required": self.required,
             "help": self.help,
             "location": "args",
             "default": self.default
         }
+        if self.choices is not None:
+            ret["choices"] = self.choices
+        return ret
 
 
 @dataclass
 class File(MyField):
+    """
+    Represents a file field for parsing file uploads in a request.
+
+    This class defines the properties of a file field, such as its name,
+    help text, type, and whether it is required. It provides a method to
+    convert these properties into keyword arguments suitable for use with
+    a request parser.
+
+    Attributes:
+        name (str): The name of the file field.
+        help (str | None): An optional help text describing the field. Defaults to None.
+        type (type): The data type of the field. Defaults to FileStorage.
+        required (bool): Whether the field is required. Defaults to True.
+    """
+
     name: str
     help: str | None = None
     type: type = FileStorage
     required: bool = True
 
     def to_kwargs(self) -> dict[str, Any]:
+        """
+        Convert the file field properties to a dictionary of keyword arguments.
+
+        This method generates a dictionary containing the properties of the file field,
+        which can be used to configure a request parser.
+
+        Returns:
+            dict[str, Any]: A dictionary of keyword arguments representing the file field.
+        """
         return {
             "type": self.type,
             "required": self.required,
@@ -250,8 +329,8 @@ def paging() -> list[MyField]:
 
 def request_parser(*args: MyField) -> reqparse.RequestParser:
     parser = reqparse.RequestParser()
-    parser.add_argument("username", type=str, required=False, help="Username of the user using the api",
-                        location="values")
+    # parser.add_argument("username", type=str, required=False, help="Username of the user using the api",
+    #                    location="values")
     parser.add_argument("api-key", type=str, required=False, help="Api key to authenticate the user",
                         location=("form", "headers"))
     for arg in args:
