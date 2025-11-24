@@ -22,11 +22,12 @@ from flask import request
 from flask_restx import Resource, fields
 from werkzeug.utils import secure_filename
 
-from .base import get_api_user, api_response, api, marshal_with, request_parser, Form, paging, pagination, Args, File
-from ... import objs, problemsetting, datas, executing, constants, tools, config, server
+from .base import (get_api_user, api_response, api, marshal_with, request_parser, Form, paging, pagination, Args, File,
+                   base_request_parser)
+from ... import objs, problemsetting, datas, executing, constants, tools, config, server, contests
 from ...constants import preparing_problem_path, problem_path
 
-ns = api.namespace("problem", path="/problem", description="Problem-related API endpoints")
+ns = api.namespace("problem", path="/problem", description="Problem related API endpoints")
 
 # region Models
 problem_post_output = ns.model("CreateProblemOutput", {
@@ -185,11 +186,11 @@ class ProblemDetail(Resource):
 @ns.route("/<string:pid>/manage")
 class ProblemManage(Resource):
     @ns.doc("get_manageable_problem_details")
-    @ns.expect(request_parser())
+    @ns.expect(base_request_parser)
     @marshal_with(ns, manageable_problem_details_model)
     def get(self, pid: str):
         """Gets detailed problem data for management and editing."""
-        args = request_parser().parse_args()
+        args = base_request_parser.parse_args()
         user = get_api_user(args)
         pid = secure_filename(pid)
         pdat: datas.Problem = datas.first(datas.Problem, pid=pid)
@@ -229,14 +230,21 @@ class ProblemManage(Resource):
         })
 
 
+problem_preview_input = request_parser(
+    Args("type", "Content Type", type=str, required=True,
+         choices=["statement", "public_file", "file", "testcases", "testcases_gen"]),
+    Args("name", "Content name", type=str, required=False)
+)
+
+
 @ns.route("/<string:pid>/manage/preview")
 class ProblemPreview(Resource):
     @ns.doc(description="Previews a problem component (e.g., statement HTML). Returns raw content.")
-    @ns.expect(request_parser())
+    @ns.expect(problem_preview_input)
     @server.limiter.limit(config.server.file_limit)
     def get(self, pid: str):
         """Previews a problem component."""
-        auth_args = request_parser().parse_args()
+        auth_args = problem_preview_input.parse_args()
         user = get_api_user(auth_args)
         pid = secure_filename(pid)
         pdat: datas.Problem = datas.first(datas.Problem, pid=pid)
@@ -255,3 +263,48 @@ class ProblemPreview(Resource):
         preview_args = request.args.to_dict()
         preview_args['pid'] = pid
         return problemsetting.preview(preview_args, pdat)
+
+
+
+problem_file_input = request_parser(
+    Args("cid", "Contest ID if applicable", type=str, required=False)
+)
+
+
+@ns.route("/<string:pid>/file/<string:filename>")
+class ProblemFile(Resource):
+    @ns.doc("get_problem_file")
+    @ns.expect(problem_file_input)
+    def get(self, pid: str, filename: str):
+        """Serve a public file associated with a problem."""
+        args = problem_file_input.parse_args()
+        user = get_api_user(args)
+        idx = secure_filename(pid)
+        filename = secure_filename(filename)
+
+        if args.get("cid"):
+            cdat = datas.first(datas.Contest, cid=args["cid"])
+            if cdat is None:
+                server.custom_abort(404, "Contest not found.")
+            found_problem = False
+            for obj in cdat.datas.problems.values():
+                if obj.pid == idx:
+                    found_problem = True
+                    break
+            if not found_problem:
+                server.custom_abort(404, "Problem not found in contest.")
+            contests.check_access(cdat, user)
+        else:
+            pdat = datas.first(datas.Problem, pid=idx)
+            if pdat is None:
+                server.custom_abort(404, "Problem not found.")
+            dat = pdat.datas
+            if not pdat.is_public:
+                if not user.is_authenticated:
+                    server.custom_abort(403, "You has no permission to access this file.")
+                if not user.has(objs.Permission.admin) and user.id not in dat.users:
+                    server.custom_abort(403, "You has no permission to access this file.")
+        target = constants.problem_path / idx / "public_file" / filename
+        if not target.is_file():
+            server.custom_abort(404, "File not found.")
+        return server.sending_file(target)

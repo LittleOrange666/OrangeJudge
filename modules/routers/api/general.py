@@ -18,10 +18,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 from flask_restx import Resource, fields
 from pygments import lexers
-from werkzeug.utils import secure_filename
 
 from .base import get_api_user, api_response, api, marshal_with, request_parser, Args, Form, paging, pagination
-from ... import submitting, datas, objs, tools, executing, tasks, contests, constants, server
+from ... import submitting, datas, objs, tools, executing, tasks, contests, server
 
 ns = api.namespace("general", path="/", description="General API endpoints")
 
@@ -331,47 +330,3 @@ class JudgeInfo(Resource):
             out.append({"name": lang.branch, "compile": " ".join(lang.sample_compile_cmd),
                         "run": " ".join(lang.sample_exec_cmd)})
         return api_response({"langs": out})
-
-
-problem_file_input = request_parser(
-    Args("cid", "Contest ID if applicable", type=str, required=False)
-)
-
-
-@ns.route("/problem_file/<string:idx>/<string:filename>")
-class ProblemFile(Resource):
-    @ns.doc("get_problem_file")
-    @ns.expect(problem_file_input)
-    def get(self, idx: str, filename: str):
-        """Serve a public file associated with a problem."""
-        args = problem_file_input.parse_args()
-        user = get_api_user(args)
-        idx = secure_filename(idx)
-        filename = secure_filename(filename)
-
-        if args["cid"]:
-            cdat = datas.first(datas.Contest, cid=args["cid"])
-            if cdat is None:
-                server.custom_abort(404, "Contest not found.")
-            found_problem = False
-            for obj in cdat.datas.problems.values():
-                if obj.pid == idx:
-                    found_problem = True
-                    break
-            if not found_problem:
-                server.custom_abort(404, "Problem not found in contest.")
-            contests.check_access(cdat, user)
-        else:
-            pdat = datas.first(datas.Problem, pid=idx)
-            if pdat is None:
-                server.custom_abort(404, "Problem not found.")
-            dat = pdat.datas
-            if not pdat.is_public:
-                if not user.is_authenticated:
-                    server.custom_abort(403, "You has no permission to access this file.")
-                if not user.has(objs.Permission.admin) and user.id not in dat.users:
-                    server.custom_abort(403, "You has no permission to access this file.")
-        target = constants.problem_path / idx / "public_file" / filename
-        if not target.is_file():
-            server.custom_abort(404, "File not found.")
-        return server.sending_file(target)

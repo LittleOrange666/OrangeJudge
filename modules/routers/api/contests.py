@@ -32,6 +32,7 @@ from .base import (
     Form,
     paging,
     pagination,
+    base_request_parser
 )
 from ... import contests, datas, executing, objs, tools, constants, server
 from ...objs import Permission
@@ -219,11 +220,11 @@ class ContestList(Resource):
 @ns.param("cid", "The contest ID")
 class Contest(Resource):
     @ns.doc("get_contest_details")
-    @ns.expect(request_parser())
+    @ns.expect(base_request_parser)
     @marshal_with(ns, contest_details_output)
     def get(self, cid: str):
         """Get details of a specific contest"""
-        args = request_parser().parse_args()
+        args = base_request_parser.parse_args()
         user = get_api_user(args)
 
         dat: datas.Contest = datas.first(datas.Contest, cid=cid)
@@ -273,7 +274,7 @@ class ContestStatus(Resource):
     @ns.doc("get_contest_status")
     @ns.expect(contest_status_input)
     @marshal_with(ns, contest_status_output)
-    def post(self, cid: str):
+    def get(self, cid: str):
         """Get submission status for a contest with filtering"""
         args = contest_status_input.parse_args()
         api_user = get_api_user(args)
@@ -337,11 +338,11 @@ class ContestStatus(Resource):
 @ns.param("cid", "The contest ID")
 class ContestRegister(Resource):
     @ns.doc("register_for_contest")
-    @ns.expect(request_parser())
+    @ns.expect(base_request_parser)
     @marshal_with(ns, ok_output)
     def post(self, cid: str):
         """Register for a contest"""
-        args = request_parser().parse_args()
+        args = base_request_parser.parse_args()
         user = get_api_user(args)
         if not user.is_authenticated:
             server.custom_abort(403, "Authentication required to register")
@@ -369,11 +370,11 @@ class ContestRegister(Resource):
 @ns.param("cid", "The contest ID")
 class ContestUnregister(Resource):
     @ns.doc("unregister_from_contest")
-    @ns.expect(request_parser())
+    @ns.expect(base_request_parser)
     @marshal_with(ns, ok_output)
     def post(self, cid: str):
         """Unregister from a contest"""
-        args = request_parser().parse_args()
+        args = base_request_parser.parse_args()
         user = get_api_user(args)
         if not user.is_authenticated:
             server.custom_abort(403, "Authentication required")
@@ -441,11 +442,11 @@ class ContestVirtual(Resource):
 @ns.param("cid", "The contest ID")
 class ContestStanding(Resource):
     @ns.doc("get_contest_standing")
-    @ns.expect(request_parser())
+    @ns.expect(base_request_parser)
     @marshal_with(ns, standing_output)
     def get(self, cid: str):
         """Get contest standings (scoreboard)"""
-        args = request_parser().parse_args()
+        args = base_request_parser.parse_args()
         user = get_api_user(args)
         cdat: datas.Contest = datas.first(datas.Contest, cid=cid)
         if cdat is None:
@@ -500,11 +501,11 @@ class ContestQuestion(Resource):
 @ns.param("sub_id", "The submission ID")
 class RejectSubmission(Resource):
     @ns.doc("reject_submission")
-    @ns.expect(request_parser())
+    @ns.expect(base_request_parser)
     @marshal_with(ns, ok_output)
     def post(self, cid: str, sub_id: int):
         """Reject a submission in a contest (requires admin/owner)"""
-        args = request_parser().parse_args()
+        args = base_request_parser.parse_args()
         user = get_api_user(args)
 
         cdat: datas.Contest = datas.first(datas.Contest, cid=cid)
@@ -534,7 +535,7 @@ class ContestProblem(Resource):
     @marshal_with(ns, contest_problem_detail_model)
     def get(self, cid: str, pid: str):
         """Get details of a specific problem in a contest"""
-        args = request_parser().parse_args()
+        args = base_request_parser.parse_args()
         user = get_api_user(args)
 
         cdat: datas.Contest = datas.first(datas.Contest, cid=cid)

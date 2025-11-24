@@ -339,6 +339,9 @@ def request_parser(*args: MyField) -> reqparse.RequestParser:
     return parser
 
 
+base_request_parser = request_parser()
+
+
 def pagination(sql_obj, args: ParseResult, rev: bool = True) -> tuple[list, int, int, list[int]]:
     page = args["page"]
     page_size = args["page_size"]
