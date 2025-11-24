@@ -18,11 +18,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 from flask import request, Response
-from flask_restx import Resource, abort
+from flask_restx import Resource
 from werkzeug.utils import secure_filename
 
 from .base import get_api_user, api_response, api, request_parser, Form, File
-from ... import problemsetting, datas, objs, executing
+from ... import problemsetting, datas, objs, executing, server
 from ...constants import problem_path
 
 ns = api.namespace("problem_actions", path="/problem/<string:pid>/manage",
@@ -37,12 +37,14 @@ class BaseProblemAction(Resource):
         auth_args = self.action_input.parse_args()
         user = get_api_user(auth_args)
         pid = secure_filename(pid)
-        pdat: datas.Problem = datas.first_or_404(datas.Problem, pid=pid)
+        pdat: datas.Problem = datas.first(datas.Problem, pid=pid)
+        if pdat is None:
+            server.custom_abort(404, "Problem not found.")
         permission_dat = pdat.new_datas
         if not user.has(objs.Permission.admin) and user.data.username not in permission_dat.users:
-            abort(403, "You do not have permission to perform this action on this problem.")
+            server.custom_abort(403, "You do not have permission to perform this action on this problem.")
         if (problem_path / pid / "waiting").is_file() or problemsetting.check_background_action(pid) is not None:
-            abort(503, "A background action is already in progress.")
+            server.custom_abort(503, "A background action is already in progress.")
         action_func = problemsetting.actions.get(self.action_name)
         is_important = hasattr(action_func, "important") and getattr(action_func, "important")
         with problemsetting.Problem(pid, is_important) as dat:
@@ -51,7 +53,7 @@ class BaseProblemAction(Resource):
                 return api_response({"status": "success", "view_hint": result})
             elif isinstance(result, Response):
                 return result
-            abort(500, f"Action handler for '{self.action_name}' returned an unexpected result.")
+            server.custom_abort(500, f"Action handler for '{self.action_name}' returned an unexpected result.")
 
 
 @ns.route("/save_general_info")

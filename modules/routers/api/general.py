@@ -16,7 +16,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-from flask_restx import Resource, fields, abort
+from flask_restx import Resource, fields
 from pygments import lexers
 from werkzeug.utils import secure_filename
 
@@ -62,14 +62,14 @@ status_item_model = ns.model("StatusItem", {
     "can_rejudge": fields.Boolean(description="Whether current user can rejudge"),
 })
 status_list_output = ns.model("StatusListOutput", {
-    "show_pages": fields.List(fields.Integer),
-    "page_count": fields.Integer,
-    "page": fields.Integer,
-    "data": fields.List(fields.Nested(status_item_model)),
+    "show_pages": fields.List(fields.Integer, description="List of page numbers to display"),
+    "page_count": fields.Integer(description="Total number of pages"),
+    "page": fields.Integer(description="Current page number"),
+    "data": fields.List(fields.Nested(status_item_model), description="List of submission status items"),
 })
 
 rejudge_output = ns.model("RejudgeOutput", {
-    "message": fields.String(default="OK")
+    "message": fields.String(default="OK", description="Status message")
 })
 
 judge_info_item = ns.model("JudgeInfoItem", {
@@ -78,7 +78,7 @@ judge_info_item = ns.model("JudgeInfoItem", {
     "run": fields.String(description="Sample execution command"),
 })
 judge_info_output = ns.model("JudgeInfoOutput", {
-    "langs": fields.List(fields.Nested(judge_info_item)),
+    "langs": fields.List(fields.Nested(judge_info_item), description="List of supported languages"),
 })
 # endregion
 
@@ -132,9 +132,11 @@ class Submission(Resource):
         args = submission_get_input.parse_args()
         user = get_api_user(args)
         idx = args["submission_id"]
-        dat = datas.first_or_404(datas.Submission, id=idx)
+        dat = datas.first(datas.Submission, id=idx)
+        if dat is None:
+            server.custom_abort(404, "Submission not found.")
         if not user.has(objs.Permission.admin) and dat.user_id != user.data.id:
-            abort(403)
+            server.custom_abort(403, "You do not have permission to view this submission.")
         lang = dat.language
         source = tools.read(dat.path / dat.source)
         completed = dat.completed
@@ -212,7 +214,7 @@ class Status(Resource):
                                                  (obj.problem and obj.problem.user and
                                                   obj.problem.user.username == user.id))
             can_rejudge = can_see and (user.has(objs.Permission.admin) or (
-                        obj.problem and obj.problem.user and obj.problem.user.username == user.id))
+                    obj.problem and obj.problem.user and obj.problem.user.username == user.id))
             out.append({
                 "id": str(obj.id),
                 "time": obj.time.timestamp(),
@@ -240,22 +242,26 @@ class Rejudge(Resource):
         args = rejudge_input.parse_args()
         user = get_api_user(args)
         if not user.is_authenticated:
-            abort(403, "Authentication required to rejudge.")
+            server.custom_abort(403, "Authentication required to rejudge.")
 
-        dat = datas.get_or_404(datas.Submission, args["idx"])
+        dat = datas.get_by_id(datas.Submission, args["idx"])
+        if dat is None:
+            server.custom_abort(404, "Submission not found.")
         if args["cid"]:
             if dat.contest.cid != args["cid"]:
-                abort(400, "Submission does not belong to the specified contest.")
-            cdat: datas.Contest = datas.first_or_404(datas.Contest, cid=args["cid"])
+                server.custom_abort(400, "Submission does not belong to the specified contest.")
+            cdat: datas.Contest = datas.first(datas.Contest, cid=args["cid"])
+            if cdat is None:
+                server.custom_abort(404, "Contest not found.")
             if not contests.check_super_access(cdat, user):  # Assuming this is the correct permission check
-                abort(403, "Permission denied to rejudge in this contest.")
+                server.custom_abort(403, "Permission denied to rejudge in this contest.")
         else:
             if dat.contest_id is not None:
-                abort(400, "Submission is part of a contest, specify CID.")
+                server.custom_abort(400, "Submission is part of a contest, specify CID.")
             if not user.has(objs.Permission.admin) and (not dat.problem or user.id != dat.problem.user.username):
-                abort(403, "Permission denied to rejudge this submission.")
+                server.custom_abort(403, "Permission denied to rejudge this submission.")
         if not dat.completed:
-            abort(400, "Cannot rejudge an uncompleted submission.")
+            server.custom_abort(400, "Cannot rejudge an uncompleted submission.")
         tasks.rejudge(dat, "wait for rejudge")
         datas.add(dat)
         return api_response({"message": "Submission rejudged successfully."})
@@ -271,29 +277,35 @@ class RejudgeAll(Resource):
         args = rejudge_all_input.parse_args()
         user = get_api_user(args)
         if not user.is_authenticated:
-            abort(403, "Authentication required to rejudge.")
+            server.custom_abort(403, "Authentication required to rejudge.")
 
         pid = args["pid"]
         if pid == "":
-            abort(400, "Problem ID cannot be empty.")
+            server.custom_abort(400, "Problem ID cannot be empty.")
 
         if args["cid"]:
-            cdat: datas.Contest = datas.first_or_404(datas.Contest, cid=args["cid"])
+            cdat: datas.Contest = datas.first(datas.Contest, cid=args["cid"])
+            if cdat is None:
+                server.custom_abort(404, "Contest not found.")
             if not contests.check_super_access(cdat, user):  # Assuming this is the correct permission check
-                abort(403, "Permission denied to rejudge in this contest.")
+                server.custom_abort(403, "Permission denied to rejudge in this contest.")
 
             probs = cdat.datas.problems
             if pid not in probs:
-                abort(404, "Problem not found in contest.")
+                server.custom_abort(404, "Problem not found in contest.")
             the_pid = probs[pid].pid
-            prob = datas.first_or_404(datas.Problem, pid=the_pid)
+            prob = datas.first(datas.Problem, pid=the_pid)
+            if prob is None:
+                server.custom_abort(404, "Problem not found.")
             status_query = datas.filter_by(datas.Submission, problem_id=prob.id, contest_id=cdat.id, completed=True)
         else:
             if pid == "test":
-                abort(400, "Test problem submissions cannot be rejudged en masse.")
-            prob = datas.first_or_404(datas.Problem, pid=pid)
+                server.custom_abort(400, "Test problem submissions cannot be rejudged en masse.")
+            prob = datas.first(datas.Problem, pid=pid)
+            if prob is None:
+                server.custom_abort(404, "Problem not found.")
             if not user.has(objs.Permission.admin) and (not prob.user or user.id != prob.user.username):
-                abort(403, "Permission denied to rejudge submissions for this problem.")
+                server.custom_abort(403, "Permission denied to rejudge submissions for this problem.")
             status_query = datas.filter_by(datas.Submission, problem_id=prob.id, contest_id=None, completed=True)
 
         if args["result"] and args["result"] in objs.TaskResult.__members__:
@@ -338,24 +350,28 @@ class ProblemFile(Resource):
         filename = secure_filename(filename)
 
         if args["cid"]:
-            cdat = datas.first_or_404(datas.Contest, cid=args["cid"])
+            cdat = datas.first(datas.Contest, cid=args["cid"])
+            if cdat is None:
+                server.custom_abort(404, "Contest not found.")
             found_problem = False
             for obj in cdat.datas.problems.values():
                 if obj.pid == idx:
                     found_problem = True
                     break
             if not found_problem:
-                abort(404, "Problem not found in contest.")
+                server.custom_abort(404, "Problem not found in contest.")
             contests.check_access(cdat, user)
         else:
-            pdat = datas.first_or_404(datas.Problem, pid=idx)
+            pdat = datas.first(datas.Problem, pid=idx)
+            if pdat is None:
+                server.custom_abort(404, "Problem not found.")
             dat = pdat.datas
             if not pdat.is_public:
                 if not user.is_authenticated:
-                    abort(403)
+                    server.custom_abort(403, "You has no permission to access this file.")
                 if not user.has(objs.Permission.admin) and user.id not in dat.users:
-                    abort(403)
+                    server.custom_abort(403, "You has no permission to access this file.")
         target = constants.problem_path / idx / "public_file" / filename
         if not target.is_file():
-            abort(404, "File not found.")
+            server.custom_abort(404, "File not found.")
         return server.sending_file(target)

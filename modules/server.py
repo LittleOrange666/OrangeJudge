@@ -75,7 +75,7 @@ if config.server.admin_fast:
 def inject_global_variables():
     version_info = ""
     if "ORANGEJUDGE_VERSION" in os.environ:
-        version_info = "Version: "+os.environ["ORANGEJUDGE_VERSION"]
+        version_info = "Version: " + os.environ["ORANGEJUDGE_VERSION"]
     return {
         'site_name': config.server.server_name,
         'version_info': version_info,

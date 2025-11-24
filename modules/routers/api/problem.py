@@ -19,7 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 
 from flask import request
-from flask_restx import Resource, fields, abort
+from flask_restx import Resource, fields
 from werkzeug.utils import secure_filename
 
 from .base import get_api_user, api_response, api, marshal_with, request_parser, Form, paging, pagination, Args, File
@@ -55,21 +55,21 @@ problem_detail_get_output = ns.model("ProblemDetailOutput", {
     "memory_limit": fields.Integer(description="Memory limit for the problem in megabytes")
 })
 version_info_model = ns.model("VersionInfo", {
-    "version": fields.String(),
-    "description": fields.String(),
-    "create_time": fields.Float(),
+    "version": fields.String(description="Version hash"),
+    "description": fields.String(description="Version description"),
+    "create_time": fields.Float(description="Creation timestamp"),
 })
 manageable_problem_details_model = ns.model("ManageableProblemDetails", {
-    "pid": fields.String(),
-    "name": fields.String(),
-    "is_public": fields.Boolean(),
+    "pid": fields.String(description="Problem ID"),
+    "name": fields.String(description="Problem name"),
+    "is_public": fields.Boolean(description="Whether the problem is public"),
     "data": fields.Raw(description="The full editable ProblemData object"),
-    "versions": fields.List(fields.Nested(version_info_model)),
-    "public_files": fields.List(fields.String),
-    "default_checkers": fields.List(fields.String),
-    "available_languages": fields.List(fields.String),
-    "default_interactors": fields.List(fields.String),
-    "collaborators": fields.List(fields.String),
+    "versions": fields.List(fields.Nested(version_info_model), description="List of problem versions"),
+    "public_files": fields.List(fields.String, description="List of public files"),
+    "default_checkers": fields.List(fields.String, description="List of available default checkers"),
+    "available_languages": fields.List(fields.String, description="List of available programming languages"),
+    "default_interactors": fields.List(fields.String, description="List of available default interactors"),
+    "collaborators": fields.List(fields.String, description="List of collaborators"),
     "current_actions": fields.List(fields.String, description="List of available background actions"),
     "background_action": fields.Raw(description="Current running background action, if any", required=False)
 })
@@ -87,6 +87,8 @@ problem_get_input = request_parser(
          choices=["true", "false"])
 )
 problem_detail_get_input = request_parser()
+
+
 # endregion
 
 
@@ -121,7 +123,7 @@ class ProblemIndex(Resource):
 
         if args.get('manageable') == "true":
             if not user.is_authenticated:
-                abort(403, "Authentication required to list manageable problems.")
+                server.custom_abort(403, "Authentication required to list manageable problems.")
 
             if user.has(objs.Permission.admin):
                 problem_obj = datas.Problem.query.filter(datas.Problem.pid != "test")
@@ -147,10 +149,12 @@ class ProblemDetail(Resource):
         """Gets the public details of a problem for viewing/solving."""
         args = problem_detail_get_input.parse_args()
         user = get_api_user(args)
-        pdat = datas.first_or_404(datas.Problem, pid=pid)
+        pdat: datas.Problem = datas.first(datas.Problem, pid=pid)
+        if pdat is None:
+            server.custom_abort(404, f"Problem {pid!r} not found.")
         dat = pdat.datas
         if not pdat.is_public and not user.has(objs.Permission.admin) and user.id not in dat.users:
-            abort(403)
+            server.custom_abort(403, "You do not have permission to view this problem.")
         langs = [lang for lang in executing.langs.keys() if pdat.lang_allowed(lang)]
         path = constants.problem_path / pid
         statement = tools.read(path / "statement.html")
@@ -188,10 +192,12 @@ class ProblemManage(Resource):
         args = request_parser().parse_args()
         user = get_api_user(args)
         pid = secure_filename(pid)
-        pdat: datas.Problem = datas.first_or_404(datas.Problem, pid=pid)
+        pdat: datas.Problem = datas.first(datas.Problem, pid=pid)
+        if pdat is None:
+            server.custom_abort(404, f"Problem {pid!r} not found.")
         dat = pdat.new_datas
         if not user.has(objs.Permission.admin) and user.data not in dat.users:
-            abort(403, "You do not have permission to manage this problem.")
+            server.custom_abort(403, "You do not have permission to manage this problem.")
 
         bg_action = problemsetting.check_background_action(pid)
         if bg_action is not None:
@@ -233,10 +239,12 @@ class ProblemPreview(Resource):
         auth_args = request_parser().parse_args()
         user = get_api_user(auth_args)
         pid = secure_filename(pid)
-        pdat: datas.Problem = datas.first_or_404(datas.Problem, pid=pid)
+        pdat: datas.Problem = datas.first(datas.Problem, pid=pid)
+        if pdat is None:
+            server.custom_abort(404, f"Problem {pid!r} not found.")
         dat = pdat.new_datas
         if not user.has(objs.Permission.admin) and user.data not in dat.users:
-            abort(403, "You do not have permission to preview this problem.")
+            server.custom_abort(403, "You do not have permission to preview this problem.")
 
         if (problem_path / pid / "waiting").is_file():
             return api_response({

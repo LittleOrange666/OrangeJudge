@@ -19,7 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import time
 from datetime import datetime, timedelta
 
-from flask_restx import Resource, fields, abort
+from flask_restx import Resource, fields
 from sqlalchemy.orm.attributes import flag_modified
 
 from .base import (
@@ -33,7 +33,7 @@ from .base import (
     paging,
     pagination,
 )
-from ... import contests, datas, executing, objs, tools, constants
+from ... import contests, datas, executing, objs, tools, constants, server
 from ...objs import Permission
 
 ns = api.namespace("contests", path="/contest", description="Contest related API endpoints")
@@ -50,10 +50,10 @@ contest_summary_model = ns.model("ContestSummary", {
     "can_virtual": fields.Boolean(description="Whether virtual participation is allowed")
 })
 contest_list_output = ns.model("ContestListOutput", {
-    "contests": fields.List(fields.Nested(contest_summary_model)),
-    "page": fields.Integer,
-    "page_count": fields.Integer,
-    "show_pages": fields.List(fields.Integer),
+    "contests": fields.List(fields.Nested(contest_summary_model), description="List of contests"),
+    "page": fields.Integer(description="Current page number"),
+    "page_count": fields.Integer(description="Total number of pages"),
+    "show_pages": fields.List(fields.Integer, description="List of page numbers to display in pagination"),
 })
 create_contest_output = ns.model("CreateContestOutput", {
     "contest_id": fields.String(description="ID of the newly created contest")
@@ -65,64 +65,82 @@ problem_in_contest_model = ns.model("ProblemInContest", {
     "name": fields.String(description="Problem name"),
 })
 announcement_model = ns.model("Announcement", {
-    "title": fields.String,
-    "content": fields.String,
-    "time": fields.Float,
+    "title": fields.String(description="Announcement title"),
+    "content": fields.String(description="Announcement content"),
+    "time": fields.Float(description="Announcement timestamp"),
 })
 question_model = ns.model("Question", {
-    "id": fields.Integer,
-    "title": fields.String,
-    "content": fields.String,
-    "time": fields.Float,
-    "author": fields.String,
+    "id": fields.Integer(description="Question ID"),
+    "title": fields.String(description="Question title"),
+    "content": fields.String(description="Question content"),
+    "time": fields.Float(description="Question timestamp"),
+    "author": fields.String(description="Username of the author"),
     "answer": fields.String(description="Content of the reply to this question, if any"),
 })
 contest_details_output = ns.model("ContestDetailsOutput", {
-    "cid": fields.String,
-    "name": fields.String,
-    "description": fields.String,
-    "start_time": fields.Float,
-    "end_time": fields.Float,
-    "status": fields.String,
-    "can_edit": fields.Boolean,
-    "can_see_problems": fields.Boolean,
-    "problems": fields.List(fields.Nested(problem_in_contest_model)),
-    "announcements": fields.List(fields.Nested(announcement_model)),
-    "questions": fields.List(fields.Nested(question_model)),
-    "is_registered": fields.Boolean,
-    "is_virtual_participant": fields.Boolean,
+    "cid": fields.String(description="Contest ID"),
+    "name": fields.String(description="Contest name"),
+    "description": fields.String(description="Contest description"),
+    "start_time": fields.Float(description="Start time timestamp"),
+    "end_time": fields.Float(description="End time timestamp"),
+    "status": fields.String(description="Contest status"),
+    "can_edit": fields.Boolean(description="Whether the user can edit the contest"),
+    "can_see_problems": fields.Boolean(description="Whether the user can see problems"),
+    "problems": fields.List(fields.Nested(problem_in_contest_model), description="List of problems in the contest"),
+    "announcements": fields.List(fields.Nested(announcement_model), description="List of announcements"),
+    "questions": fields.List(fields.Nested(question_model), description="List of questions"),
+    "is_registered": fields.Boolean(description="Whether the user is registered"),
+    "is_virtual_participant": fields.Boolean(description="Whether the user is a virtual participant"),
 })
 submission_status_model = ns.model("SubmissionStatus", {
-    "id": fields.String,
-    "timestamp": fields.Float,
-    "user_id": fields.String,
-    "user_name": fields.String,
-    "problem_id": fields.String,
-    "problem_name": fields.String,
-    "language": fields.String,
-    "result": fields.String,
-    "can_see_details": fields.Boolean,
+    "id": fields.String(description="Submission ID"),
+    "timestamp": fields.Float(description="Submission timestamp"),
+    "user_id": fields.String(description="User ID"),
+    "user_name": fields.String(description="User display name"),
+    "problem_id": fields.String(description="Problem ID"),
+    "problem_name": fields.String(description="Problem name"),
+    "language": fields.String(description="Programming language"),
+    "result": fields.String(description="Submission result"),
+    "can_see_details": fields.Boolean(description="Whether details are visible"),
 })
 contest_status_output = ns.model("ContestStatusOutput", {
-    "submissions": fields.List(fields.Nested(submission_status_model)),
-    "page": fields.Integer,
-    "page_count": fields.Integer,
-    "show_pages": fields.List(fields.Integer),
+    "submissions": fields.List(fields.Nested(submission_status_model), description="List of submissions"),
+    "page": fields.Integer(description="Current page number"),
+    "page_count": fields.Integer(description="Total number of pages"),
+    "show_pages": fields.List(fields.Integer, description="List of page numbers to display"),
 })
 standing_output = ns.model("StandingOutput", {
-    "headers": fields.List(fields.Raw),
-    "standings": fields.List(fields.Raw)
+    "submissions": fields.List(fields.Nested(ns.model("StandingSubmission", {
+        "user": fields.String(description="User ID"),
+        "pid": fields.String(description="Problem ID"),
+        "time": fields.Float(description="Submission timestamp"),
+        "scores": fields.Raw(description="Scores per problem"),
+        "total_score": fields.Float(description="Total score"),
+        "pretest": fields.Boolean(description="Whether it's a pretest"),
+        "per": fields.Integer(description="Period ID"),
+    })), description="List of standing submissions"),
+    "rule": fields.String(description="Contest rule type"),
+    "pids": fields.List(fields.String, description="List of problem IDs"),
+    "penalty": fields.Integer(description="Penalty time"),
+    "pers": fields.List(fields.Nested(ns.model("StandingPeriod", {
+        "start_time": fields.Float(description="Period start time"),
+        "judging": fields.Boolean(description="Whether judging is in progress"),
+        "id": fields.Integer(description="Period ID"),
+    })), description="List of periods"),
+    "main_per": fields.Integer(description="Main period ID"),
+    "participants": fields.List(fields.String, description="List of participants"),
+    "virtual_participants": fields.Raw(description="Virtual participants data"),
 })
 contest_problem_detail_model = ns.model("ContestProblemDetail", {
     "pid": fields.String(description="Problem ID within the contest"),
     "internal_pid": fields.String(description="System-wide Problem ID"),
-    "name": fields.String,
+    "name": fields.String(description="Problem name"),
     "description": fields.String(description="Problem description HTML"),
-    "allowed_languages": fields.List(fields.String),
-    "contest_cid": fields.String,
-    "contest_name": fields.String,
-    "time_limit": fields.Float,
-    "memory_limit": fields.Integer,
+    "allowed_languages": fields.List(fields.String, description="List of allowed languages"),
+    "contest_cid": fields.String(description="Contest ID"),
+    "contest_name": fields.String(description="Contest name"),
+    "time_limit": fields.Float(description="Time limit in seconds"),
+    "memory_limit": fields.Integer(description="Memory limit in MB"),
 })
 # endregion
 
@@ -192,7 +210,7 @@ class ContestList(Resource):
         user = get_api_user(args, required=Permission.make_problems)
         name = args["contest_name"]
         if not name or len(name) > 120:
-            abort(400, "Invalid contest name length")
+            server.custom_abort(400, "Invalid contest name length")
         cid = contests.create_contest(name, user.data)
         return api_response({"contest_id": cid})
 
@@ -208,10 +226,12 @@ class Contest(Resource):
         args = request_parser().parse_args()
         user = get_api_user(args)
 
-        dat: datas.Contest = datas.first_or_404(datas.Contest, cid=cid)
+        dat: datas.Contest = datas.first(datas.Contest, cid=cid)
+        if dat is None:
+            server.custom_abort(404, f"Contest not found.")
         can_edit = contests.check_super_access(dat, user)
         if not can_edit and dat.hidden:
-            abort(404, "Contest not found")
+            server.custom_abort(404, "Contest not found")
 
         status, _, can_see_problems = contests.check_status(dat, user)
         can_see_problems = can_see_problems or can_edit
@@ -258,16 +278,23 @@ class ContestStatus(Resource):
         args = contest_status_input.parse_args()
         api_user = get_api_user(args)
 
-        dat: datas.Contest = datas.first_or_404(datas.Contest, cid=cid)
+        dat: datas.Contest = datas.first(datas.Contest, cid=cid)
+        if dat is None:
+            server.custom_abort(404, f"Contest not found.")
+        can_edit = contests.check_super_access(dat, api_user)
+        if not can_edit and dat.hidden:
+            server.custom_abort(404, "Contest not found")
         info = dat.datas
         status_query = dat.submissions
 
         if args["user"]:
-            user_filter: datas.User = datas.first_or_404(datas.User, username=args["user"])
+            user_filter: datas.User = datas.first(datas.User, username=args["user"])
+            if user_filter is None:
+                server.custom_abort(404, "User not found")
             status_query = status_query.filter_by(user=user_filter)
         if args["pid"]:
             if args["pid"] not in info.problems:
-                abort(404, "Problem not found in contest")
+                server.custom_abort(404, "Problem not found in contest")
             status_query = status_query.filter_by(pid=info.problems[args["pid"]].pid)
         if args["result"] and args["result"] in objs.TaskResult.__members__:
             status_query = status_query.filter_by(simple_result_flag=objs.TaskResult[args["result"]].name)
@@ -284,7 +311,7 @@ class ContestStatus(Resource):
             problem_name = info.problems[problem_display_id].name if problem_display_id != "?" else "???"
 
             can_see_details = api_user.is_authenticated and (
-                        api_user.has(Permission.admin) or api_user.id == obj.user.username)
+                    api_user.has(Permission.admin) or api_user.id == obj.user.username)
             can_know_all = can_see_details or info.standing.public or can_edit
 
             if can_know_all:
@@ -317,15 +344,19 @@ class ContestRegister(Resource):
         args = request_parser().parse_args()
         user = get_api_user(args)
         if not user.is_authenticated:
-            abort(403, "Authentication required to register")
+            server.custom_abort(403, "Authentication required to register")
 
-        dat = datas.first_or_404(datas.Contest, cid=cid)
-        per = datas.get_or_404(datas.Period, dat.main_period_id)
+        dat = datas.first(datas.Contest, cid=cid)
+        if dat is None:
+            server.custom_abort(404, "Contest not found")
+        per = datas.get_by_id(datas.Period, dat.main_period_id)
+        if per is None:
+            server.custom_abort(500, "Contest main period data is missing")
         info = dat.datas
         if not info.can_register or per.is_over():
-            abort(403, "Registration is not open")
+            server.custom_abort(403, "Registration is not open")
         if user.id in info.participants:
-            abort(409, "User already registered")
+            server.custom_abort(409, "User already registered")
 
         info.participants.append(user.id)
         dat.datas = info
@@ -345,14 +376,16 @@ class ContestUnregister(Resource):
         args = request_parser().parse_args()
         user = get_api_user(args)
         if not user.is_authenticated:
-            abort(403, "Authentication required")
+            server.custom_abort(403, "Authentication required")
 
-        dat: datas.Contest = datas.first_or_404(datas.Contest, cid=cid)
+        dat: datas.Contest = datas.first(datas.Contest, cid=cid)
+        if dat is None:
+            server.custom_abort(404, "Contest not found")
         info = dat.datas
         if not info.can_register:
-            abort(403, "Cannot unregister from this contest")
+            server.custom_abort(403, "Cannot unregister from this contest")
         if user.id not in info.participants:
-            abort(409, "User is not registered")
+            server.custom_abort(409, "User is not registered")
 
         info.participants.remove(user.id)
         dat.datas = info
@@ -372,14 +405,16 @@ class ContestVirtual(Resource):
         args = virtual_register_input.parse_args()
         user = get_api_user(args)
         if not user.is_authenticated:
-            abort(403, "Authentication required")
+            server.custom_abort(403, "Authentication required")
 
-        dat: datas.Contest = datas.first_or_404(datas.Contest, cid=cid)
+        dat: datas.Contest = datas.first(datas.Contest, cid=cid)
+        if dat is None:
+            server.custom_abort(404, "Contest not found")
         info = dat.datas
         if not dat.can_virtual():
-            abort(403, "This contest does not support virtual participation")
+            server.custom_abort(403, "This contest does not support virtual participation")
         if user.id in info.virtual_participants:
-            abort(409, "User already registered for a virtual contest")
+            server.custom_abort(409, "User already registered for a virtual contest")
 
         start_time: datetime = tools.to_datetime(args["start_time"], second=0, microsecond=0)
         per = datas.Period.query.filter_by(start_time=start_time, contest=dat, is_virtual=True).first()
@@ -412,13 +447,18 @@ class ContestStanding(Resource):
         """Get contest standings (scoreboard)"""
         args = request_parser().parse_args()
         user = get_api_user(args)
-        cdat: datas.Contest = datas.first_or_404(datas.Contest, cid=cid)
+        cdat: datas.Contest = datas.first(datas.Contest, cid=cid)
+        if cdat is None:
+            server.custom_abort(404, "Contest not found")
+        can_edit = contests.check_super_access(cdat, user)
+        if not can_edit and cdat.hidden:
+            server.custom_abort(404, "Contest not found")
         info = cdat.datas
         dt = time.time() - info.start
         dt = dt / 60 - info.elapsed
         can_see = (info.standing.public and (dt <= -info.standing.start_freeze or dt >= info.standing.end_freeze))
         if not can_see and not contests.check_super_access(cdat, user):
-            abort(403, "Standings are not public at this time")
+            server.custom_abort(403, "Standings are not public at this time")
         dat = contests.get_standing(cid)
         return api_response(dat)
 
@@ -434,11 +474,13 @@ class ContestQuestion(Resource):
         args = question_input.parse_args()
         user = get_api_user(args)
         if not user.is_authenticated:
-            abort(403, "Authentication required")
+            server.custom_abort(403, "Authentication required")
 
-        cdat: datas.Contest = datas.first_or_404(datas.Contest, cid=cid)
+        cdat: datas.Contest = datas.first(datas.Contest, cid=cid)
+        if cdat is None:
+            server.custom_abort(404, "Contest not found")
         if len(args["title"]) > 80 or len(args["content"]) > 1000:
-            abort(400, "Title or content too long")
+            server.custom_abort(400, "Title or content too long")
 
         obj = datas.Announcement(
             time=datetime.now(),
@@ -465,15 +507,19 @@ class RejectSubmission(Resource):
         args = request_parser().parse_args()
         user = get_api_user(args)
 
-        cdat: datas.Contest = datas.first_or_404(datas.Contest, cid=cid)
+        cdat: datas.Contest = datas.first(datas.Contest, cid=cid)
+        if cdat is None:
+            server.custom_abort(404, "Contest not found")
         if not contests.check_super_access(cdat, user):
-            abort(403, "Permission denied to reject submission")
+            server.custom_abort(403, "Permission denied to reject submission")
 
-        dat = datas.get_or_404(datas.Submission, sub_id)
+        dat = datas.get_by_id(datas.Submission, sub_id)
+        if dat is None:
+            server.custom_abort(404, "Submission not found")
         if dat.contest_id != cdat.id:
-            abort(400, "Submission does not belong to this contest")
+            server.custom_abort(400, "Submission does not belong to this contest")
         if not dat.completed:
-            abort(400, "Cannot reject an incomplete submission")
+            server.custom_abort(400, "Cannot reject an incomplete submission")
 
         contests.reject(dat)
         datas.add(dat)
@@ -491,19 +537,23 @@ class ContestProblem(Resource):
         args = request_parser().parse_args()
         user = get_api_user(args)
 
-        cdat: datas.Contest = datas.first_or_404(datas.Contest, cid=cid)
+        cdat: datas.Contest = datas.first(datas.Contest, cid=cid)
+        if cdat is None:
+            server.custom_abort(404, "Contest not found")
         can_edit = contests.check_super_access(cdat, user)
         status, _, can_see_problems = contests.check_status(cdat, user)
 
         if not (can_edit or can_see_problems):
-            abort(403, "You do not have access to this contest's problems yet")
+            server.custom_abort(403, "You do not have access to this contest's problems yet")
 
         info = cdat.datas
         if pid not in info.problems:
-            abort(404, "Problem not found in this contest")
+            server.custom_abort(404, "Problem not found in this contest")
 
         problem_internal_pid = info.problems[pid].pid
-        pdat: datas.Problem = datas.first_or_404(datas.Problem, pid=problem_internal_pid)
+        pdat: datas.Problem = datas.first(datas.Problem, pid=problem_internal_pid)
+        if pdat is None:
+            server.custom_abort(500, "Problem data is missing")
         p_info = pdat.datas
 
         langs = [lang for lang in executing.langs.keys() if pdat.lang_allowed(lang)]

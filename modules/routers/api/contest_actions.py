@@ -19,10 +19,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 from datetime import timedelta
 
 from flask import request, Response
-from flask_restx import Resource, abort
+from flask_restx import Resource
 
 from .base import get_api_user, api_response, api, request_parser, Form, File
-from ... import contests, datas
+from ... import contests, datas, server
 
 ns = api.namespace("contest_actions", path="/contest/<string:cid>/manage",
                    description="Detailed contest management actions")
@@ -35,14 +35,16 @@ class BaseContestAction(Resource):
     def do_post(self, cid: str):
         auth_args = self.action_input.parse_args()
         user = get_api_user(auth_args)
-        cdat: datas.Contest = datas.first_or_404(datas.Contest, cid=cid)
+        cdat: datas.Contest = datas.first(datas.Contest, cid=cid)
+        if cdat is None:
+            server.custom_abort(404, "Contest not found.")
         if not contests.check_super_access(cdat, user):
-            abort(403, "You do not have permission to perform this action on this contest.")
+            server.custom_abort(403, "You do not have permission to perform this action on this contest.")
 
         action_func = contests.actions.get(self.action_name)
 
         if not action_func:
-            abort(501, f"Action handler for '{self.action_name}' is not implemented.")
+            server.custom_abort(501, f"Action handler for '{self.action_name}' is not implemented.")
 
         dat = cdat.datas
 
@@ -62,7 +64,7 @@ class BaseContestAction(Resource):
         elif result is None:
             return api_response({"message": "OK"})
 
-        abort(500, f"Action handler for '{self.action_name}' returned an unexpected result.")
+        server.custom_abort(500, f"Action handler for '{self.action_name}' returned an unexpected result.")
 
 
 @ns.route("/add_problem")
@@ -72,7 +74,7 @@ class AddProblem(BaseContestAction):
         Form("pid", "Problem ID to add", str, required=True)
     )
 
-    @ns.doc("contest_"+action_name)
+    @ns.doc("contest_" + action_name)
     @ns.expect(action_input)
     def post(self, cid: str):
         """Add a problem to the contest."""
@@ -86,7 +88,7 @@ class RemoveProblem(BaseContestAction):
         Form("idx", "Problem Index to remove", str, required=True)
     )
 
-    @ns.doc("contest_"+action_name)
+    @ns.doc("contest_" + action_name)
     @ns.expect(action_input)
     def post(self, cid: str):
         """Remove a problem from the contest."""
@@ -100,7 +102,7 @@ class AddParticipant(BaseContestAction):
         Form("username", "Username to add", str, required=True)
     )
 
-    @ns.doc("contest_"+action_name)
+    @ns.doc("contest_" + action_name)
     @ns.expect(action_input)
     def post(self, cid: str):
         """Add a participant to the contest."""
@@ -114,7 +116,7 @@ class AddParticipants(BaseContestAction):
         File("file", "File containing list of usernames to add", required=True)
     )
 
-    @ns.doc("contest_"+action_name)
+    @ns.doc("contest_" + action_name)
     @ns.expect(action_input)
     def post(self, cid: str):
         """Add multiple participants to the contest."""
@@ -128,7 +130,7 @@ class RemoveParticipant(BaseContestAction):
         Form("username", "Username to remove", str, required=True)
     )
 
-    @ns.doc("contest_"+action_name)
+    @ns.doc("contest_" + action_name)
     @ns.expect(action_input)
     def post(self, cid: str):
         """Remove a participant from the contest."""
@@ -146,14 +148,16 @@ class ChangeSettings(BaseContestAction):
         Form("pretest_type", "Pretest type for the contest", str, required=True, choices=["all", "last", "no"]),
         Form("practice_type", "Practice type for the contest", str, required=True, choices=["no", "private", "public"]),
         Form("register_type", "Whether self register is allowed", str, required=True, choices=["no", "yes"]),
-        Form("show_standing", "Whether to show standings during the contest", str, required=True, choices=["no", "yes"]),
-        Form("show_contest", "Whether to show the contest in the contest list", str, required=True, choices=["no", "yes"]),
+        Form("show_standing", "Whether to show standings during the contest", str, required=True,
+             choices=["no", "yes"]),
+        Form("show_contest", "Whether to show the contest in the contest list", str, required=True,
+             choices=["no", "yes"]),
         Form("freeze_time", "Freeze time before the end of the contest (in minutes)", int, required=True),
         Form("unfreeze_time", "Unfreeze time after the end of the contest (in minutes)", int, required=True),
         Form("penalty", "Penalty time for wrong submissions (in minutes)", int, required=True)
     )
 
-    @ns.doc("contest_"+action_name)
+    @ns.doc("contest_" + action_name)
     @ns.expect(action_input)
     def post(self, cid: str):
         """Change contest settings."""
@@ -167,7 +171,7 @@ class SaveOrder(BaseContestAction):
         Form("order", "New order of problem indices, comma-separated", str, required=True)
     )
 
-    @ns.doc("contest_"+action_name)
+    @ns.doc("contest_" + action_name)
     @ns.expect(action_input)
     def post(self, cid: str):
         """Save the order of problems in the contest."""
@@ -182,7 +186,7 @@ class SendAnnouncement(BaseContestAction):
         Form("content", "Content of the announcement", str, required=True)
     )
 
-    @ns.doc("contest_"+action_name)
+    @ns.doc("contest_" + action_name)
     @ns.expect(action_input)
     def post(self, cid: str):
         """Send an announcement to all contest participants."""
@@ -196,7 +200,7 @@ class RemoveAnnouncement(BaseContestAction):
         Form("id", "ID of the announcement to remove", int, required=True)
     )
 
-    @ns.doc("contest_"+action_name)
+    @ns.doc("contest_" + action_name)
     @ns.expect(action_input)
     def post(self, cid: str):
         """Remove an announcement from the contest."""
@@ -212,7 +216,7 @@ class SaveQuestion(BaseContestAction):
         Form("public", "Whether the reply is public", str, required=True, choices=["no", "yes"])
     )
 
-    @ns.doc("contest_"+action_name)
+    @ns.doc("contest_" + action_name)
     @ns.expect(action_input)
     def post(self, cid: str):
         """reply a question asked by a participant."""
