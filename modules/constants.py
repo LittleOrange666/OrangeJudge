@@ -129,6 +129,8 @@ judge_path = Path("judge").absolute()
 
 default_lang = "C++17"
 
+error_filename = "stderr.txt"
+
 
 def init():
     problem_path.mkdir(exist_ok=True, parents=True)

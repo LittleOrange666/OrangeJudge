@@ -75,7 +75,7 @@ def run(lang: executing.Language, file: Path, env: executing.Environment, stdin:
     Path(stdout).touch()
     in_file = env.send_rand_file(stdin)
     out_file = env.send_rand_file(stdout)
-    err_file = env.path("stderr.txt")
+    err_file = env.path(constants.error_filename)
     SandboxUser.running.readable(in_file)
     SandboxUser.running.writeable(out_file)
     res = env.run(exec_cmd, 10 * 1000, 1000, in_file, out_file, err_file, user=SandboxUser.running,
@@ -85,7 +85,7 @@ def run(lang: executing.Language, file: Path, env: executing.Environment, stdin:
         return "JE: " + res.error
     if res.result == "TLE":
         return "TLE: The custom test execution time exceeded the 10 second limit"
-    tools.copy(err_file.full, Path(file).parent / "stderr.txt")
+    tools.copy(err_file.full, Path(file).parent / constants.error_filename)
     if res.result == "RE":
         exit_code = str(res.exit_code)
         msg = constants.exit_codes.get(exit_code, exit_code)

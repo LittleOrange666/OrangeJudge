@@ -527,7 +527,7 @@ class RejectSubmission(Resource):
         return api_response({"message": "Submission rejected"})
 
 
-@ns.route("/<string:cid>/problems/<string:pid>")
+@ns.route("/<string:cid>/problem/<string:pid>")
 @ns.param("cid", "The contest ID")
 @ns.param("pid", "The problem ID within the contest")
 class ContestProblem(Resource):

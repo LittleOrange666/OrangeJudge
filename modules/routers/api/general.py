@@ -20,7 +20,7 @@ from flask_restx import Resource, fields
 from pygments import lexers
 
 from .base import get_api_user, api_response, api, marshal_with, request_parser, Args, Form, paging, pagination
-from ... import submitting, datas, objs, tools, executing, tasks, contests, server
+from ... import submitting, datas, objs, tools, executing, tasks, contests, server, constants
 
 ns = api.namespace("general", path="/", description="General API endpoints")
 
@@ -45,7 +45,8 @@ submission_get_output = ns.model("SubmissionDetailsOutput", {
     "ce_msg": fields.String(description="Compilation error message if any"),
     "result": fields.Raw(description="Result of the submission, varies based on problem type"),
     "input": fields.String(description="Input for test submissions", required=False),
-    "output": fields.String(description="Output for test submissions", required=False)
+    "output": fields.String(description="Output for test submissions", required=False),
+    "error": fields.String(description="Error output for test submissions", required=False),
 })
 
 status_item_model = ns.model("StatusItem", {
@@ -150,6 +151,7 @@ class Submission(Resource):
             ret["result"] = dat.simple_result or "unknown"
             ret["input"] = tools.read_default(dat.path / info.infile)
             ret["output"] = tools.read_default(dat.path / info.outfile)
+            ret["error"] = tools.read_default(dat.path / constants.error_filename)
         else:
             result_data = dat.results
             group_results = {}

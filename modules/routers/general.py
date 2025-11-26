@@ -100,7 +100,7 @@ def submission(idx: str):
         inp = tools.read_default(dat.path / info.infile)
         out = tools.read_default(dat.path / info.outfile)
         result = dat.simple_result or "unknown"
-        err = tools.read_default(dat.path / "stderr.txt")
+        err = tools.read_default(dat.path / constants.error_filename)
         ret = render_template("submission/test.html", lang=lang, source=source, inp=inp,
                               out=out, completed=completed, result=result, pos=tasks.get_queue_position(dat),
                               ce_msg=ce_msg, je=info.JE, logid=info.log_uuid, err=err)
