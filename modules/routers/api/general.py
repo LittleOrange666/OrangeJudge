@@ -16,7 +16,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-from flask_login import login_user, logout_user
+from flask_login import login_user, logout_user, current_user
 from flask_restx import Resource, fields
 from pygments import lexers
 
@@ -356,7 +356,7 @@ class Login(Resource):
     @marshal_with(ns, login_status_output)
     def get(self):
         """Check login status."""
-        user = get_api_user(base_request_parser)
+        user = get_api_user(base_request_parser.parse_args())
         if user.is_authenticated:
             return api_response({"logged_in": True, "username": user.id, "display_name": user.data.display_name})
         else:
@@ -392,7 +392,7 @@ class Login(Resource):
     @ns.expect(base_request_parser)
     def delete(self):
         """Perform logout."""
-        user = get_api_user(base_request_parser)
+        user = current_user
         if not user.is_authenticated:
             server.custom_abort(403, "User is not logged in.")
         logout_user()
