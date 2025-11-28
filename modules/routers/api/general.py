@@ -16,11 +16,13 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
+from flask_login import login_user, logout_user
 from flask_restx import Resource, fields
 from pygments import lexers
 
-from .base import get_api_user, api_response, api, marshal_with, request_parser, Args, Form, paging, pagination
-from ... import submitting, datas, objs, tools, executing, tasks, contests, server, constants
+from .base import get_api_user, api_response, api, marshal_with, request_parser, Args, Form, paging, pagination, \
+    base_request_parser
+from ... import submitting, datas, objs, tools, executing, tasks, contests, server, constants, login
 
 ns = api.namespace("general", path="/", description="General API endpoints")
 
@@ -332,3 +334,66 @@ class JudgeInfo(Resource):
             out.append({"name": lang.branch, "compile": " ".join(lang.sample_compile_cmd),
                         "run": " ".join(lang.sample_exec_cmd)})
         return api_response({"langs": out})
+
+
+login_status_output = ns.model("LoginStatusOutput", {
+    "logged_in": fields.Boolean(description="Whether the user is logged in"),
+    "username": fields.String(description="Username of the logged-in user", required=False),
+    "display_name": fields.String(description="Display name of the logged-in user", required=False),
+})
+
+login_user_input = request_parser(
+    Args("api_key", "API key for authentication", type=str, required=False),
+    Args("username", "Username for authentication", type=str, required=False),
+    Args("password", "Password for authentication", type=str, required=False)
+)
+
+
+@ns.route("/login")
+class Login(Resource):
+    @ns.doc("login_status")
+    @ns.expect(base_request_parser)
+    @marshal_with(ns, login_status_output)
+    def get(self):
+        """Check login status."""
+        user = get_api_user(base_request_parser)
+        if user.is_authenticated:
+            return api_response({"logged_in": True, "username": user.id, "display_name": user.data.display_name})
+        else:
+            return api_response({"logged_in": False})
+
+    @ns.doc("perform_login")
+    @ns.expect(login_user_input)
+    @marshal_with(ns, login_status_output)
+    def post(self):
+        """Perform login using API key or username/password."""
+        args = login_user_input.parse_args()
+        api_key = args.get("api_key")
+        username = args.get("username")
+        password = args.get("password")
+
+        if api_key:
+            user_data = datas.first(datas.User, api_key=login.try_hash(api_key))
+            if user_data is None:
+                server.custom_abort(401, "Invalid API key.")
+            user = login.User(user_data.username)
+            login_user(user)
+            return api_response({"logged_in": True, "username": user.id, "display_name": user.data.display_name})
+        elif username and password:
+            user, err = login.try_login(username, password)
+            if user is None:
+                server.custom_abort(401, f"Login failed: {err}")
+            login_user(user)
+            return api_response({"logged_in": True, "username": user.id, "display_name": user.data.display_name})
+        else:
+            server.custom_abort(400, "API key or username/password required for login.")
+
+    @ns.doc("perform_logout")
+    @ns.expect(base_request_parser)
+    def delete(self):
+        """Perform logout."""
+        user = get_api_user(base_request_parser)
+        if not user.is_authenticated:
+            server.custom_abort(403, "User is not logged in.")
+        logout_user()
+        return api_response({"message": "Logged out successfully."})

@@ -54,7 +54,7 @@ services:
           timeout: 3s
           retries: 5
     judge_backend:
-        image: littleorange666/orange_judge:1.9.8
+        image: littleorange666/orange_judge:1.9.9
         read_only: true
         restart: on-failure
         depends_on:
@@ -79,7 +79,7 @@ services:
             - ./data:/app/data
             - ./langs:/app/langs:ro
         environment:
-            - ORANGEJUDGE_VERSION=1.9.8
+            - ORANGEJUDGE_VERSION=1.9.9
             - JUDGER_URL=http://judge_server:8000
             - REDIS_HOST=judge_redis
             - MYSQL_DB=orangejudge
