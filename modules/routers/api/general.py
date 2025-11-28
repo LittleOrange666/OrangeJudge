@@ -343,9 +343,9 @@ login_status_output = ns.model("LoginStatusOutput", {
 })
 
 login_user_input = request_parser(
-    Args("api_key", "API key for authentication", type=str, required=False),
-    Args("username", "Username for authentication", type=str, required=False),
-    Args("password", "Password for authentication", type=str, required=False)
+    Form("api_key", "API key for authentication", type=str, required=False),
+    Form("username", "Username for authentication", type=str, required=False),
+    Form("password", "Password for authentication", type=str, required=False)
 )
 
 
@@ -356,7 +356,7 @@ class Login(Resource):
     @marshal_with(ns, login_status_output)
     def get(self):
         """Check login status."""
-        user = get_api_user(base_request_parser.parse_args())
+        user = current_user
         if user.is_authenticated:
             return api_response({"logged_in": True, "username": user.id, "display_name": user.data.display_name})
         else:
