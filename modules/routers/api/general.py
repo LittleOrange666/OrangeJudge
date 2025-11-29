@@ -343,7 +343,6 @@ login_status_output = ns.model("LoginStatusOutput", {
 })
 
 login_user_input = request_parser(
-    Form("api_key", "API key for authentication", type=str, required=False),
     Form("username", "Username for authentication", type=str, required=False),
     Form("password", "Password for authentication", type=str, required=False)
 )
@@ -368,7 +367,7 @@ class Login(Resource):
     def post(self):
         """Perform login using API key or username/password."""
         args = login_user_input.parse_args()
-        api_key = args.get("api_key")
+        api_key = args.get("api-key")
         username = args.get("username")
         password = args.get("password")
 
