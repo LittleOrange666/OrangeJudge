@@ -19,10 +19,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 from flask_login import login_user, logout_user, current_user
 from flask_restx import Resource, fields
 from pygments import lexers
-
 from .base import get_api_user, api_response, api, marshal_with, request_parser, Args, Form, paging, pagination, \
     base_request_parser
-from ... import submitting, datas, objs, tools, executing, tasks, contests, server, constants, login
+from ... import submitting, datas, objs, tools, executing, tasks, contests, server, constants, login, config
 
 ns = api.namespace("general", path="/", description="General API endpoints")
 
@@ -336,10 +335,27 @@ class JudgeInfo(Resource):
         return api_response({"langs": out})
 
 
+server_info_output = ns.model("ServerInfoOutput", {
+    "need_verify": fields.Boolean(description="Whether email verification is needed for signup"),
+})
+
+
+@ns.route("/server_info")
+class ServerInfo(Resource):
+    @ns.doc("get_server_information")
+    @marshal_with(ns, server_info_output)
+    def get(self):
+        """Get basic server information."""
+        return api_response({
+            "need_verify": config.smtp.enabled,
+        })
+
+
 login_status_output = ns.model("LoginStatusOutput", {
     "logged_in": fields.Boolean(description="Whether the user is logged in"),
     "username": fields.String(description="Username of the logged-in user", required=False),
     "display_name": fields.String(description="Display name of the logged-in user", required=False),
+    "permissions": fields.List(fields.String, description="List of user permissions", required=False),
 })
 
 login_user_input = request_parser(
@@ -355,9 +371,10 @@ class Login(Resource):
     @marshal_with(ns, login_status_output)
     def get(self):
         """Check login status."""
-        user = current_user
+        user: login.User = current_user
         if user.is_authenticated:
-            return api_response({"logged_in": True, "username": user.id, "display_name": user.data.display_name})
+            return api_response({"logged_in": True, "username": user.id, "display_name": user.data.display_name,
+                                 "permissions": [perm for perm in user.data.permission_list()]})
         else:
             return api_response({"logged_in": False})
 
