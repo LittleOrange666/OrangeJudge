@@ -100,6 +100,7 @@ rejudge_all_input = request_parser(
     Form("cid", "Contest ID if applicable", type=str, required=False),
     Form("result", "Filter by result (e.g., AC, WA, TLE)", type=str, required=False),
     Form("lang", "Filter by programming language", type=str, required=False),
+    Form("user", "Filter by username", type=str, required=False)
 )
 
 
@@ -314,6 +315,12 @@ class RejudgeAll(Resource):
             status_query = status_query.filter_by(simple_result_flag=objs.TaskResult[args["result"]].name)
         if args["lang"] and args["lang"] in executing.langs:
             status_query = status_query.filter_by(language=args["lang"])
+        if args["user"]:
+            user_filter = datas.filter_by(datas.User, username=args["user"])
+            if user_filter.count() == 0:
+                status_query = status_query.filter_by(user_id=-1)
+            else:
+                status_query = status_query.filter_by(user=user_filter.first())
 
         for a_submit in status_query:
             tasks.rejudge(a_submit, "wait for rejudge")
@@ -394,13 +401,15 @@ class Login(Resource):
                 server.custom_abort(401, "Invalid API key.")
             user = login.User(user_data.username)
             login_user(user)
-            return api_response({"logged_in": True, "username": user.id, "display_name": user.data.display_name})
+            return api_response({"logged_in": True, "username": user.id, "display_name": user.data.display_name,
+                                 "permissions": [perm for perm in user.data.permission_list()]})
         elif username and password:
             user, err = login.try_login(username, password)
             if user is None:
                 server.custom_abort(401, f"Login failed: {err}")
             login_user(user)
-            return api_response({"logged_in": True, "username": user.id, "display_name": user.data.display_name})
+            return api_response({"logged_in": True, "username": user.id, "display_name": user.data.display_name,
+                                 "permissions": [perm for perm in user.data.permission_list()]})
         else:
             server.custom_abort(400, "API key or username/password required for login.")
 
