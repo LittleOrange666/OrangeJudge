@@ -48,6 +48,8 @@ submission_get_output = ns.model("SubmissionDetailsOutput", {
     "input": fields.String(description="Input for test submissions", required=False),
     "output": fields.String(description="Output for test submissions", required=False),
     "error": fields.String(description="Error output for test submissions", required=False),
+    "pid": fields.String(description="Problem ID associated with the submission"),
+    "simple_result": fields.String(description="Simple result string"),
 })
 
 status_item_model = ns.model("StatusItem", {
@@ -147,7 +149,9 @@ class Submission(Resource):
         ret = {"lang": lang,
                "source_code": source,
                "completed": completed,
-               "ce_msg": ce_msg}
+               "ce_msg": ce_msg,
+               "pid": pdat.pid,
+               "simple_result": dat.simple_result or "unknown"}
         info = dat.datas
         if pdat.pid == "test":
             ret["result"] = dat.simple_result or "unknown"
@@ -165,7 +169,7 @@ class Submission(Resource):
                     group_results = {k: {"result": v.result.name,
                                          "gained_score": v.gained_score,
                                          "time": v.time,
-                                         "mem": v.mem} for k, v in gpr}
+                                         "mem": v.mem} for k, v in gpr.items()}
                 detail = []
                 for res in result_data.results:
                     detail.append({
