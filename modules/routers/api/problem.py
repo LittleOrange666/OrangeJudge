@@ -45,7 +45,8 @@ problem_get_output = ns.model("ProblemListOutput", {
 problem_detail_get_output = ns.model("ProblemDetailOutput", {
     "pid": fields.String(description="Problem ID"),
     "title": fields.String(description="Title of the problem"),
-    "statement": fields.String(description="Problem statement in HTML format"),
+    "statement": fields.String(description="Problem statement in Markdown format"),
+    "statement_html": fields.String(description="Problem statement in HTML format"),
     "langs": fields.List(fields.String, description="List of programming languages allowed for this problem"),
     "samples": fields.List(fields.Nested(ns.model("SampleTestcase", {
         "input": fields.String(description="Sample input for the problem"),
@@ -158,7 +159,8 @@ class ProblemDetail(Resource):
             server.custom_abort(403, "You do not have permission to view this problem.")
         langs = [lang for lang in executing.langs.keys() if pdat.lang_allowed(lang)]
         path = constants.problem_path / pid
-        statement = tools.read(path / "statement.html")
+        statement = tools.read(path / "statement.md") if (path / "statement.md").is_file() else ""
+        statement_html = tools.read(path / "statement.html") if (path / "statement.html").is_file() else ""
         samples = dat.manual_samples
         default_code = dat.default_code
         files = {f for f in default_code.values() if f and f.strip()}
@@ -174,6 +176,7 @@ class ProblemDetail(Resource):
             "pid": pid,
             "title": dat.name,
             "statement": statement,
+            "statement_html": statement_html,
             "langs": langs,
             "samples": [{"input": o.in_txt, "output": o.out_txt} for o in samples],
             "default_code": default_code,
