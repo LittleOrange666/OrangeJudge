@@ -51,7 +51,7 @@ contest_summary_model = ns.model("ContestSummary", {
     "can_virtual": fields.Boolean(description="Whether virtual participation is allowed")
 })
 contest_list_output = ns.model("ContestListOutput", {
-    "contests": fields.List(fields.Nested(contest_summary_model), description="List of contests"),
+    "data": fields.List(fields.Nested(contest_summary_model), description="List of contests"),
     "page": fields.Integer(description="Current page number"),
     "page_count": fields.Integer(description="Total number of pages"),
     "show_pages": fields.List(fields.Integer, description="List of page numbers to display in pagination"),
@@ -105,7 +105,7 @@ submission_status_model = ns.model("SubmissionStatus", {
     "can_see_details": fields.Boolean(description="Whether details are visible"),
 })
 contest_status_output = ns.model("ContestStatusOutput", {
-    "submissions": fields.List(fields.Nested(submission_status_model), description="List of submissions"),
+    "data": fields.List(fields.Nested(submission_status_model), description="List of submissions"),
     "page": fields.Integer(description="Current page number"),
     "page_count": fields.Integer(description="Total number of pages"),
     "show_pages": fields.List(fields.Integer, description="List of page numbers to display"),
@@ -196,7 +196,7 @@ class ContestList(Resource):
             })
 
         return api_response({
-            "contests": contests_data,
+            "data": contests_data,
             "page": page_idx,
             "page_count": page_cnt,
             "show_pages": show_pages,
@@ -302,7 +302,7 @@ class ContestStatus(Resource):
         if args["lang"] and args["lang"] in executing.langs:
             status_query = status_query.filter_by(language=args["lang"])
 
-        got_data, page_cnt, page_idx, show_pages = tools.pagination(status_query, True, args["page"], args["page_size"])
+        got_data, page_cnt, page_idx, show_pages = pagination(status_query, args)
         out = []
         can_edit = contests.check_super_access(dat, api_user)
 
@@ -330,7 +330,7 @@ class ContestStatus(Resource):
                 })
 
         return api_response({
-            "submissions": out, "page": page_idx, "page_count": page_cnt, "show_pages": show_pages,
+            "data": out, "page": page_idx, "page_count": page_cnt, "show_pages": show_pages,
         })
 
 

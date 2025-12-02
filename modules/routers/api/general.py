@@ -194,7 +194,7 @@ class Status(Resource):
     def get(self):
         """Get global submission status (non-contest submissions)."""
         args = status_get_input.parse_args()
-        user = get_api_user(args)
+        user = get_api_user(args, require_login=False)
 
         status_query = datas.filter_by(datas.Submission, contest_id=None)
         if args["user"]:

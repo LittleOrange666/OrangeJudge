@@ -22,7 +22,7 @@ from functools import wraps
 from typing import Any
 
 from flask import Blueprint, request
-from flask_login import current_user
+from flask_login import current_user, AnonymousUserMixin
 from flask_restx import Api, fields, Namespace, reqparse
 from flask_restx.reqparse import ParseResult
 from flask_wtf.csrf import validate_csrf
@@ -114,7 +114,32 @@ def verify_csrf() -> bool:
     return True
 
 
-def get_api_user(args: ParseResult, required: objs.Permission | None = None) -> login.User:
+anon_user = AnonymousUserMixin()
+
+
+def get_api_user(args: ParseResult, required: objs.Permission | None = None, require_login: bool = True) -> login.User:
+    """
+    Retrieve the API user based on the provided arguments and validate permissions.
+
+    This function checks if the current user is authenticated and verifies the CSRF token.
+    If the user is not authenticated, it attempts to retrieve the user using an API key
+    provided in the request arguments or headers. If no valid API key is found, or if the
+    user does not have the required permissions, the function aborts with an appropriate
+    error message. If `require_login` is False, an anonymous user is returned when no API
+    key is provided.
+
+    Args:
+        args (ParseResult): The parsed request arguments containing potential API key information.
+        required (objs.Permission | None, optional): The permission required for the user. Defaults to None.
+        require_login (bool, optional): Whether login is required. If False, an anonymous user is returned
+                                        when no API key is provided. Defaults to True.
+
+    Returns:
+        login.User: The authenticated user object.
+
+    Raises:
+        403: If the API key is missing, invalid, or the user lacks the required permissions.
+    """
     if current_user.is_authenticated and verify_csrf():
         user = current_user
     else:
@@ -122,11 +147,17 @@ def get_api_user(args: ParseResult, required: objs.Permission | None = None) -> 
         if not key and request.headers.get("api-key"):
             key = request.headers.get("api-key")
         if not key:
-            server.custom_abort(403, "Missing API key")
+            if require_login:
+                server.custom_abort(403, "Missing API key")
+            else:
+                key = "PLACEHOLDER_FOR_ANON_USER"
         data_user = datas.first(datas.User, api_key=login.try_hash(key))
-        if data_user is None:
+        if data_user is None and require_login:
             server.custom_abort(403, "API key not match")
-        user = login.User(data_user.username)
+        if data_user:
+            user = login.User(data_user.username)
+        else:
+            user = anon_user
     if required is not None and not user.has(required):
         server.custom_abort(403, f"Required '{required.name}' permission")
     return user

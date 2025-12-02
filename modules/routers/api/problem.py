@@ -40,7 +40,8 @@ problem_list_result_item = ns.model("ProblemOutput", {
 problem_get_output = ns.model("ProblemListOutput", {
     "page_count": fields.Integer(description="Total number of pages"),
     "page": fields.Integer(description="Current page index"),
-    "results": fields.List(fields.Nested(problem_list_result_item), description="List of problems")
+    "data": fields.List(fields.Nested(problem_list_result_item), description="List of problems"),
+    "show_pages": fields.List(fields.Integer, description="List of page numbers to display in pagination")
 })
 problem_detail_get_output = ns.model("ProblemDetailOutput", {
     "pid": fields.String(description="Problem ID"),
@@ -121,7 +122,7 @@ class ProblemIndex(Resource):
     def get(self):
         """Lists problems. Can list either public problems or problems the user can manage."""
         args = problem_get_input.parse_args()
-        user = get_api_user(args)
+        user = get_api_user(args, require_login=False)
 
         if args.get('manageable') == "true":
             if not user.is_authenticated:
@@ -136,10 +137,13 @@ class ProblemIndex(Resource):
         else:
             problem_obj = datas.Problem.query.filter_by(is_public=True)
 
-        got_data, page_cnt, page_idx, _ = pagination(problem_obj, args)
+        got_data, page_cnt, page_idx, show_pages = pagination(problem_obj, args)
         results = [{"pid": p.pid, "name": p.name} for p in got_data]
-        res = {"page_count": page_cnt, "page": page_idx, "results": results}
-        return api_response(res)
+        return api_response({"page_count": page_cnt,
+                             "page": page_idx,
+                             "data": results,
+                             "show_pages": show_pages
+                             })
 
 
 @ns.route("/<string:pid>")
@@ -150,12 +154,13 @@ class ProblemDetail(Resource):
     def get(self, pid):
         """Gets the public details of a problem for viewing/solving."""
         args = problem_detail_get_input.parse_args()
-        user = get_api_user(args)
+        user = get_api_user(args, require_login=False)
         pdat: datas.Problem = datas.first(datas.Problem, pid=pid)
         if pdat is None:
             server.custom_abort(404, f"Problem {pid!r} not found.")
         dat = pdat.datas
-        if not pdat.is_public and not user.has(objs.Permission.admin) and user.id not in dat.users:
+        if not pdat.is_public and (not user.is_authenticated or
+                                   (not user.has(objs.Permission.admin) and user.id not in dat.users)):
             server.custom_abort(403, "You do not have permission to view this problem.")
         langs = [lang for lang in executing.langs.keys() if pdat.lang_allowed(lang)]
         path = constants.problem_path / pid
@@ -268,7 +273,6 @@ class ProblemPreview(Resource):
         return problemsetting.preview(preview_args, pdat)
 
 
-
 problem_file_input = request_parser(
     Args("cid", "Contest ID if applicable", type=str, required=False)
 )
@@ -281,7 +285,7 @@ class ProblemFile(Resource):
     def get(self, pid: str, filename: str):
         """Serve a public file associated with a problem."""
         args = problem_file_input.parse_args()
-        user = get_api_user(args)
+        user = get_api_user(args, require_login=False)
         idx = secure_filename(pid)
         filename = secure_filename(filename)
 
