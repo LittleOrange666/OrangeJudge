@@ -100,14 +100,14 @@ contest_details_output = ns.model("ContestDetailsOutput", {
 })
 submission_status_model = ns.model("SubmissionStatus", {
     "id": fields.String(description="Submission ID"),
-    "timestamp": fields.Float(description="Submission timestamp"),
+    "time": fields.Float(description="Submission timestamp"),
     "user_id": fields.String(description="User ID"),
     "user_name": fields.String(description="User display name"),
     "problem_id": fields.String(description="Problem ID"),
     "problem_name": fields.String(description="Problem name"),
-    "language": fields.String(description="Programming language"),
+    "lang": fields.String(description="Programming language"),
     "result": fields.String(description="Submission result"),
-    "can_see_details": fields.Boolean(description="Whether details are visible"),
+    "can_see": fields.Boolean(description="Whether details are visible"),
 })
 contest_status_output = ns.model("ContestStatusOutput", {
     "data": fields.List(fields.Nested(submission_status_model), description="List of submissions"),
@@ -337,16 +337,16 @@ class ContestStatus(Resource):
 
             if can_know_all:
                 out.append({
-                    "id": str(obj.id), "timestamp": obj.time.timestamp(), "user_id": obj.user.username,
+                    "id": str(obj.id), "time": obj.time.timestamp(), "user_id": obj.user.username,
                     "user_name": obj.user.display_name, "problem_id": problem_display_id, "problem_name": problem_name,
-                    "language": obj.language, "result": obj.simple_result or "unknown",
-                    "can_see_details": can_see_details
+                    "lang": obj.language, "result": obj.simple_result or "unknown",
+                    "can_see": can_see_details
                 })
             else:
                 out.append({
-                    "id": str(obj.id), "timestamp": obj.time.timestamp(), "user_id": "???", "user_name": "???",
-                    "problem_id": "?", "problem_name": "???", "language": "???", "result": "???",
-                    "can_see_details": False
+                    "id": str(obj.id), "time": obj.time.timestamp(), "user_id": "???", "user_name": "???",
+                    "problem_id": "?", "problem_name": "???", "lang": "???", "result": "???",
+                    "can_see": False
                 })
 
         return api_response({
@@ -581,7 +581,14 @@ class ContestProblem(Resource):
         path = constants.problem_path / pdat.pid
         statement = tools.read(path / "statement.md") if (path / "statement.md").is_file() else ""
         statement_html = tools.read(path / "statement.html") if (path / "statement.html").is_file() else ""
-        samples = pdat.manual_samples
+        dat = pdat.datas
+        samples = dat.manual_samples
+        samples.extend([objs.ManualSample(tools.read(path / "testcases" / o.in_file),
+                                          tools.read(path / "testcases" / o.out_file))
+                        for o in dat.testcases if o.sample])
+        samples.extend([objs.ManualSample(tools.read(path / "testcases_gen" / o.in_file),
+                                          tools.read(path / "testcases_gen" / o.out_file))
+                        for o in dat.testcases_gen if o.sample])
 
         problem_data = {
             "pid": pid,

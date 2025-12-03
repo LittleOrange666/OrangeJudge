@@ -173,6 +173,15 @@ class Submission(Resource):
             result_data = dat.results
             group_results = {}
             result = {}
+            detail = []
+            for res in result_data.results:
+                detail.append({
+                    "result": res.result.name,
+                    "time": res.time,
+                    "mem": res.mem,
+                    "score": res.score
+                })
+            result["detail"] = detail
             if completed and not info.JE:
                 result["CE"] = result_data.CE
                 gpr = result_data.group_results
@@ -181,17 +190,8 @@ class Submission(Resource):
                                          "gained_score": v.gained_score,
                                          "time": v.time,
                                          "mem": v.mem} for k, v in gpr.items()}
-                detail = []
-                for res in result_data.results:
-                    detail.append({
-                        "result": res.result.name,
-                        "time": res.time,
-                        "mem": res.mem,
-                        "score": res.score
-                    })
                 result["total_score"] = result_data.total_score
                 result["group_result"] = group_results
-                result["detail"] = detail
             ret["result"] = result
         ret["cid"] = cid
         ret["contest"] = contest
