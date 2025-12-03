@@ -16,6 +16,8 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
+import os
+
 from flask_login import login_user, logout_user, current_user
 from flask_restx import Resource, fields
 from pygments import lexers
@@ -359,7 +361,13 @@ class JudgeInfo(Resource):
 
 server_info_output = ns.model("ServerInfoOutput", {
     "need_verify": fields.Boolean(description="Whether email verification is needed for signup"),
+    "site_name": fields.String(description="Name of the server"),
+    "version_info": fields.String(description="Version information of the server")
 })
+
+version_info = ""
+if "ORANGEJUDGE_VERSION" in os.environ:
+    version_info = "Version: " + os.environ["ORANGEJUDGE_VERSION"]
 
 
 @ns.route("/server_info")
@@ -370,6 +378,8 @@ class ServerInfo(Resource):
         """Get basic server information."""
         return api_response({
             "need_verify": config.smtp.enabled,
+            'site_name': config.server.server_name,
+            'version_info': version_info
         })
 
 

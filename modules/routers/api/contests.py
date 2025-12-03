@@ -147,6 +147,12 @@ contest_problem_detail_model = ns.model("ContestProblemDetail", {
     "contest_name": fields.String(description="Contest name"),
     "time_limit": fields.Float(description="Time limit in seconds"),
     "memory_limit": fields.Integer(description="Memory limit in MB"),
+    "statement": fields.String(description="Problem statement in Markdown format"),
+    "statement_html": fields.String(description="Problem statement in HTML format"),
+    "samples": fields.List(fields.Nested(ns.model("ContestSampleTestcase", {
+        "input": fields.String(description="Sample input for the problem"),
+        "output": fields.String(description="Sample output for the problem")
+    })), description="List of sample testcases"),
 })
 # endregion
 
@@ -572,6 +578,10 @@ class ContestProblem(Resource):
         p_info = pdat.datas
 
         langs = [lang for lang in executing.langs.keys() if pdat.lang_allowed(lang)]
+        path = constants.problem_path / pdat.pid
+        statement = tools.read(path / "statement.md") if (path / "statement.md").is_file() else ""
+        statement_html = tools.read(path / "statement.html") if (path / "statement.html").is_file() else ""
+        samples = pdat.manual_samples
 
         problem_data = {
             "pid": pid,
@@ -583,6 +593,9 @@ class ContestProblem(Resource):
             "contest_name": cdat.name,
             "time_limit": p_info.timelimit,
             "memory_limit": p_info.memorylimit,
+            "statement": statement,
+            "statement_html": statement_html,
+            "samples": [{"input": o.in_txt, "output": o.out_txt} for o in samples],
         }
 
         return api_response(problem_data)
