@@ -48,7 +48,10 @@ contest_summary_model = ns.model("ContestSummary", {
     "start_time": fields.Float(description="Start time timestamp"),
     "end_time": fields.Float(description="End time timestamp"),
     "status": fields.String(description="Contest status (Running, Upcoming, Ended)"),
-    "can_virtual": fields.Boolean(description="Whether virtual participation is allowed")
+    "can_virtual": fields.Boolean(description="Whether virtual participation is allowed"),
+    "can_register": fields.Boolean(description="Whether registration is allowed"),
+    "is_registered": fields.Boolean(description="Whether the user is registered for the contest"),
+    "elapsed": fields.Integer(description="Contest duration in minutes"),
 })
 contest_list_output = ns.model("ContestListOutput", {
     "data": fields.List(fields.Nested(contest_summary_model), description="List of contests"),
@@ -92,6 +95,8 @@ contest_details_output = ns.model("ContestDetailsOutput", {
     "questions": fields.List(fields.Nested(question_model), description="List of questions"),
     "is_registered": fields.Boolean(description="Whether the user is registered"),
     "is_virtual_participant": fields.Boolean(description="Whether the user is a virtual participant"),
+    "elapsed": fields.Integer(description="Contest duration in minutes"),
+    "can_register": fields.Boolean(description="Whether registration is allowed"),
 })
 submission_status_model = ns.model("SubmissionStatus", {
     "id": fields.String(description="Submission ID"),
@@ -166,7 +171,7 @@ question_input = request_parser(
 
 # endregion
 
-@ns.route("/")
+@ns.route("")
 class ContestList(Resource):
     @ns.doc("list_contests")
     @ns.expect(contest_list_input)
@@ -174,25 +179,32 @@ class ContestList(Resource):
     def get(self):
         """List all available contests"""
         args = contest_list_input.parse_args()
-        user = get_api_user(args)
+        user = get_api_user(args, require_login=False)
 
         query = datas.Contest.query
-        if not user.has(Permission.admin):
+        if not user.is_authenticated or not user.has(Permission.make_problems):
             query = query.filter_by(hidden=False)
 
         got_data, page_cnt, page_idx, show_pages = pagination(query, args)
 
         contests_data = []
         for contest in got_data:
+            contest: datas.Contest
             info: objs.ContestData = contest.datas
             status, _, _ = contests.check_status(contest, user)
+            can_vir = contest.can_virtual() and user.is_authenticated and user.id not in info.virtual_participants
+            can_reg = info.can_register and user.is_authenticated
+            is_reg = user.is_authenticated and user.id in info.participants
             contests_data.append({
                 "cid": contest.cid,
                 "name": contest.name,
                 "start_time": info.start,
+                "elapsed": info.elapsed,
                 "end_time": info.start + info.elapsed * 60,
                 "status": status.name,
-                "can_virtual": contest.can_virtual()
+                "can_virtual": can_vir,
+                "can_register": can_reg,
+                "is_registered": is_reg
             })
 
         return api_response({
@@ -257,6 +269,7 @@ class Contest(Resource):
             "description": "a contest",
             "start_time": info.start,
             "end_time": info.start + info.elapsed * 60,
+            "elapsed": info.elapsed,
             "status": status.name,
             "can_edit": can_edit,
             "can_see_problems": can_see_problems,
@@ -264,7 +277,8 @@ class Contest(Resource):
             "announcements": announcements_data,
             "questions": questions_data,
             "is_registered": user.is_authenticated and user.id in info.participants,
-            "is_virtual_participant": user.is_authenticated and user.id in info.virtual_participants
+            "is_virtual_participant": user.is_authenticated and user.id in info.virtual_participants,
+            "can_register": info.can_register and user.is_authenticated,
         })
 
 

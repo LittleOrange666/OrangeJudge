@@ -50,6 +50,8 @@ submission_get_output = ns.model("SubmissionDetailsOutput", {
     "error": fields.String(description="Error output for test submissions", required=False),
     "pid": fields.String(description="Problem ID associated with the submission"),
     "simple_result": fields.String(description="Simple result string"),
+    "cid": fields.String(description="Contest ID if applicable"),
+    "contest": fields.String(description="Contest name if applicable"),
 })
 
 status_item_model = ns.model("StatusItem", {
@@ -154,12 +156,18 @@ class Submission(Resource):
                "pid": pdat.pid,
                "simple_result": dat.simple_result or "unknown"}
         info = dat.datas
+        contest = ""
+        cid = ""
         if pdat.pid == "test":
             ret["result"] = dat.simple_result or "unknown"
             ret["input"] = tools.read_default(dat.path / info.infile)
             ret["output"] = tools.read_default(dat.path / info.outfile)
             ret["error"] = tools.read_default(dat.path / constants.error_filename)
         else:
+            if dat.contest_id:
+                cdat: datas.Contest = dat.contest
+                contest = cdat.name
+                cid = cdat.cid
             result_data = dat.results
             group_results = {}
             result = {}
@@ -183,6 +191,8 @@ class Submission(Resource):
                 result["group_result"] = group_results
                 result["detail"] = detail
             ret["result"] = result
+        ret["cid"] = cid
+        ret["contest"] = contest
         return api_response(ret)
 
 
