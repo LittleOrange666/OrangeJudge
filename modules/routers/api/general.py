@@ -128,6 +128,8 @@ class Submission(Resource):
         cid = args.get("cid")
         if pid == "test":
             inp = args["input"]
+            if inp is None:
+                inp = ""
             idx = submitting.test_submit(lang, code, inp, user)
         else:
             idx = submitting.submit(lang, pid, code, cid, user)
