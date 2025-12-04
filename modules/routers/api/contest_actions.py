@@ -19,9 +19,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 from datetime import timedelta
 
 from flask import request, Response
-from flask_restx import Resource
+from flask_restx import Resource, fields
 
-from .base import get_api_user, api_response, api, request_parser, Form, File, base_request_parser
+from .base import get_api_user, api_response, api, request_parser, Form, File, base_request_parser, marshal_with
 from ... import contests, datas, server
 
 ns = api.namespace("contest_manage", path="/contest/<string:cid>/manage",
@@ -129,6 +129,22 @@ class Participant(Resource):
         return do_action(cid, self.delete_action_name, self.delete_action_input)
 
 
+setting_get_output = ns.model("ContestSettingGetOutput", {
+    "contest_title": fields.String(description="Title for the contest"),
+    "start_time": fields.Integer(description="Start time for the contest (ISO format)"),
+    "elapsed_time": fields.Integer(description="Elapsed time for the contest (in minutes)"),
+    "rule_type": fields.String(description="Rule type for the contest"),
+    "pretest_type": fields.String(description="Pretest type for the contest"),
+    "practice_type": fields.String(description="Practice type for the contest"),
+    "register_type": fields.Boolean(description="Whether self register is allowed"),
+    "show_standing": fields.Boolean(description="Whether to show standings during the contest"),
+    "show_contest": fields.Boolean(description="Whether to show the contest in the contest list"),
+    "freeze_time": fields.Integer(description="Freeze time before the end of the contest (in minutes)"),
+    "unfreeze_time": fields.Integer(description="Unfreeze time after the end of the contest (in minutes)"),
+    "penalty": fields.Integer(description="Penalty time for wrong submissions (in minutes)")
+})
+
+
 @ns.route("/settings")
 class ChangeSettings(Resource):
     action_name = "change_settings"
@@ -154,6 +170,34 @@ class ChangeSettings(Resource):
     def put(self, cid: str):
         """Change contest settings."""
         return do_action(cid, self.action_name, self.action_input)
+
+    @ns.doc("contest_get_settings")
+    @ns.expect(base_request_parser)
+    @marshal_with(ns,setting_get_output)
+    def get(self, cid: str):
+        """Get current contest settings."""
+        user = get_api_user(base_request_parser.parse_args())
+        cdat: datas.Contest = datas.first(datas.Contest, cid=cid)
+        if cdat is None:
+            server.custom_abort(404, "Contest not found.")
+        if not contests.check_super_access(cdat, user):
+            server.custom_abort(403, "You do not have permission to perform this action on this contest.")
+        dat = cdat.datas
+        settings = {
+            "contest_title": cdat.name,
+            "start_time": dat.start,
+            "elapsed_time": dat.elapsed,
+            "rule_type": dat.type.name,
+            "pretest_type": dat.pretest.name,
+            "practice_type": dat.practice.name,
+            "register_type": dat.can_register,
+            "show_standing": dat.standing.public,
+            "show_contest": not cdat.hidden,
+            "freeze_time": dat.standing.start_freeze,
+            "unfreeze_time": dat.standing.end_freeze,
+            "penalty": dat.penalty
+        }
+        return api_response(settings)
 
 
 @ns.route("/announcement")

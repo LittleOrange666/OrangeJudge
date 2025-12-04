@@ -91,6 +91,8 @@ def run(lang: executing.Language, file: Path, env: executing.Environment, stdin:
         msg = constants.exit_codes.get(exit_code, exit_code)
         if res.signal == 31:
             return "RF: Violation of seccomp rules: " + res.seccomp_info
+        if res.signal == 25:
+            return "OLE: Output limit exceeded"
         sig_name = str(res.signal)
         if sig_name in constants.signal_names:
             sig_name = f"{sig_name} ({constants.signal_names[sig_name]})"
