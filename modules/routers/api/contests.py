@@ -131,7 +131,7 @@ standing_output = ns.model("StandingOutput", {
     "pers": fields.List(fields.Nested(ns.model("StandingPeriod", {
         "start_time": fields.Float(description="Period start time"),
         "judging": fields.Boolean(description="Whether judging is in progress"),
-        "id": fields.Integer(description="Period ID"),
+        "idx": fields.Integer(description="Period ID"),
     })), description="List of periods"),
     "main_per": fields.Integer(description="Main period ID"),
     "participants": fields.List(fields.String, description="List of participants"),
@@ -243,7 +243,7 @@ class Contest(Resource):
     def get(self, cid: str):
         """Get details of a specific contest"""
         args = base_request_parser.parse_args()
-        user = get_api_user(args)
+        user = get_api_user(args, require_login=False)
 
         dat: datas.Contest = datas.first(datas.Contest, cid=cid)
         if dat is None:
@@ -262,7 +262,10 @@ class Contest(Resource):
 
         questions_query = dat.announcements.filter_by(question=True)
         if not can_edit:
-            questions_query = questions_query.filter_by(user=user.data)
+            if user.is_authenticated:
+                questions_query = questions_query.filter_by(user=user.data)
+            else:
+                questions_query = questions_query.filter_by(user=None)
         questions_data = [{
             "id": q.id, "title": q.title, "content": q.content,
             "time": q.time.timestamp(), "author": q.user.username,
@@ -297,7 +300,7 @@ class ContestStatus(Resource):
     def get(self, cid: str):
         """Get submission status for a contest with filtering"""
         args = contest_status_input.parse_args()
-        api_user = get_api_user(args)
+        api_user = get_api_user(args, require_login=False)
 
         dat: datas.Contest = datas.first(datas.Contest, cid=cid)
         if dat is None:
@@ -393,7 +396,7 @@ class ContestUnregister(Resource):
     @ns.expect(base_request_parser)
     @marshal_with(ns, ok_output)
     def post(self, cid: str):
-        """Unregister from a contest"""
+        """get participant list of a contest"""
         args = base_request_parser.parse_args()
         user = get_api_user(args)
         if not user.is_authenticated:
@@ -413,6 +416,26 @@ class ContestUnregister(Resource):
         flag_modified(dat, "data")
         datas.add(dat)
         return api_response({"message": "Successfully unregistered"})
+
+
+participants_output = ns.model("ContestParticipantsOutput", {
+    "participants": fields.List(fields.String, description="List of participant user IDs")
+})
+
+
+@ns.route("/<string:cid>/participants")
+@ns.param("cid", "The contest ID")
+class ContestParticipants(Resource):
+    @ns.doc("participants_for_contest")
+    @ns.expect(base_request_parser)
+    @marshal_with(ns, participants_output)
+    def get(self, cid: str):
+        """Unregister from a contest"""
+        dat: datas.Contest = datas.first(datas.Contest, cid=cid)
+        if dat is None:
+            server.custom_abort(404, "Contest not found")
+        info = dat.datas
+        return api_response({"participants": info.participants})
 
 
 @ns.route("/<string:cid>/virtual")
