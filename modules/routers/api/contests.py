@@ -97,6 +97,7 @@ contest_details_output = ns.model("ContestDetailsOutput", {
     "is_virtual_participant": fields.Boolean(description="Whether the user is a virtual participant"),
     "elapsed": fields.Integer(description="Contest duration in minutes"),
     "can_register": fields.Boolean(description="Whether registration is allowed"),
+    "target": fields.Integer(description="Target time")
 })
 submission_status_model = ns.model("SubmissionStatus", {
     "id": fields.String(description="Submission ID"),
@@ -252,7 +253,7 @@ class Contest(Resource):
         if not can_edit and dat.hidden:
             server.custom_abort(404, "Contest not found")
 
-        status, _, can_see_problems = contests.check_status(dat, user)
+        status, target, can_see_problems = contests.check_status(dat, user)
         can_see_problems = can_see_problems or can_edit
         info = dat.datas
 
@@ -288,6 +289,7 @@ class Contest(Resource):
             "is_registered": user.is_authenticated and user.id in info.participants,
             "is_virtual_participant": user.is_authenticated and user.id in info.virtual_participants,
             "can_register": info.can_register and user.is_authenticated,
+            "target": target
         })
 
 
