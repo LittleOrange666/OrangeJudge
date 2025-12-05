@@ -140,7 +140,7 @@ def get_api_user(args: ParseResult, required: objs.Permission | None = None, req
     Raises:
         403: If the API key is missing, invalid, or the user lacks the required permissions.
     """
-    if current_user.is_authenticated and verify_csrf():
+    if current_user.is_authenticated:
         user = current_user
     else:
         key = args.get("api-key")

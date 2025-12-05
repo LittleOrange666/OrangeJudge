@@ -79,7 +79,7 @@ services:
             - ./data:/app/data
             - ./langs:/app/langs:ro
         environment:
-            - ORANGEJUDGE_VERSION=1.10.5
+            - ORANGEJUDGE_VERSION=1.10.6
             - JUDGER_URL=http://judge_server:8000
             - REDIS_HOST=judge_redis
             - MYSQL_DB=orangejudge
