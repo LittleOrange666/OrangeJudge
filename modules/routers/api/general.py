@@ -54,6 +54,7 @@ submission_get_output = ns.model("SubmissionDetailsOutput", {
     "simple_result": fields.String(description="Simple result string"),
     "cid": fields.String(description="Contest ID if applicable"),
     "contest": fields.String(description="Contest name if applicable"),
+    "pos": fields.Integer(description="Position in the judging queue")
 })
 
 status_item_model = ns.model("StatusItem", {
@@ -197,6 +198,7 @@ class Submission(Resource):
             ret["result"] = result
         ret["cid"] = cid
         ret["contest"] = contest
+        ret["pos"] = tasks.get_queue_position(dat)
         return api_response(ret)
 
 
