@@ -29,6 +29,7 @@ from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from flask_sqlalchemy.query import Query
 from flask_sqlalchemy.session import Session
+from sqlalchemy.exc import PendingRollbackError
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -77,7 +78,10 @@ def teardown_request(exception=None):
     if exception:
         db.session.rollback()
     else:
-        db.session.commit()
+        try:
+            db.session.commit()
+        except PendingRollbackError:
+            db.session.rollback()
 
 
 @app.teardown_appcontext
