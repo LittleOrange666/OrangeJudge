@@ -21,7 +21,7 @@ import os
 from pathlib import Path
 from typing import Iterable
 
-from flask import abort, render_template, request
+from flask import render_template, request
 from flask_login import login_required
 from werkzeug.utils import secure_filename
 
@@ -106,9 +106,9 @@ def problem_action():
     idx = secure_filename(idx)
     pdat = datas.first_or_404(datas.Problem, pid=idx)
     if (problem_path / idx / "waiting").is_file():
-        abort(503)
+        server.custom_abort(503, "已有其他操作正在進行中，請稍後再試。")
     if problemsetting.check_background_action(idx) is not None:
-        abort(503)
+        server.custom_abort(503, "已有其他操作正在進行中，請稍後再試。")
     dat = pdat.data
     login.check_user(Permission.make_problems, dat["users"])
     return problemsetting.action(request.form)

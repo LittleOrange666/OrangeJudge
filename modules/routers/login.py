@@ -22,7 +22,7 @@ import time
 from urllib.parse import urlparse
 
 import flask
-from flask import abort, render_template, redirect, request, Response
+from flask import render_template, redirect, request, Response
 from flask_login import login_required, current_user, login_user, logout_user
 from werkzeug.utils import secure_filename
 
@@ -37,11 +37,11 @@ app = server.app
 @login_required
 def log(uid):
     if not current_user.has(Permission.admin):
-        abort(403)
+        server.custom_abort(403, "無權限查看日誌")
     uid = secure_filename(uid)
     path = log_path / f"{uid}.log"
     if not path.exists():
-        abort(404)
+        server.custom_abort(404, "日誌不存在")
     return render_template("log.html", content=tools.read(path))
 
 
@@ -75,7 +75,7 @@ def do_login():
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if not config.account.signup:
-        abort(503)
+        server.custom_abort(503, "註冊功能已被關閉")
     need_verify = config.smtp.enabled
     if request.method == 'GET':
         link = request.referrer
@@ -123,15 +123,15 @@ verify_codes = locks.manager.dict()
 def get_code():
     email = request.form["email"]
     if constants.email_reg.match(email) is None:
-        abort(400)
+        server.custom_abort(400, "Email格式不正確")
     if email in verify_codes and verify_codes[email][1] > time.time() - 60:
-        abort(409)
+        server.custom_abort(409, "請勿頻繁獲取驗證碼")
     idx = "".join(str(random.randint(0, 9)) for _ in range(6))
     verify_codes[email] = (idx, time.time())
     if not config.smtp.enabled:
-        abort(503)
+        server.custom_abort(503, "伺服器未啟用郵件驗證功能")
     if not login.send_code(email, idx):
-        abort(503)
+        server.custom_abort(503, "無法發送驗證碼，請稍後再試")
     return Response(status=200)
 
 
@@ -159,7 +159,7 @@ def logout():
 def user_page(name):
     name = name.lower()
     if not login.exist(name):
-        abort(404)
+        server.custom_abort(404, "使用者不存在")
     return render_template("user.html", name=name, data=login.get_user(name).data)
 
 
@@ -174,16 +174,16 @@ def settings():
     if request.form["action"] == "general_info":
         display_name = request.form["DisplayName"]
         if len(display_name) > 120 or len(display_name) < 1:
-            abort(400)
+            server.custom_abort(400, "顯示名稱長度應介於1到120個字元之間")
         data.display_name = display_name
         current_user.save()
     elif request.form["action"] == "change_password":
         old_password = request.form.get("old_password", "")
         new_password = request.form.get("new_password", "")
         if login.try_hash(old_password) != data.password_sha256_hex:
-            abort(403)
+            server.custom_abort(403, "舊密碼錯誤")
         if len(new_password) < 6:
-            abort(400)
+            server.custom_abort(400, "密碼應至少6個字元")
         data.password_sha256_hex = login.try_hash(new_password)
         current_user.save()
     return "", 200
@@ -202,9 +202,9 @@ def gen_key():
 @app.route("/forget_password", methods=["GET", "POST"])
 def forget_password():
     if not config.smtp.enabled:
-        abort(503)
+        server.custom_abort(503, "伺服器未啟用郵件驗證功能，無法使用此功能")
     if current_user.is_authenticated:
-        abort(409)
+        server.custom_abort(409, "已登入狀態無法使用此功能")
     if request.method == "GET":
         return render_template("forget_password.html")
     email = request.form["email"]
@@ -212,9 +212,9 @@ def forget_password():
     password = request.form["password"]
     user = login.get_user(email)
     if user is None:
-        abort(404)
+        server.custom_abort(404, "使用者不存在")
     if not use_code(email, verify):
-        abort(403)
+        server.custom_abort(403, "驗證碼錯誤")
     data = user.data
     data.password_sha256_hex = login.try_hash(password)
     user.save()

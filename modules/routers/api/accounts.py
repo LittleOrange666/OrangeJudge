@@ -105,6 +105,8 @@ forget_password_input = request_parser(
     Form("verify", "Email verification code", type=str, required=True),
     Form("password", "New password", type=str, required=True)
 )
+
+
 # endregion
 
 

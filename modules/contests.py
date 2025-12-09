@@ -26,7 +26,7 @@ from multiprocessing import Process
 from time import sleep
 
 from cachetools import TTLCache, cached
-from flask import abort, request
+from flask import request
 from flask_login import current_user
 from loguru import logger
 from openpyxl.reader.excel import load_workbook
@@ -40,7 +40,7 @@ actions = tools.Switcher()
 
 def create_contest(name: str, user: datas.User) -> str:
     if len(name) > 120:
-        abort(400)
+        server.custom_abort(400, "Contest name too long")
     ccnt = datas.count(datas.Contest)
     cidx = ccnt + 1
     while datas.count(datas.Contest, cid=str(cidx)) > 0:
@@ -78,10 +78,10 @@ def add_problem(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: ob
     pid = form["pid"]
     pdat: datas.Problem = datas.first_or_404(datas.Problem, pid=pid)
     if len(pdat.datas.versions) == 0:
-        abort(409)
+        server.custom_abort(409, "Problem has no available version")
     for idx, obj in dat.problems.items():
         if obj.pid == pid:
-            abort(409)
+            server.custom_abort(409, "Problem already added to contest")
     idx = 0
     while calidx(idx) in dat.problems:
         idx += 1
@@ -93,7 +93,7 @@ def add_problem(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: ob
 def remove_problem(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: objs.ContestData) -> str:
     idx = form["idx"]
     if idx not in dat.problems:
-        abort(409)
+        server.custom_abort(409, "Problem not found in contest")
     del dat.problems[idx]
     return "index_page"
 
@@ -102,7 +102,7 @@ def remove_problem(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat:
 def add_participant(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: objs.ContestData) -> str:
     user: datas.User = datas.first_or_404(datas.User, username=form["username"].lower())
     if user.username in dat.participants:
-        abort(409)
+        server.custom_abort(409, "User is already a participant")
     dat.participants.append(user.username)
     return "participants"
 
@@ -111,10 +111,10 @@ def add_participant(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat
 def add_participants(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: objs.ContestData) -> str:
     file = request.files["file"]
     if not file or file.filename == "":
-        abort(400)
+        server.custom_abort(400, "No file provided")
     ext = file.filename.rsplit(".", 1)[-1].lower()
     if ext not in ("xlsx", "csv"):
-        abort(400)
+        server.custom_abort(400, "Unsupported file type")
     try:
         in_memory_file = BytesIO(file.stream.read())
         if ext == ".xlsx":
@@ -160,7 +160,7 @@ def add_participants(form: ImmutableMultiDict[str, str], cdat: datas.Contest, da
 def remove_participant(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: objs.ContestData) -> str:
     user: datas.User = datas.first_or_404(datas.User, username=form["username"].lower())
     if user.username not in dat.participants:
-        abort(409)
+        server.custom_abort(409, "User is not a participant")
     dat.participants.remove(user.username)
     return "participants"
 
@@ -169,41 +169,41 @@ def remove_participant(form: ImmutableMultiDict[str, str], cdat: datas.Contest, 
 def change_settings(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: objs.ContestData) -> str:
     contest_title = form["contest_title"]
     if len(contest_title) < 1 or len(contest_title) > 120:
-        abort(400)
+        server.custom_abort(400, "Contest title length must be between 1 and 120 characters")
     start_time = 0
     try:
         start_time = tools.to_datetime(form["start_time"], second=0, microsecond=0).timestamp()
     except ValueError:
-        abort(400)
+        server.custom_abort(400, "Invalid start time format")
     if not form["elapsed_time"].isdigit():
-        abort(400)
+        server.custom_abort(400, "Elapsed time must be a positive integer")
     elapsed_time = int(form["elapsed_time"])
     rule_type = form["rule_type"]
     if rule_type not in ("icpc", "ioi"):
-        abort(400)
+        server.custom_abort(400, "Invalid rule type")
     pretest_type = form["pretest_type"]
     if pretest_type not in ("all", "last", "no"):
-        abort(400)
+        server.custom_abort(400, "Invalid pretest type")
     practice_type = form["practice_type"]
     if practice_type not in ("no", "private", "public"):
-        abort(400)
+        server.custom_abort(400, "Invalid practice type")
     register_type = form["register_type"]
     if register_type not in ("no", "yes"):
-        abort(400)
+        server.custom_abort(400, "Invalid register type")
     show_standing = form["show_standing"]
     if show_standing not in ("no", "yes"):
-        abort(400)
+        server.custom_abort(400, "Invalid show standing type")
     show_contest = form["show_contest"]
     if show_contest not in ("no", "yes"):
-        abort(400)
+        server.custom_abort(400, "Invalid show contest type")
     if not form["freeze_time"].isdigit():
-        abort(400)
+        server.custom_abort(400, "Freeze time must be a positive integer")
     freeze_time = int(form["freeze_time"])
     if not form["unfreeze_time"].isdigit():
-        abort(400)
+        server.custom_abort(400, "Unfreeze time must be a positive integer")
     unfreeze_time = int(form["unfreeze_time"])
     if not form["penalty"].isdigit():
-        abort(400)
+        server.custom_abort(400, "Penalty must be a positive integer")
     penalty = int(form["penalty"])
     per: datas.Period = datas.get_by_id(datas.Period, cdat.main_period_id)
     per.start_time = datetime.fromtimestamp(start_time)
@@ -226,7 +226,7 @@ def change_settings(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat
 def save_order(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: objs.ContestData) -> str:
     order = form["order"].split(",")
     if set(order) != set(dat.problems.keys()):
-        abort(400)
+        server.custom_abort(400, "Invalid problem order")
     nw_dict = {}
     arr = sorted(order)
     for k1, k2 in zip(arr, order):
@@ -238,9 +238,9 @@ def save_order(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: obj
 @actions.bind
 def send_announcement(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: objs.ContestData) -> str:
     if len(form["title"]) > 80:
-        abort(400)
+        server.custom_abort(400, "Title too long")
     if len(form["content"]) > 1000:
-        abort(400)
+        server.custom_abort(400, "Content too long")
     obj = datas.Announcement(time=datetime.now(),
                              title=form["title"],
                              content=form["content"],
@@ -257,7 +257,7 @@ def remove_announcement(form: ImmutableMultiDict[str, str], cdat: datas.Contest,
     idx = tools.to_int(form["id"])
     obj: datas.Announcement = datas.get_or_404(datas.Announcement, idx)
     if obj.contest != cdat:
-        abort(404)
+        server.custom_abort(404, "Announcement not found")
     datas.delete(obj)
     return "index_page"
 
@@ -267,10 +267,10 @@ def save_question(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: 
     idx = tools.to_int(form["id"])
     obj: datas.Announcement = datas.get_or_404(datas.Announcement, idx)
     if obj.contest != cdat:
-        abort(404)
+        server.custom_abort(404, "Question not found")
     reply = form["content"]
     if len(reply) > 1000:
-        abort(400)
+        server.custom_abort(400, "Reply content too long")
     public = form.get("public", "no") == "yes"
     obj.reply = reply
     obj.reply_name = current_user.id
@@ -281,7 +281,7 @@ def save_question(form: ImmutableMultiDict[str, str], cdat: datas.Contest, dat: 
 
 @actions.default
 def action_not_found(*args):
-    abort(404)
+    server.custom_abort(404, "Action not found")
 
 
 def action(form: ImmutableMultiDict[str, str], cdat: datas.Contest):
@@ -311,11 +311,11 @@ def check_access(dat: datas.Contest, user: login.User = None):
         user = current_user
     info = dat.datas
     if per is None:
-        abort(409)
+        server.custom_abort(409, "Main period not found")
     if check_super_access(dat, user):
         return
     if dat.hidden:
-        abort(404)
+        server.custom_abort(404, "Contest not found")
     if user.is_authenticated:
         if user.id in info.participants:
             if per.is_running():
@@ -324,7 +324,7 @@ def check_access(dat: datas.Contest, user: login.User = None):
                 return
     if info.practice == objs.PracticeType.public and per.is_over():
         return
-    abort(403)
+    server.custom_abort(403, "You do not have access to this contest")
 
 
 def check_status(dat: datas.Contest, user: login.User = None) -> tuple[ContestStatus, int, bool]:
@@ -357,7 +357,7 @@ def check_status(dat: datas.Contest, user: login.User = None) -> tuple[ContestSt
         if user.id in info.virtual_participants:
             vir_per: datas.Period = datas.get_by_id(datas.Period, info.virtual_participants[user.id])
             if vir_per is None:
-                abort(409)
+                server.custom_abort(409, "Virtual period not found for user")
             if not vir_per.is_started():
                 return ContestStatus.waiting_virtual, vir_per.start_time.timestamp(), False
             if vir_per.is_running():

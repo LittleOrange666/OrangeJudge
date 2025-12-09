@@ -29,10 +29,10 @@ from functools import partial
 from pathlib import Path
 from typing import Callable, Any
 
-from flask import abort, request
+from flask import request
 from loguru import logger
 
-from . import locks, constants
+from . import locks, constants, server
 from .constants import tmp_path
 
 
@@ -186,7 +186,7 @@ def form_json(s: str) -> dict:
     try:
         return json.loads(s)
     except json.decoder.JSONDecodeError:
-        abort(400)
+        server.custom_abort(400, "Invalid JSON format")
 
 
 class Switcher:
@@ -345,13 +345,13 @@ def init():
 
 def to_int(text: str, return_code: int = 400) -> int:
     if not text.isdigit():
-        abort(return_code)
+        server.custom_abort(return_code, "Invalid integer format")
     return int(text)
 
 
 def to_float(text: str) -> float:
     if text.count(".") > 1 or not text.replace(".", "").isdigit():
-        abort(400)
+        server.custom_abort(400, "Invalid float format")
     return float(text)
 
 
@@ -359,7 +359,7 @@ def to_datetime(text: str, **replace_kwargs) -> datetime:
     try:
         return datetime.fromtimestamp(to_float(text)).replace(**replace_kwargs)
     except ValueError:
-        abort(400)
+        server.custom_abort(400, "Invalid datetime format")
 
 
 def print_to_string(*args, **kwargs):

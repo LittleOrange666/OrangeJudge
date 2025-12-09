@@ -25,7 +25,7 @@ from datetime import timedelta
 from pathlib import Path
 
 import redis
-from flask import Flask, render_template, request, Response, abort, send_file
+from flask import Flask, render_template, request, Response, send_file
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_login import current_user
@@ -189,7 +189,7 @@ def check_port(ip, port):
 
 def sending_file(file: Path) -> Response:
     if not file.is_file():
-        abort(404)
+        custom_abort(404, "File not found")
     return send_file(file.absolute())
 
 

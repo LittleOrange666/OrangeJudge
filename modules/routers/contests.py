@@ -20,7 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import time
 from datetime import datetime, timedelta
 
-from flask import abort, render_template, request, jsonify
+from flask import render_template, request, jsonify
 from flask_login import login_required, current_user
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -48,7 +48,7 @@ def create_contest():
     login.check_user(Permission.make_problems)
     name = request.form.get("contest_name")
     if not name or len(name) > 120:
-        abort(400)
+        server.custom_abort(400, "比賽名稱不合法")
     idx = contests.create_contest(name, current_user.data)
     return "/contest/" + idx, 200
 
@@ -83,7 +83,7 @@ def contest_problem(cid, pid):
     contests.check_access(cdat)
     info = cdat.datas
     if pid not in info.problems:
-        abort(404)
+        server.custom_abort(404, "題目不存在於此比賽中")
     idx = info.problems[pid].pid
     pdat: datas.Problem = datas.first_or_404(datas.Problem, pid=idx)
     dat = pdat.datas
@@ -101,7 +101,7 @@ def contest_status(cid, page_str):
         status = status.filter_by(user=user)
     if "pid" in request.form and len(request.form["pid"]):
         if request.form["pid"] not in info.problems:
-            abort(404)
+            server.custom_abort(404, "題目不存在於此比賽中")
         status = status.filter_by(pid=info.problems[request.form["pid"]].pid)
     if "result" in request.form and request.form["result"] in objs.TaskResult.__members__:
         result = objs.TaskResult[request.form["result"]]
@@ -156,7 +156,7 @@ def contest_action():
     idx = request.form["cid"]
     cdat = datas.first_or_404(datas.Contest, cid=idx)
     if not contests.check_super_access(cdat):
-        abort(403)
+        server.custom_abort(403, "您沒有權限進行此操作")
     return contests.action(request.form, cdat)
 
 
@@ -167,9 +167,9 @@ def contest_register(cid):
     per = datas.get_or_404(datas.Period, dat.main_period_id)
     info = dat.datas
     if not info.can_register or per.is_over():
-        abort(403)
+        server.custom_abort(403, "此比賽不允許註冊")
     if current_user.id in info.participants:
-        abort(409)
+        server.custom_abort(409, "您已經註冊此比賽，無法重複註冊")
     info.participants.append(current_user.id)
     dat.datas = info
     flag_modified(dat, "data")
@@ -183,9 +183,9 @@ def contest_unregister(cid):
     dat: datas.Contest = datas.first_or_404(datas.Contest, cid=cid)
     info = dat.datas
     if not info.can_register:
-        abort(403)
+        server.custom_abort(403, "此比賽不允許取消註冊")
     if current_user.id not in info.participants:
-        abort(409)
+        server.custom_abort(409, "您尚未註冊此比賽，無法取消註冊")
     info.participants.remove(current_user.id)
     dat.datas = info
     flag_modified(dat, "data")
@@ -199,9 +199,9 @@ def virtual_register(cid):
     dat: datas.Contest = datas.first_or_404(datas.Contest, cid=cid)
     info = dat.datas
     if not dat.can_virtual():
-        abort(403)
+        server.custom_abort(403, "此比賽不允許虛擬參賽")
     if current_user.id in info.virtual_participants:
-        abort(409)
+        server.custom_abort(409, "您已經註冊為虛擬參賽者，無法重複註冊")
     if request.method == "GET":
         return render_template("virtual_register.html", cid=cid, name=dat.name)
     else:
@@ -232,7 +232,7 @@ def contest_standing(cid):
     can_see = (info.standing.public and
                (dt <= -info.standing.start_freeze or dt >= info.standing.end_freeze))
     if not can_see and not contests.check_super_access(cdat):
-        abort(403)
+        server.custom_abort(403, "您無權查看此比賽的榜單")
     dat = contests.get_standing(cid)
     return jsonify(dat)
 
@@ -241,9 +241,9 @@ def contest_standing(cid):
 def contest_question(cid):
     cdat: datas.Contest = datas.first_or_404(datas.Contest, cid=cid)
     if len(request.form["title"]) > 80:
-        abort(400)
+        server.custom_abort(400, "標題過長，請限制在80字以內")
     if len(request.form["content"]) > 1000:
-        abort(400)
+        server.custom_abort(400, "內容過長，請限制在1000字以內")
     obj = datas.Announcement(time=datetime.now(),
                              title=request.form["title"],
                              content=request.form["content"],
@@ -262,12 +262,12 @@ def reject():
     cid = request.form["cid"]
     dat = datas.get_or_404(datas.Submission, tools.to_int(idx))
     if dat.contest.cid != cid:
-        abort(400)
+        server.custom_abort(400, "提交不屬於此比賽")
     cdat: datas.Contest = datas.first_or_404(datas.Contest, cid=cid)
     if not contests.check_super_access(cdat):
-        abort(403)
+        server.custom_abort(403, "您沒有權限拒絕此提交")
     if not dat.completed:
-        abort(400)
+        server.custom_abort(400, "無法拒絕尚未完成的提交")
     contests.reject(dat)
     datas.add(dat)
     return "OK", 200

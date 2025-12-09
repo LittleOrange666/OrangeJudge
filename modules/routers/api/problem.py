@@ -58,9 +58,9 @@ problem_detail_get_output = ns.model("ProblemDetailOutput", {
     "memory_limit": fields.Integer(description="Memory limit for the problem in megabytes")
 })
 version_info_model = ns.model("VersionInfo", {
-    "version": fields.String(description="Version hash"),
-    "description": fields.String(description="Version description"),
-    "create_time": fields.Float(description="Creation timestamp"),
+    "id": fields.String(description="Version id"),
+    "message": fields.String(description="Version description"),
+    "date": fields.Float(description="Creation timestamp"),
 })
 manageable_problem_details_model = ns.model("ManageableProblemDetails", {
     "pid": fields.String(description="Problem ID"),

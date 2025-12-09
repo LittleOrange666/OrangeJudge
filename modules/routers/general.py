@@ -18,7 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 import json
 
-from flask import abort, render_template, redirect, request, jsonify
+from flask import render_template, redirect, request, jsonify
 from flask_login import login_required, current_user
 from pygments import highlight, lexers
 from pygments.formatters import HtmlFormatter
@@ -95,7 +95,7 @@ def submission(idx: str):
     submit_info = dat.datas
     if pdat.pid == "test":
         if not current_user.has(Permission.admin) and dat.user_id != current_user.data.id:
-            abort(403)
+            server.custom_abort(403, "無權限查看此提交結果")
         info = dat.datas
         inp = tools.read_default(dat.path / info.infile)
         out = tools.read_default(dat.path / info.outfile)
@@ -111,7 +111,7 @@ def submission(idx: str):
         problem_info = pdat.datas
         if not current_user.has(Permission.admin) and dat.user_id != current_user.data.id and current_user.id not in \
                 problem_info.users:
-            abort(403)
+            server.custom_abort(403, "無權限查看此提交結果")
         ac_info = ""
         super_access = current_user.has(Permission.admin) or current_user.id in problem_info.users
         result = {}
@@ -177,9 +177,9 @@ def problem_page(idx):
     dat = pdat.datas
     if not pdat.is_public:
         if not current_user.is_authenticated:
-            abort(403)
+            server.custom_abort(403, "無權限查看此題目")
         if not current_user.has(Permission.admin) and current_user.id not in dat.users:
-            abort(403)
+            server.custom_abort(403, "無權限查看此題目")
     langs = [lang for lang in executing.langs.keys() if pdat.lang_allowed(lang)]
     return render_problem(dat, idx, langs, is_contest=False)
 
@@ -222,16 +222,16 @@ def problem_file(idx, filename):
             if obj.pid == idx:
                 break
         else:
-            abort(404)
+            server.custom_abort(404, "題目不存在於此比賽中")
         contests.check_access(cdat)
     else:
         pdat = datas.first_or_404(datas.Problem, pid=idx)
         dat = pdat.datas
         if not pdat.is_public:
             if not current_user.is_authenticated:
-                abort(403)
+                server.custom_abort(403, "無權限查看此檔案")
             if not current_user.has(Permission.admin) and current_user.id not in dat.users:
-                abort(403)
+                server.custom_abort(403, "無權限查看此檔案")
     target = problem_path / idx / "public_file" / filename
     return sending_file(target)
 
@@ -299,17 +299,17 @@ def rejudge():
     dat = datas.get_or_404(datas.Submission, tools.to_int(idx))
     if "cid" in request.form:
         if dat.contest.cid != request.form["cid"]:
-            abort(400)
+            server.custom_abort(400, "提交不屬於指定的比賽")
         cdat: datas.Contest = datas.first_or_404(datas.Contest.query, cid=request.form["cid"])
         if not contests.check_super_access(cdat):
-            abort(403)
+            server.custom_abort(403, "無權限進行此操作")
     else:
         if dat.contest_id is not None:
-            abort(400)
+            server.custom_abort(400, "Rejudge比賽中的提交需要顯式指定比賽ID")
         if not current_user.has(Permission.admin) and current_user.id != dat.problem.user.username:
-            abort(403)
+            server.custom_abort(403, "無權限進行此操作")
     if not dat.completed:
-        abort(400)
+        server.custom_abort(400, "無法Rejudge尚未完成的提交")
     tasks.rejudge(dat, "wait for rejudge")
     datas.add(dat)
     return "OK", 200
@@ -324,10 +324,10 @@ def rejudge_all():
     if "cid" in request.form:
         cdat: datas.Contest = datas.first_or_404(datas.Contest.query, cid=request.form["cid"])
         if not contests.check_super_access(cdat):
-            abort(403)
+            server.custom_abort(403, "無權限進行此操作")
         probs = cdat.datas.problems
         if pid not in probs:
-            abort(404)
+            server.custom_abort(404, "題目不存在於此比賽中")
         the_pid = probs[pid].pid
         prob = datas.first_or_404(datas.Problem, pid=the_pid)
         status = datas.filter_by(datas.Submission, problem_id=prob.id, contest_id=cdat.id, completed=True)
@@ -336,7 +336,7 @@ def rejudge_all():
             return "不允許Rejudge測試題目", 400
         prob = datas.first_or_404(datas.Problem, pid=pid)
         if not login.has_permission(Permission.admin) and current_user.id != prob.user.username:
-            abort(403)
+            server.custom_abort(403, "無權限進行此操作")
         status = datas.filter_by(datas.Submission, problem_id=prob.id, contest_id=None, completed=True)
     if "result" in request.form and request.form["result"] in objs.TaskResult.__members__:
         result = objs.TaskResult[request.form["result"]]

@@ -31,7 +31,7 @@ from typing import Callable
 from xml.etree import ElementTree
 from xml.etree.ElementTree import Element
 
-from flask import Response, abort, request, redirect
+from flask import Response, request, redirect
 from loguru import logger
 from pyzipper import AESZipFile
 from pyzipper.zipfile_aes import AESZipInfo
@@ -39,7 +39,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from werkzeug.datastructures import ImmutableMultiDict, MultiDict
 from werkzeug.utils import secure_filename
 
-from . import executing, tools, constants, createhtml, datas, objs, judge
+from . import executing, tools, constants, createhtml, datas, objs, judge, server
 from .constants import tmp_path, preparing_problem_path, testlib, problem_path
 from .judge import SandboxPath, SandboxUser
 from .objs import ProgramType, GenType
@@ -262,12 +262,12 @@ def init() -> None:
 def create_problem(name: str, pid: str, user: datas.User) -> str:
     problem_count = datas.count(datas.Problem)
     if len(name) == 0 or len(name) > 120:
-        abort(400)
+        server.custom_abort(400, "Problem name length invalid")
     if pid:
         if constants.problem_id_reg.match(pid) is None:
-            abort(400)
+            server.custom_abort(400, "Problem ID format invalid")
         if datas.count(datas.Problem, pid=pid) > 0:
-            abort(409)
+            server.custom_abort(409, "Problem ID already exists")
     else:
         pidx = problem_count + 1000
         while datas.count(datas.Problem, pid=str(pidx)) > 0:
@@ -420,7 +420,7 @@ def do_import_polygon(pid: str, filename: str):
     filelist: list[AESZipInfo] = zip_file.filelist
     files: dict[str, AESZipInfo] = {o.filename: o for o in filelist if not o.is_dir()}
     if "problem.xml" not in files:
-        abort(400)
+        server.custom_abort(400, "Invalid Polygon problem: missing problem.xml")
     root: Element = ElementTree.fromstring(zip_file.read(files["problem.xml"]).decode())
     dat = problem
     path = problem.path
@@ -566,7 +566,7 @@ def add_background_action(obj: dict):
     tools.write_json(cur, folder / f"{idx}.json")
 
 
-def check_background_action(pid: str):
+def check_background_action(pid: str) -> tuple[str, str] | None:
     cntfile = preparing_problem_path / pid / "background_action_cnt"
     idx = tools.read_default(cntfile, default="0")
     if idx == "0":
@@ -580,7 +580,7 @@ def check_background_action(pid: str):
 
 @actions.default
 def action_not_found(*args):
-    abort(404)
+    server.custom_abort(404, "Action not found")
 
 
 @actions.bind
@@ -592,13 +592,13 @@ def save_general_info(form: ImmutableMultiDict[str, str], dat: Problem) -> str |
     show_testcase = form["show_testcase"]
     show_checker = form["show_checker"]
     if not ml.isdigit() or not tl.isdigit():
-        abort(400)
+        server.custom_abort(400, "Invalid time or memory limit")
     if not (10000 >= int(tl) >= 250 and 1024 >= int(ml) >= 4):
-        abort(400)
+        server.custom_abort(400, "Time or memory limit out of range")
     if show_testcase not in ("yes", "no"):
-        abort(400)
+        server.custom_abort(400, "Invalid show_testcase value")
     if show_checker not in ("yes", "no"):
-        abort(400)
+        server.custom_abort(400, "Invalid show_checker value")
     dat.memorylimit = ml
     dat.timelimit = tl
     dat.public_testcase = show_testcase == "yes"
@@ -677,7 +677,7 @@ def upload_zip(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Respon
             if o.filename in mp:
                 ps.append((mp[o.filename], o))
         if len(ps) == 0:
-            abort(400)
+            server.custom_abort(400, "No valid testcases found in the zip file")
         fps = [(o.in_file, o.out_file) for o in dat.testcases]
         testcases = dat.path / "testcases"
         ps.sort(key=lambda x: x[0].filename)
@@ -697,13 +697,13 @@ def upload_testcase(form: ImmutableMultiDict[str, str], dat: Problem) -> str | R
     input_name = secure_filename(form["input_name"])
     output_name = secure_filename(form["output_name"])
     if input_name == "" or output_name == "":
-        abort(400)
+        server.custom_abort(400, "Invalid filename")
     input_path = dat.path / "testcases" / input_name
     output_path = dat.path / "testcases" / output_name
     input_content = form["input_content"]
     output_content = form["output_content"]
     if input_path.exists() or output_path.exists():
-        abort(409)
+        server.custom_abort(409, "Testcase file already exists")
     with input_path.open("w") as f:
         f.write(input_content)
     with output_path.open("w") as f:
@@ -716,7 +716,7 @@ def upload_testcase(form: ImmutableMultiDict[str, str], dat: Problem) -> str | R
 def remove_testcase(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Response:
     idx = tools.to_int(form["idx"])
     if idx < 0 or idx >= len(dat.testcases):
-        abort(404)
+        server.custom_abort(404, "Testcase not found")
     obj = dat.testcases.pop(idx)
     (dat.path / "testcases" / obj.in_file).unlink()
     (dat.path / "testcases" / obj.out_file).unlink()
@@ -726,7 +726,7 @@ def remove_testcase(form: ImmutableMultiDict[str, str], dat: Problem) -> str | R
 @actions.bind
 def remove_all_testcase(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Response:
     if len(dat.testcases) == 0:
-        abort(409)
+        server.custom_abort(409, "No testcases to remove")
     for obj in dat.testcases:
         (dat.path / "testcases" / obj.in_file).unlink()
         (dat.path / "testcases" / obj.out_file).unlink()
@@ -740,11 +740,11 @@ def upload_public_file(form: ImmutableMultiDict[str, str], dat: Problem) -> str 
     for file in get_files:
         fn = secure_filename(file.filename)
         if fn == "":
-            abort(400)
+            server.custom_abort(400, "Invalid filename")
         if len(fn) > 100:
-            abort(400)
+            server.custom_abort(400, "Filename too long")
         if (dat.path / "public_file" / fn).exists():
-            abort(409)
+            server.custom_abort(409, f"File {fn} already exists")
     for file in get_files:
         fn = secure_filename(file.filename)
         file.save(dat.path / "public_file" / fn)
@@ -758,7 +758,7 @@ def remove_public_file(form: ImmutableMultiDict[str, str], dat: Problem) -> str 
     if filepath.is_file():
         filepath.unlink()
     else:
-        abort(404)
+        server.custom_abort(404, "File not found")
     return "files"
 
 
@@ -768,11 +768,11 @@ def upload_file(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Respo
     for file in get_files:
         fn = secure_filename(file.filename)
         if fn == "":
-            abort(400)
+            server.custom_abort(400, "Invalid filename")
         if len(fn) > 100:
-            abort(400)
+            server.custom_abort(400, "Filename too long")
         if (dat.path / "file" / fn).exists():
-            abort(409)
+            server.custom_abort(409, f"File {fn} already exists")
         file.save(dat.path / "file" / fn)
         ext = Path(fn).suffix
         tp = constants.default_lang
@@ -788,10 +788,10 @@ def upload_file(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Respo
 def create_file(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Response:
     filename = secure_filename(form["filename"])
     if len(filename) == 0 or len(filename) > 100:
-        abort(400)
+        server.custom_abort(400, "Invalid filename")
     filepath = dat.path / "file" / filename
     if filepath.exists():
-        abort(409)
+        server.custom_abort(409, "File already exists")
     filepath.touch()
     dat.files.append(objs.ProgramFile(name=filename, type=constants.default_lang))
     return "files"
@@ -807,11 +807,11 @@ def remove_file(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Respo
             target = o
             break
     if target is None:
-        abort(404)
+        server.custom_abort(404, "File not found")
     if filepath.exists():
         filepath.unlink()
     else:
-        abort(400)
+        server.custom_abort(400, "File missing on disk")
     dat.files.remove(target)
     return "files"
 
@@ -822,7 +822,7 @@ def save_file_content(form: ImmutableMultiDict[str, str], dat: Problem) -> str |
     filename = secure_filename(filename)
     content = form["content"]
     if form["type"] not in executing.langs:
-        abort(400)
+        server.custom_abort(400, "Invalid file type")
     filepath = dat.path / "file" / filename
     target: objs.ProgramFile | None = None
     for o in dat.files:
@@ -830,7 +830,7 @@ def save_file_content(form: ImmutableMultiDict[str, str], dat: Problem) -> str |
             target = o
             break
     if target is None:
-        abort(404)
+        server.custom_abort(404, "File not found")
     target.type = form["type"]
     tools.write(content, Path(filepath))
     return "files"
@@ -840,11 +840,11 @@ def save_file_content(form: ImmutableMultiDict[str, str], dat: Problem) -> str |
 def choose_checker(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Response:
     tp = form["checker_type"]
     if tp not in ("my", "default"):
-        abort(400)
+        server.custom_abort(400, "Invalid checker type")
     name = secure_filename(form[tp + "_checker"])
     filepath = (Path("testlib/checkers") if tp == "default" else dat.path / "file") / name
     if not filepath.is_file():
-        abort(400)
+        server.custom_abort(400, "Checker file not found")
     dat.checker_source = objs.ProgramPtr(type=ProgramType[tp], name=name)
     return "judge"
 
@@ -907,9 +907,9 @@ def choose_sample(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Res
 def add_library(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Response:
     name = form["library"]
     if not any(o.name == name for o in dat.files):
-        abort(404)
+        server.custom_abort(404, "Library file not found")
     elif name in dat.library:
-        abort(409)
+        server.custom_abort(409, "Library already added")
     else:
         dat.library.append(name)
     return "judge"
@@ -919,7 +919,7 @@ def add_library(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Respo
 def remove_library(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Response:
     name = form["name"]
     if name not in dat.library:
-        abort(409)
+        server.custom_abort(409, "Library not in use")
     else:
         dat.library.remove(name)
     return "judge"
@@ -930,10 +930,10 @@ def save_testcase(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Res
     try:
         modify = json.loads(form["modify"])
     except json.decoder.JSONDecodeError:
-        abort(400)
+        server.custom_abort(400, "Invalid modify data")
     testcases = dat.testcases
     if type(modify) is not list or len(modify) != len(testcases):
-        abort(400)
+        server.custom_abort(400, "Modify data length mismatch")
     s = set()
     new_testcases = []
     for o in modify:
@@ -942,9 +942,9 @@ def save_testcase(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Res
                 type(o[0]) is not int or
                 not (len(testcases) > o[0] >= 0) or
                 o[3] not in dat.groups):
-            abort(400)
+            server.custom_abort(400, "Invalid modify data")
         if o[0] in s:
-            abort(400)
+            server.custom_abort(400, "Duplicate testcase index")
         s.add(o[0])
         obj = testcases[o[0]]
         obj.sample = o[1]
@@ -965,7 +965,7 @@ def do_generate(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Respo
 def create_group(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Response:
     name = secure_filename(form["name"].strip())
     if name in dat.groups:
-        abort(409)
+        server.custom_abort(409, "Group already exists")
     dat.groups[name] = objs.TestcaseGroup()
     return "tests"
 
@@ -974,9 +974,9 @@ def create_group(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Resp
 def remove_group(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Response:
     name = secure_filename(form["name"])
     if name not in dat.groups:
-        abort(404)
+        server.custom_abort(404, "Group not found")
     if name == "default":
-        abort(400)
+        server.custom_abort(400, "Cannot remove default group")
     del dat.groups[name]
     for o in dat.testcases:
         if o.group == name:
@@ -990,9 +990,9 @@ def save_groups(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Respo
     dr = {}
     for k in dat.groups:
         if not form["score_" + k].isdigit():
-            abort(400)
+            server.custom_abort(400, "Invalid score value")
         if form["rule_" + k] not in ("min", "avg"):
-            abort(400)
+            server.custom_abort(400, "Invalid rule value")
         d[k] = int(form["score_" + k])
         dr[k] = form["rule_" + k]
     cnt = len(dat.groups)
@@ -1002,13 +1002,13 @@ def save_groups(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Respo
         for j in range(cnt):
             if f"dependency_{i}_{j}" in form:
                 if i == j:
-                    abort(400)
+                    server.custom_abort(400, "A group cannot depend on itself")
                 dep[i].append(j)
     order = list(range(cnt))
     try:
         order = list(TopologicalSorter(dep).static_order())
     except CycleError:
-        abort(400)
+        server.custom_abort(400, "Cyclic dependency detected")
     for i, k in enumerate(dat.groups):
         dat.groups[k].score = d[k]
         dat.groups[k].rule = objs.TestcaseRule[dr[k]]
@@ -1025,7 +1025,7 @@ def save_groups(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Respo
 @actions.bind
 def protect_problem(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Response:
     if not dat.sql_data.is_public:
-        abort(400)
+        server.custom_abort(400, "Problem is already protected")
     dat.sql_data.is_public = False
     return "general_info"
 
@@ -1033,9 +1033,9 @@ def protect_problem(form: ImmutableMultiDict[str, str], dat: Problem) -> str | R
 @actions.bind
 def public_problem(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Response:
     if dat.sql_data.is_public:
-        abort(400)
+        server.custom_abort(400, "Problem is already public")
     if len(dat.versions) == 0:
-        abort(409)
+        server.custom_abort(409, "Cannot public problem without any version")
     dat.sql_data.is_public = True
     return "general_info"
 
@@ -1045,7 +1045,7 @@ def save_languages(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Re
     for k in executing.langs.keys():
         mul = form.get("lang_mul_" + k, "1")
         if not mul.isdigit() or int(mul) < 1 or int(mul) > 100:
-            abort(400)
+            server.custom_abort(400, "Invalid language multiplier")
     for k in executing.langs.keys():
         dat.languages[k] = (form.get("lang_check_" + k, "off") == "on")
         dat.language_multipliers[k] = int(form.get("lang_mul_" + k, "1"))
@@ -1055,16 +1055,16 @@ def save_languages(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Re
 def prepare_gen_group(form: ImmutableMultiDict[str, str], dat: Problem):
     file1 = form["file1"]
     if not any(o.name == file1 for o in dat.files):
-        abort(404)
+        server.custom_abort(404, "Generator file not found")
     file2 = form["file2"]
     if not any(o.name == file2 for o in dat.files):
-        abort(404)
+        server.custom_abort(404, "Second file not found")
     group = form["group"]
     if group not in dat.groups:
-        abort(404)
+        server.custom_abort(404, "Group not found")
     tp = form["type"]
     if tp not in ("sol", "gen"):
-        abort(400)
+        server.custom_abort(400, "Invalid generator type")
     return file1, file2, group, objs.GenType[tp]
 
 
@@ -1087,7 +1087,7 @@ def update_gen_group(form: ImmutableMultiDict[str, str], dat: Problem) -> str | 
     idx = tools.to_int(form["idx"])
     cmds = form["cmds"].split("\n")
     if idx < 0 or idx >= len(dat.gen_groups):
-        abort(400)
+        server.custom_abort(400, "Invalid generator group index")
     dat.gen_groups[idx] = objs.GenGroup(file1=file1, file2=file2, group=group, type=tp, cmds=cmds, status="未更新")
     return "tests"
 
@@ -1096,7 +1096,7 @@ def update_gen_group(form: ImmutableMultiDict[str, str], dat: Problem) -> str | 
 def remove_gen_group(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Response:
     idx = tools.to_int(form["idx"])
     if idx < 0 or idx >= len(dat.gen_groups):
-        abort(400)
+        server.custom_abort(400, "Invalid generator group index")
     dat.gen_groups.pop(idx)
     return "tests"
 
@@ -1183,7 +1183,7 @@ def preview(args: MultiDict[str, str], pdat: datas.Problem) -> Response:
     match args["type"]:
         case "statement":
             if not (path / "statement.html").exists():
-                abort(404)
+                server.custom_abort(404, "Statement not found")
             dat = pdat.new_datas
             langs = [lang for lang in executing.langs.keys() if pdat.lang_allowed(lang)]
             return render_problem(dat, pid, langs, preview=True, is_contest=False)
@@ -1195,7 +1195,7 @@ def preview(args: MultiDict[str, str], pdat: datas.Problem) -> Response:
             return sending_file(path / "testcases" / filename())
         case "testcases_gen":
             return sending_file(path / "testcases_gen" / filename())
-    abort(404)
+    server.custom_abort(404, "Invalid preview type")
 
 
 def query_versions(pdat: datas.Problem):

@@ -22,7 +22,6 @@ import os
 import smtplib
 from email.message import EmailMessage
 
-from flask import abort
 from flask_login import LoginManager, UserMixin, current_user
 from werkzeug.utils import secure_filename
 
@@ -283,12 +282,12 @@ def check_user(require: Permission | None = None, users: list[str] | None = None
     """
     user: User = current_user
     if not user.is_authenticated:
-        abort(403)
+        server.custom_abort(403, "您沒有權限存取此頁面")
     if not user.has(Permission.admin):
         if require is not None and not user.has(require):
-            abort(403)
+            server.custom_abort(403, "您沒有權限存取此頁面")
         if users is not None and user.id not in users:
-            abort(403)
+            server.custom_abort(403, "您沒有權限存取此頁面")
     return user
 
 

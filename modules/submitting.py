@@ -18,7 +18,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 import datetime
 
-from flask import abort
 from flask_login import current_user
 
 from . import datas, executing, tasks, contests, config, objs, tools, constants, login, server
@@ -28,7 +27,7 @@ def test_submit(lang: str, code: str, inp: str, user: login.User | None = None) 
     if not inp.endswith("\n"):
         inp += "\n"
     if lang not in executing.langs:
-        abort(404)
+        server.custom_abort(404, "Language not supported")
     ext = executing.langs[lang].source_ext
     fn = constants.source_file_name + ext
     dat = datas.Submission(source=fn, time=datetime.datetime.now(), user=user.data,
@@ -51,12 +50,12 @@ def submit(lang: str, pid: str, code: str, cid: str | None = None, user: login.U
     if datas.count(datas.Submission, user=user.data, completed=False) >= config.judge.pending_limit:
         server.custom_abort(409, "Too many uncompleted submissions")
     if len(code) > config.judge.file_size * 1024:
-        abort(400)
+        server.custom_abort(400, "Source code file too large")
     pdat: datas.Problem = datas.first_or_404(datas.Problem, pid=pid)
     if lang not in executing.langs:
-        abort(404)
+        server.custom_abort(404, "Language not supported")
     if not pdat.lang_allowed(lang):
-        abort(400)
+        server.custom_abort(400, "Language not allowed for this problem")
     ext = executing.langs[lang].source_ext
     fn = constants.source_file_name + ext
     dat = datas.Submission(source=fn, time=datetime.datetime.now(), user=user.data,

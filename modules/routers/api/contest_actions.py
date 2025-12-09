@@ -173,7 +173,7 @@ class ChangeSettings(Resource):
 
     @ns.doc("contest_get_settings")
     @ns.expect(base_request_parser)
-    @marshal_with(ns,setting_get_output)
+    @marshal_with(ns, setting_get_output)
     def get(self, cid: str):
         """Get current contest settings."""
         user = get_api_user(base_request_parser.parse_args())

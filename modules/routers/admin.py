@@ -25,7 +25,7 @@ import traceback
 import uuid
 from io import BytesIO, TextIOWrapper
 
-from flask import abort, render_template, request, jsonify
+from flask import render_template, request, jsonify
 from flask_login import login_required, current_user
 from limits import parse
 from openpyxl import load_workbook
@@ -221,7 +221,7 @@ def stop_server():
 @login_required
 def admin():
     if not current_user.has(Permission.root):
-        abort(403)
+        server.custom_abort(403, "需要管理員權限")
     if request.method == 'GET':
         users = datas.query(datas.User).all()
         config_fields = config.get_fields()
@@ -238,4 +238,4 @@ def admin():
             return update_config()
         if request.form["action"] == "stop_server":
             return stop_server()
-        abort(404)
+        server.custom_abort(404, "找不到指定的操作")
