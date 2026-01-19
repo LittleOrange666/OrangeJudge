@@ -270,6 +270,11 @@ class ProblemPreview(Resource):
 
         preview_args = request.args.to_dict()
         preview_args['pid'] = pid
+        if preview_args["type"] == "statement":
+            path = preparing_problem_path / pid / "statement.html"
+            if not path.is_file():
+                server.custom_abort(404, "Statement file not found.")
+            return tools.read(path)
         return problemsetting.preview(preview_args, pdat)
 
 
@@ -282,6 +287,7 @@ problem_file_input = request_parser(
 class ProblemFile(Resource):
     @ns.doc("get_problem_file")
     @ns.expect(problem_file_input)
+    @server.limiter.limit(config.server.file_limit)
     def get(self, pid: str, filename: str):
         """Serve a public file associated with a problem."""
         args = problem_file_input.parse_args()

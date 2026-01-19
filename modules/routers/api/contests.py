@@ -398,7 +398,7 @@ class ContestUnregister(Resource):
     @ns.expect(base_request_parser)
     @marshal_with(ns, ok_output)
     def post(self, cid: str):
-        """get participant list of a contest"""
+        """Unregister for a contest"""
         args = base_request_parser.parse_args()
         user = get_api_user(args)
         if not user.is_authenticated:
@@ -407,8 +407,11 @@ class ContestUnregister(Resource):
         dat: datas.Contest = datas.first(datas.Contest, cid=cid)
         if dat is None:
             server.custom_abort(404, "Contest not found")
+        per = datas.get_by_id(datas.Period, dat.main_period_id)
+        if per is None:
+            server.custom_abort(500, "Contest main period data is missing")
         info = dat.datas
-        if not info.can_register:
+        if not info.can_register or per.is_over():
             server.custom_abort(403, "Cannot unregister from this contest")
         if user.id not in info.participants:
             server.custom_abort(409, "User is not registered")
