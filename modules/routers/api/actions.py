@@ -374,13 +374,13 @@ class Group(Resource):
 
     @ns.doc("problem_" + delete_action_name)
     @ns.expect(delete_action_input)
-    def post(self, pid: str):
+    def delete(self, pid: str):
         """Remove a group from the problem."""
         return do_action(pid, self.delete_action_name, self.delete_action_input)
 
     @ns.doc("problem_" + put_action_name)
     @ns.expect(put_action_input)
-    def post(self, pid: str):
+    def put(self, pid: str):
         """Save group information for the problem."""
         return do_action(pid, self.put_action_name, self.put_action_input)
 
@@ -463,7 +463,7 @@ class GenGroup(Resource):
 
     @ns.doc("problem_" + delete_action_name)
     @ns.expect(delete_action_input)
-    def post(self, pid: str):
+    def delete(self, pid: str):
         """Remove a generation group from the problem."""
         return do_action(pid, self.delete_action_name, self.delete_action_input)
 

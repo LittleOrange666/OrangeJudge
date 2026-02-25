@@ -270,7 +270,7 @@ class Contest(Resource):
         questions_data = [{
             "id": q.id, "title": q.title, "content": q.content,
             "time": q.time.timestamp(), "author": q.user.username,
-            "answer": q.answer
+            "answer": q.reply
         } for q in reversed(questions_query.all())]
 
         return api_response({
