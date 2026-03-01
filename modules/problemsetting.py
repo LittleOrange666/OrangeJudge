@@ -1177,6 +1177,9 @@ def preview(args: MultiDict[str, str], pdat: datas.Problem) -> Response:
     pid = args["pid"]
     path = preparing_problem_path / pid
 
+    if not "name" in args or not "type" in args:
+        server.custom_abort(400, "Missing name or type parameter")
+
     def filename():
         return secure_filename(args["name"])
 

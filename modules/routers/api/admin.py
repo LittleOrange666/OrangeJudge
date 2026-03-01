@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from flask_restx import Resource, fields
 
+from constants import log_path
 from .base import get_api_user, api_response, api, marshal_with, base_request_parser, request_parser, Form, paging, \
     pagination, Args
 from .. import admin
@@ -134,4 +135,21 @@ class AdminUsers(Resource):
             })
         return api_response({
             "show_pages": show_pages, "page_count": page_cnt, "page": page_idx, "data": out
+        })
+
+@ns.route("/log/<log_id>")
+class AdminLog(Resource):
+    @ns.doc("get_log")
+    @ns.expect(base_request_parser)
+    def get(self, log_id):
+        """Get a specific log entry by ID"""
+        user = get_api_user(base_request_parser.parse_args())
+        if not user.has(objs.Permission.admin):
+            server.custom_abort(403, "Forbidden: Admin access required")
+        path = log_path / f"{log_id}.log"
+        if not path.exists():
+            server.custom_abort(404, "Log entry not found")
+        return api_response({
+            "id": log_id,
+            "content": path.read_text(encoding="utf-8")
         })
