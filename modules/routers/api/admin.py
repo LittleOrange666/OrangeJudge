@@ -19,7 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from flask_restx import Resource, fields
 
-from constants import log_path
+from ...constants import log_path
 from .base import get_api_user, api_response, api, marshal_with, base_request_parser, request_parser, Form, paging, \
     pagination, Args
 from .. import admin
