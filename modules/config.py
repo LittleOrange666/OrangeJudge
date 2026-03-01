@@ -141,7 +141,7 @@ class DebugConfig(metaclass=DataMeta):
         disable_csrf (bool): Whether to disable CSRF protection.
         single_secret (bool): Whether to use a fixed SECRET_KEY.
     """
-    disable_csrf: bool = ConfigProperty("關閉CSRF保護", bool, False)
+    disable_csrf: bool = ConfigProperty("關閉CSRF保護", bool, True)
     single_secret: bool = ConfigProperty("使用固定的SECRET_KEY", bool, False)
 
 

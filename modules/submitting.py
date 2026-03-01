@@ -26,6 +26,10 @@ from . import datas, executing, tasks, contests, config, objs, tools, constants,
 def test_submit(lang: str, code: str, inp: str, user: login.User | None = None) -> str:
     if not inp.endswith("\n"):
         inp += "\n"
+    if datas.count(datas.Submission, user=user.data, completed=False) >= config.judge.pending_limit:
+        server.custom_abort(409, "Too many uncompleted submissions")
+    if len(code) > config.judge.file_size * 1024:
+        server.custom_abort(400, "Source code file too large")
     if lang not in executing.langs:
         server.custom_abort(404, "Language not supported")
     ext = executing.langs[lang].source_ext

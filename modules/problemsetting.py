@@ -593,7 +593,7 @@ def save_general_info(form: ImmutableMultiDict[str, str], dat: Problem) -> str |
     show_checker = form["show_checker"]
     if not ml.isdigit() or not tl.isdigit():
         server.custom_abort(400, "Invalid time or memory limit")
-    if not (10000 >= int(tl) >= 250 and 1024 >= int(ml) >= 4):
+    if not (20000 >= int(tl) >= 250 and 2048 >= int(ml) >= 4):
         server.custom_abort(400, "Time or memory limit out of range")
     if show_testcase not in ("yes", "no"):
         server.custom_abort(400, "Invalid show_testcase value")
@@ -1009,7 +1009,7 @@ def save_groups(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Respo
         order = list(TopologicalSorter(dep).static_order())
     except CycleError:
         server.custom_abort(400, "Cyclic dependency detected")
-    for i, k in enumerate(dat.groups):
+    for i, k in enumerate(names):
         dat.groups[k].score = d[k]
         dat.groups[k].rule = objs.TestcaseRule[dr[k]]
         dat.groups[k].dependency = [names[j] for j in dep[i]]
