@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import os
+import traceback
 from contextlib import contextmanager
 from contextvars import ContextVar
 from datetime import datetime
@@ -71,25 +72,6 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
 _current_session: ContextVar = ContextVar("current_session", default=None)
-
-
-@app.teardown_request
-def teardown_request(exception=None):
-    if exception:
-        db.session.rollback()
-    else:
-        try:
-            db.session.commit()
-        except PendingRollbackError:
-            db.session.rollback()
-
-
-@app.teardown_appcontext
-def shutdown_session(exception=None):
-    if exception:
-        db.session.rollback()
-    db.session.remove()
-
 
 class User(db.Model):
     """
@@ -572,31 +554,35 @@ def get_session() -> Session:
     return session
 
 
-def add(*objs):
+def add(*add_objs):
     """
     Add the given objects to the database session.
 
     This function retrieves the current SQLAlchemy session and adds the provided objects to it.
 
     Args:
-        *objs: Variable length argument list of objects to add to the database session.
+        *add_objs: Variable length argument list of objects to add to the database session.
     """
-    session = get_session()
-    for obj in objs:
+    session = _current_session.get()
+    if session is None:
+        raise RuntimeError("SessionContext is required to add objects.")
+    for obj in add_objs:
         session.add(obj)
 
 
-def delete(*objs):
+def delete(*del_objs):
     """
     Delete the given objects from the database session.
 
     This function retrieves the current SQLAlchemy session and deletes the provided objects from it.
 
     Args:
-        *objs: Variable length argument list of objects to delete from the database session.
+        *del_objs: Variable length argument list of objects to delete from the database session.
     """
-    session = get_session()
-    for obj in objs:
+    session = _current_session.get()
+    if session is None:
+        raise RuntimeError("SessionContext is required to delete objects.")
+    for obj in del_objs:
         session.delete(obj)
 
 

@@ -24,6 +24,7 @@ from flask import render_template, request, jsonify
 from flask_login import login_required, current_user
 from sqlalchemy.orm.attributes import flag_modified
 
+from ..datas import SessionContext
 from .general import render_problem
 from .. import server, login, contests, datas, tools, executing, objs, constants
 from ..objs import Permission
@@ -154,73 +155,77 @@ def contest_status(cid, page_str):
 @login_required
 def contest_action():
     idx = request.form["cid"]
-    cdat = datas.first_or_404(datas.Contest, cid=idx)
-    if not contests.check_super_access(cdat):
-        server.custom_abort(403, "您沒有權限進行此操作")
-    return contests.action(request.form, cdat)
+    with datas.SessionContext():
+        cdat = datas.first_or_404(datas.Contest, cid=idx)
+        if not contests.check_super_access(cdat):
+            server.custom_abort(403, "您沒有權限進行此操作")
+        return contests.action(request.form, cdat)
 
 
 @app.route("/contest/<cid>/register", methods=['POST'])
 @login_required
 def contest_register(cid):
-    dat = datas.first_or_404(datas.Contest, cid=cid)
-    per = datas.get_or_404(datas.Period, dat.main_period_id)
-    info = dat.datas
-    if not info.can_register or per.is_over():
-        server.custom_abort(403, "此比賽不允許註冊")
-    if current_user.id in info.participants:
-        server.custom_abort(409, "您已經註冊此比賽，無法重複註冊")
-    info.participants.append(current_user.id)
-    dat.datas = info
-    flag_modified(dat, "data")
-    datas.add(dat)
+    with SessionContext():
+        dat = datas.first_or_404(datas.Contest, cid=cid)
+        per = datas.get_or_404(datas.Period, dat.main_period_id)
+        info = dat.datas
+        if not info.can_register or per.is_over():
+            server.custom_abort(403, "此比賽不允許註冊")
+        if current_user.id in info.participants:
+            server.custom_abort(409, "您已經註冊此比賽，無法重複註冊")
+        info.participants.append(current_user.id)
+        dat.datas = info
+        flag_modified(dat, "data")
+        datas.add(dat)
     return "OK", 200
 
 
 @app.route("/contest/<cid>/unregister", methods=['POST'])
 @login_required
 def contest_unregister(cid):
-    dat: datas.Contest = datas.first_or_404(datas.Contest, cid=cid)
-    info = dat.datas
-    if not info.can_register:
-        server.custom_abort(403, "此比賽不允許取消註冊")
-    if current_user.id not in info.participants:
-        server.custom_abort(409, "您尚未註冊此比賽，無法取消註冊")
-    info.participants.remove(current_user.id)
-    dat.datas = info
-    flag_modified(dat, "data")
-    datas.add(dat)
+    with SessionContext():
+        dat: datas.Contest = datas.first_or_404(datas.Contest, cid=cid)
+        info = dat.datas
+        if not info.can_register:
+            server.custom_abort(403, "此比賽不允許取消註冊")
+        if current_user.id not in info.participants:
+            server.custom_abort(409, "您尚未註冊此比賽，無法取消註冊")
+        info.participants.remove(current_user.id)
+        dat.datas = info
+        flag_modified(dat, "data")
+        datas.add(dat)
     return "OK", 200
 
 
 @app.route("/contest/<cid>/virtual", methods=['GET', 'POST'])
 @login_required
 def virtual_register(cid):
-    dat: datas.Contest = datas.first_or_404(datas.Contest, cid=cid)
-    info = dat.datas
-    if not dat.can_virtual():
-        server.custom_abort(403, "此比賽不允許虛擬參賽")
-    if current_user.id in info.virtual_participants:
-        server.custom_abort(409, "您已經註冊為虛擬參賽者，無法重複註冊")
-    if request.method == "GET":
-        return render_template("virtual_register.html", cid=cid, name=dat.name)
-    else:
-        start_time: datetime = tools.to_datetime(request.form["start_time"], second=0, microsecond=0)
-        per = datas.filter_by(datas.Period, start_time=start_time, contest=dat, is_virtual=True)
-        if per.count() > 0:
-            idx = per.first().id
+    with SessionContext():
+        dat: datas.Contest = datas.first_or_404(datas.Contest, cid=cid)
+        info = dat.datas
+        if not dat.can_virtual():
+            server.custom_abort(403, "此比賽不允許虛擬參賽")
+        if current_user.id in info.virtual_participants:
+            server.custom_abort(409, "您已經註冊為虛擬參賽者，無法重複註冊")
+        if request.method == "GET":
+            return render_template("virtual_register.html", cid=cid, name=dat.name)
         else:
-            nw_per = datas.Period(start_time=start_time,
-                                  end_time=start_time + timedelta(minutes=info.elapsed),
-                                  contest=dat,
-                                  is_virtual=True)
-            datas.add(nw_per)
-            datas.flush()
-            idx = nw_per.id
-        info.virtual_participants[current_user.id] = idx
-        flag_modified(dat, "data")
-        datas.add(dat)
-        return "OK", 200
+            start_time: datetime = tools.to_datetime(request.form["start_time"], second=0, microsecond=0)
+            per = datas.filter_by(datas.Period, start_time=start_time, contest=dat, is_virtual=True)
+            if per.count() > 0:
+                idx = per.first().id
+            else:
+                nw_per = datas.Period(start_time=start_time,
+                                      end_time=start_time + timedelta(minutes=info.elapsed),
+                                      contest=dat,
+                                      is_virtual=True)
+                datas.add(nw_per)
+                datas.flush()
+                idx = nw_per.id
+            info.virtual_participants[current_user.id] = idx
+            flag_modified(dat, "data")
+            datas.add(dat)
+            return "OK", 200
 
 
 @app.route("/contest/<cid>/standing", methods=['POST'])
@@ -239,19 +244,20 @@ def contest_standing(cid):
 
 @app.route("/contest/<cid>/question", methods=['POST'])
 def contest_question(cid):
-    cdat: datas.Contest = datas.first_or_404(datas.Contest, cid=cid)
-    if len(request.form["title"]) > 80:
-        server.custom_abort(400, "標題過長，請限制在80字以內")
-    if len(request.form["content"]) > 1000:
-        server.custom_abort(400, "內容過長，請限制在1000字以內")
-    obj = datas.Announcement(time=datetime.now(),
-                             title=request.form["title"],
-                             content=request.form["content"],
-                             user=current_user.data,
-                             contest=cdat,
-                             public=False,
-                             question=True)
-    datas.add(obj)
+    with datas.SessionContext():
+        cdat: datas.Contest = datas.first_or_404(datas.Contest, cid=cid)
+        if len(request.form["title"]) > 80:
+            server.custom_abort(400, "標題過長，請限制在80字以內")
+        if len(request.form["content"]) > 1000:
+            server.custom_abort(400, "內容過長，請限制在1000字以內")
+        obj = datas.Announcement(time=datetime.now(),
+                                 title=request.form["title"],
+                                 content=request.form["content"],
+                                 user=current_user.data,
+                                 contest=cdat,
+                                 public=False,
+                                 question=True)
+        datas.add(obj)
     return "", 200
 
 
@@ -260,14 +266,15 @@ def contest_question(cid):
 def reject():
     idx = request.form["idx"]
     cid = request.form["cid"]
-    dat = datas.get_or_404(datas.Submission, tools.to_int(idx))
-    if dat.contest.cid != cid:
-        server.custom_abort(400, "提交不屬於此比賽")
-    cdat: datas.Contest = datas.first_or_404(datas.Contest, cid=cid)
-    if not contests.check_super_access(cdat):
-        server.custom_abort(403, "您沒有權限拒絕此提交")
-    if not dat.completed:
-        server.custom_abort(400, "無法拒絕尚未完成的提交")
-    contests.reject(dat)
-    datas.add(dat)
+    with SessionContext():
+        dat = datas.get_or_404(datas.Submission, tools.to_int(idx))
+        if dat.contest.cid != cid:
+            server.custom_abort(400, "提交不屬於此比賽")
+        cdat: datas.Contest = datas.first_or_404(datas.Contest, cid=cid)
+        if not contests.check_super_access(cdat):
+            server.custom_abort(403, "您沒有權限拒絕此提交")
+        if not dat.completed:
+            server.custom_abort(400, "無法拒絕尚未完成的提交")
+        contests.reject(dat)
+        datas.add(dat)
     return "OK", 200

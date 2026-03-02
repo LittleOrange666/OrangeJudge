@@ -109,11 +109,12 @@ class ProblemIndex(Resource):
         idx = problemsetting.create_problem(name, pid, user.data)
         res = {"pid": idx}
         if args.get("zip_file"):
-            with problemsetting.Problem(idx) as problem:
-                problemsetting.import_problem(request.form, problem)
-                problemsetting.create_version({
-                    "description": "Initial version"
-                }, problem)
+            with datas.SessionContext():
+                with problemsetting.Problem(idx) as problem:
+                    problemsetting.import_problem(request.form, problem)
+                    problemsetting.create_version({
+                        "description": "Initial version"
+                    }, problem)
         return api_response(res)
 
     @ns.doc("list_problems")

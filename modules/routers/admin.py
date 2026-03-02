@@ -37,21 +37,22 @@ app = server.app
 
 
 def update_user():
-    user: datas.User = datas.first_or_404(datas.User, username=request.form["username"])
-    user.display_name = request.form["display_name"]
-    if len(request.form["password"]) > 1:
-        user.password_sha256_hex = login.try_hash(request.form["password"])
-    perms = user.permission_list()
-    new_perms = request.form["permissions"].split(";")
-    for perm_name in ("admin", "make_problems"):
-        if perm_name in new_perms:
-            if perm_name not in perms:
-                perms.append(perm_name)
-        else:
-            if perm_name in perms:
-                perms.remove(perm_name)
-    user.permissions = ";".join(perms)
-    datas.add(user)
+    with datas.SessionContext():
+        user: datas.User = datas.first_or_404(datas.User, username=request.form["username"])
+        user.display_name = request.form["display_name"]
+        if len(request.form["password"]) > 1:
+            user.password_sha256_hex = login.try_hash(request.form["password"])
+        perms = user.permission_list()
+        new_perms = request.form["permissions"].split(";")
+        for perm_name in ("admin", "make_problems"):
+            if perm_name in new_perms:
+                if perm_name not in perms:
+                    perms.append(perm_name)
+            else:
+                if perm_name in perms:
+                    perms.remove(perm_name)
+        user.permissions = ";".join(perms)
+        datas.add(user)
     return "OK", 200
 
 

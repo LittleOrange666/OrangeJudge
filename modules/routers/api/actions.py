@@ -43,13 +43,14 @@ def do_action(pid: str, action_name: str, action_input):
         server.custom_abort(503, "A background action is already in progress.")
     action_func = problemsetting.actions.get(action_name)
     is_important = hasattr(action_func, "important") and getattr(action_func, "important")
-    with problemsetting.Problem(pid, is_important) as dat:
-        result = action_func(request.form, dat)
-        if isinstance(result, str):
-            return api_response({"status": "success", "view_hint": result})
-        elif isinstance(result, Response):
-            return result
-        server.custom_abort(500, f"Action handler for '{action_name}' returned an unexpected result.")
+    with datas.SessionContext():
+        with problemsetting.Problem(pid, is_important) as dat:
+            result = action_func(request.form, dat)
+            if isinstance(result, str):
+                return api_response({"status": "success", "view_hint": result})
+            elif isinstance(result, Response):
+                return result
+            server.custom_abort(500, f"Action handler for '{action_name}' returned an unexpected result.")
 
 
 @ns.route("/general")

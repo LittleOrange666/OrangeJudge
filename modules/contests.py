@@ -48,20 +48,23 @@ def create_contest(name: str, user: datas.User) -> str:
     cid = str(cidx)
     start_time = datetime.now().replace(second=0, microsecond=0) + timedelta(days=1)
     start_timestamp = start_time.timestamp()
-    info = objs.ContestData(name=name, users=[user.username], start=int(start_timestamp), elapsed=60)
-    dat = datas.Contest(id=cidx, cid=cid, name=name, data=objs.as_dict(info), user=user)
-    per = datas.Period(start_time=start_time,
-                       end_time=start_time + timedelta(hours=1),
-                       ended=False,
-                       running=False,
-                       contest_id=dat.id,
-                       is_virtual=False)
-    datas.add(dat, per)
-    datas.flush()  # 重要 !!!
-    dat.main_period_id = per.id
-    datas.add(dat)
-    dat.path.mkdir(parents=True, exist_ok=True)
-    tools.write_json({}, dat.path / "standings.json")
+    username = user.username
+    user_id = user.id
+    with datas.SessionContext():
+        info = objs.ContestData(name=name, users=[username], start=int(start_timestamp), elapsed=60)
+        dat = datas.Contest(id=cidx, cid=cid, name=name, data=objs.as_dict(info), user_id=user_id)
+        per = datas.Period(start_time=start_time,
+                           end_time=start_time + timedelta(hours=1),
+                           ended=False,
+                           running=False,
+                           contest_id=dat.id,
+                           is_virtual=False)
+        datas.add(dat, per)
+        datas.flush()  # 重要 !!!
+        dat.main_period_id = per.id
+        datas.add(dat)
+        dat.path.mkdir(parents=True, exist_ok=True)
+        tools.write_json({}, dat.path / "standings.json")
     return cid
 
 

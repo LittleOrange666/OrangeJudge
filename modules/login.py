@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import hashlib
 import os
 import smtplib
+from contextlib import contextmanager
 from email.message import EmailMessage
 
 from flask_login import LoginManager, UserMixin, current_user
@@ -48,12 +49,6 @@ class User(UserMixin):
         """
         self.id = secure_filename(name.lower())
         self.data: datas.User = datas.first(datas.User, username=name)
-
-    def save(self):
-        """
-        Save the user data to the database.
-        """
-        datas.add(self.data)
 
     @property
     def folder(self) -> str:
@@ -114,6 +109,15 @@ class User(UserMixin):
             bool: True if the user has the API key, False otherwise.
         """
         return self.data.api_key == try_hash(key)
+
+
+@contextmanager
+def SafeModify(user: User):
+    user_id = user.data.id
+    with datas.SessionContext():
+        data = datas.get_by_id(datas.User, user_id)
+        yield data
+        datas.add(data)
 
 
 app = server.app

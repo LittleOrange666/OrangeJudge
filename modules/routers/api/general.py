@@ -292,26 +292,27 @@ class Rejudge(Resource):
         if not user.is_authenticated:
             server.custom_abort(403, "Authentication required to rejudge.")
 
-        dat = datas.get_by_id(datas.Submission, args["idx"])
-        if dat is None:
-            server.custom_abort(404, "Submission not found.")
-        if args["cid"]:
-            if dat.contest.cid != args["cid"]:
-                server.custom_abort(400, "Submission does not belong to the specified contest.")
-            cdat: datas.Contest = datas.first(datas.Contest, cid=args["cid"])
-            if cdat is None:
-                server.custom_abort(404, "Contest not found.")
-            if not contests.check_super_access(cdat, user):  # Assuming this is the correct permission check
-                server.custom_abort(403, "Permission denied to rejudge in this contest.")
-        else:
-            if dat.contest_id is not None:
-                server.custom_abort(400, "Submission is part of a contest, specify CID.")
-            if not user.has(objs.Permission.admin) and (not dat.problem or user.id != dat.problem.user.username):
-                server.custom_abort(403, "Permission denied to rejudge this submission.")
-        if not dat.completed:
-            server.custom_abort(400, "Cannot rejudge an uncompleted submission.")
-        tasks.rejudge(dat, "wait for rejudge")
-        datas.add(dat)
+        with datas.SessionContext():
+            dat = datas.get_by_id(datas.Submission, args["idx"])
+            if dat is None:
+                server.custom_abort(404, "Submission not found.")
+            if args["cid"]:
+                if dat.contest.cid != args["cid"]:
+                    server.custom_abort(400, "Submission does not belong to the specified contest.")
+                cdat: datas.Contest = datas.first(datas.Contest, cid=args["cid"])
+                if cdat is None:
+                    server.custom_abort(404, "Contest not found.")
+                if not contests.check_super_access(cdat, user):  # Assuming this is the correct permission check
+                    server.custom_abort(403, "Permission denied to rejudge in this contest.")
+            else:
+                if dat.contest_id is not None:
+                    server.custom_abort(400, "Submission is part of a contest, specify CID.")
+                if not user.has(objs.Permission.admin) and (not dat.problem or user.id != dat.problem.user.username):
+                    server.custom_abort(403, "Permission denied to rejudge this submission.")
+            if not dat.completed:
+                server.custom_abort(400, "Cannot rejudge an uncompleted submission.")
+            tasks.rejudge(dat, "wait for rejudge")
+            datas.add(dat)
         return api_response({"message": "Submission rejudged successfully."})
 
 
@@ -331,45 +332,46 @@ class RejudgeAll(Resource):
         if pid == "":
             server.custom_abort(400, "Problem ID cannot be empty.")
 
-        if args["cid"]:
-            cdat: datas.Contest = datas.first(datas.Contest, cid=args["cid"])
-            if cdat is None:
-                server.custom_abort(404, "Contest not found.")
-            if not contests.check_super_access(cdat, user):  # Assuming this is the correct permission check
-                server.custom_abort(403, "Permission denied to rejudge in this contest.")
+        with datas.SessionContext():
+            if args["cid"]:
+                cdat: datas.Contest = datas.first(datas.Contest, cid=args["cid"])
+                if cdat is None:
+                    server.custom_abort(404, "Contest not found.")
+                if not contests.check_super_access(cdat, user):  # Assuming this is the correct permission check
+                    server.custom_abort(403, "Permission denied to rejudge in this contest.")
 
-            probs = cdat.datas.problems
-            if pid not in probs:
-                server.custom_abort(404, "Problem not found in contest.")
-            the_pid = probs[pid].pid
-            prob = datas.first(datas.Problem, pid=the_pid)
-            if prob is None:
-                server.custom_abort(404, "Problem not found.")
-            status_query = datas.filter_by(datas.Submission, problem_id=prob.id, contest_id=cdat.id, completed=True)
-        else:
-            if pid == "test":
-                server.custom_abort(400, "Test problem submissions cannot be rejudged en masse.")
-            prob = datas.first(datas.Problem, pid=pid)
-            if prob is None:
-                server.custom_abort(404, "Problem not found.")
-            if not user.has(objs.Permission.admin) and (not prob.user or user.id != prob.user.username):
-                server.custom_abort(403, "Permission denied to rejudge submissions for this problem.")
-            status_query = datas.filter_by(datas.Submission, problem_id=prob.id, contest_id=None, completed=True)
-
-        if args["result"] and args["result"] in objs.TaskResult.__members__:
-            status_query = status_query.filter_by(simple_result_flag=objs.TaskResult[args["result"]].name)
-        if args["lang"] and args["lang"] in executing.langs:
-            status_query = status_query.filter_by(language=args["lang"])
-        if args["user"]:
-            user_filter = datas.filter_by(datas.User, username=args["user"])
-            if user_filter.count() == 0:
-                status_query = status_query.filter_by(user_id=-1)
+                probs = cdat.datas.problems
+                if pid not in probs:
+                    server.custom_abort(404, "Problem not found in contest.")
+                the_pid = probs[pid].pid
+                prob = datas.first(datas.Problem, pid=the_pid)
+                if prob is None:
+                    server.custom_abort(404, "Problem not found.")
+                status_query = datas.filter_by(datas.Submission, problem_id=prob.id, contest_id=cdat.id, completed=True)
             else:
-                status_query = status_query.filter_by(user=user_filter.first())
+                if pid == "test":
+                    server.custom_abort(400, "Test problem submissions cannot be rejudged en masse.")
+                prob = datas.first(datas.Problem, pid=pid)
+                if prob is None:
+                    server.custom_abort(404, "Problem not found.")
+                if not user.has(objs.Permission.admin) and (not prob.user or user.id != prob.user.username):
+                    server.custom_abort(403, "Permission denied to rejudge submissions for this problem.")
+                status_query = datas.filter_by(datas.Submission, problem_id=prob.id, contest_id=None, completed=True)
 
-        for a_submit in status_query:
-            tasks.rejudge(a_submit, "wait for rejudge")
-            datas.add(a_submit)
+            if args["result"] and args["result"] in objs.TaskResult.__members__:
+                status_query = status_query.filter_by(simple_result_flag=objs.TaskResult[args["result"]].name)
+            if args["lang"] and args["lang"] in executing.langs:
+                status_query = status_query.filter_by(language=args["lang"])
+            if args["user"]:
+                user_filter = datas.filter_by(datas.User, username=args["user"])
+                if user_filter.count() == 0:
+                    status_query = status_query.filter_by(user_id=-1)
+                else:
+                    status_query = status_query.filter_by(user=user_filter.first())
+
+            for a_submit in status_query:
+                tasks.rejudge(a_submit, "wait for rejudge")
+                datas.add(a_submit)
 
         return api_response({"message": "All matching submissions rejudged successfully."})
 

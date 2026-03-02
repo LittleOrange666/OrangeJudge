@@ -377,22 +377,23 @@ class ContestRegister(Resource):
         if not user.is_authenticated:
             server.custom_abort(403, "Authentication required to register")
 
-        dat = datas.first(datas.Contest, cid=cid)
-        if dat is None:
-            server.custom_abort(404, "Contest not found")
-        per = datas.get_by_id(datas.Period, dat.main_period_id)
-        if per is None:
-            server.custom_abort(500, "Contest main period data is missing")
-        info = dat.datas
-        if not info.can_register or per.is_over():
-            server.custom_abort(403, "Registration is not open")
-        if user.id in info.participants:
-            server.custom_abort(409, "User already registered")
+        with datas.SessionContext():
+            dat = datas.first(datas.Contest, cid=cid)
+            if dat is None:
+                server.custom_abort(404, "Contest not found")
+            per = datas.get_by_id(datas.Period, dat.main_period_id)
+            if per is None:
+                server.custom_abort(500, "Contest main period data is missing")
+            info = dat.datas
+            if not info.can_register or per.is_over():
+                server.custom_abort(403, "Registration is not open")
+            if user.id in info.participants:
+                server.custom_abort(409, "User already registered")
 
-        info.participants.append(user.id)
-        dat.datas = info
-        flag_modified(dat, "data")
-        datas.add(dat)
+            info.participants.append(user.id)
+            dat.datas = info
+            flag_modified(dat, "data")
+            datas.add(dat)
         return api_response({"message": "Successfully registered"})
 
 
@@ -409,22 +410,23 @@ class ContestUnregister(Resource):
         if not user.is_authenticated:
             server.custom_abort(403, "Authentication required")
 
-        dat: datas.Contest = datas.first(datas.Contest, cid=cid)
-        if dat is None:
-            server.custom_abort(404, "Contest not found")
-        per = datas.get_by_id(datas.Period, dat.main_period_id)
-        if per is None:
-            server.custom_abort(500, "Contest main period data is missing")
-        info = dat.datas
-        if not info.can_register or per.is_over():
-            server.custom_abort(403, "Cannot unregister from this contest")
-        if user.id not in info.participants:
-            server.custom_abort(409, "User is not registered")
+        with datas.SessionContext():
+            dat: datas.Contest = datas.first(datas.Contest, cid=cid)
+            if dat is None:
+                server.custom_abort(404, "Contest not found")
+            per = datas.get_by_id(datas.Period, dat.main_period_id)
+            if per is None:
+                server.custom_abort(500, "Contest main period data is missing")
+            info = dat.datas
+            if not info.can_register or per.is_over():
+                server.custom_abort(403, "Cannot unregister from this contest")
+            if user.id not in info.participants:
+                server.custom_abort(409, "User is not registered")
 
-        info.participants.remove(user.id)
-        dat.datas = info
-        flag_modified(dat, "data")
-        datas.add(dat)
+            info.participants.remove(user.id)
+            dat.datas = info
+            flag_modified(dat, "data")
+            datas.add(dat)
         return api_response({"message": "Successfully unregistered"})
 
 
@@ -461,33 +463,34 @@ class ContestVirtual(Resource):
         if not user.is_authenticated:
             server.custom_abort(403, "Authentication required")
 
-        dat: datas.Contest = datas.first(datas.Contest, cid=cid)
-        if dat is None:
-            server.custom_abort(404, "Contest not found")
-        info = dat.datas
-        if not dat.can_virtual():
-            server.custom_abort(403, "This contest does not support virtual participation")
-        if user.id in info.virtual_participants:
-            server.custom_abort(409, "User already registered for a virtual contest")
+        with datas.SessionContext():
+            dat: datas.Contest = datas.first(datas.Contest, cid=cid)
+            if dat is None:
+                server.custom_abort(404, "Contest not found")
+            info = dat.datas
+            if not dat.can_virtual():
+                server.custom_abort(403, "This contest does not support virtual participation")
+            if user.id in info.virtual_participants:
+                server.custom_abort(409, "User already registered for a virtual contest")
 
-        start_time: datetime = tools.to_datetime(args["start_time"], second=0, microsecond=0)
-        per = datas.Period.query.filter_by(start_time=start_time, contest=dat, is_virtual=True).first()
-        if per:
-            idx = per.id
-        else:
-            nw_per = datas.Period(
-                start_time=start_time,
-                end_time=start_time + timedelta(minutes=info.elapsed),
-                contest=dat,
-                is_virtual=True
-            )
-            datas.add(nw_per)
-            datas.flush()
-            idx = nw_per.id
+            start_time: datetime = tools.to_datetime(args["start_time"], second=0, microsecond=0)
+            per = datas.Period.query.filter_by(start_time=start_time, contest=dat, is_virtual=True).first()
+            if per:
+                idx = per.id
+            else:
+                nw_per = datas.Period(
+                    start_time=start_time,
+                    end_time=start_time + timedelta(minutes=info.elapsed),
+                    contest=dat,
+                    is_virtual=True
+                )
+                datas.add(nw_per)
+                datas.flush()
+                idx = nw_per.id
 
-        info.virtual_participants[user.id] = idx
-        flag_modified(dat, "data")
-        datas.add(dat)
+            info.virtual_participants[user.id] = idx
+            flag_modified(dat, "data")
+            datas.add(dat)
         return api_response({"message": "Successfully registered for virtual contest"})
 
 
@@ -535,17 +538,19 @@ class ContestQuestion(Resource):
             server.custom_abort(404, "Contest not found")
         if len(args["title"]) > 80 or len(args["content"]) > 1000:
             server.custom_abort(400, "Title or content too long")
-
-        obj = datas.Announcement(
-            time=datetime.now(),
-            title=args["title"],
-            content=args["content"],
-            user=user.data,
-            contest=cdat,
-            public=False,
-            question=True
-        )
-        datas.add(obj)
+        user_id = user.data.id
+        contest_id = cdat.id
+        with datas.SessionContext():
+            obj = datas.Announcement(
+                time=datetime.now(),
+                title=args["title"],
+                content_id=contest_id,
+                user_id=user_id,
+                contest=cdat,
+                public=False,
+                question=True
+            )
+            datas.add(obj)
         return api_response({"message": "Question submitted successfully"})
 
 
@@ -567,16 +572,17 @@ class RejectSubmission(Resource):
         if not contests.check_super_access(cdat, user):
             server.custom_abort(403, "Permission denied to reject submission")
 
-        dat = datas.get_by_id(datas.Submission, sub_id)
-        if dat is None:
-            server.custom_abort(404, "Submission not found")
-        if dat.contest_id != cdat.id:
-            server.custom_abort(400, "Submission does not belong to this contest")
-        if not dat.completed:
-            server.custom_abort(400, "Cannot reject an incomplete submission")
+        with datas.SessionContext():
+            dat = datas.get_by_id(datas.Submission, sub_id)
+            if dat is None:
+                server.custom_abort(404, "Submission not found")
+            if dat.contest_id != cdat.id:
+                server.custom_abort(400, "Submission does not belong to this contest")
+            if not dat.completed:
+                server.custom_abort(400, "Cannot reject an incomplete submission")
 
-        contests.reject(dat)
-        datas.add(dat)
+            contests.reject(dat)
+            datas.add(dat)
         return api_response({"message": "Submission rejected"})
 
 

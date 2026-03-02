@@ -273,15 +273,16 @@ def create_problem(name: str, pid: str, user: datas.User) -> str:
         while datas.count(datas.Problem, pid=str(pidx)) > 0:
             pidx += 1
         pid = str(pidx)
-    dat = datas.Problem(id=problem_count + 1, pid=pid, name=name, data={}, user=user)
-    path = preparing_problem_path / pid
-    path.mkdir(parents=True, exist_ok=True)
-    (path / "testcases").mkdir(parents=True, exist_ok=True)
-    (path / "file").mkdir(parents=True, exist_ok=True)
-    (path / "public_file").mkdir(parents=True, exist_ok=True)
-    info = objs.ProblemInfo(name=name, users=[user.username])
-    dat.datas = dat.new_datas = info
-    datas.add(dat)
+    with datas.SessionContext():
+        dat = datas.Problem(id=problem_count + 1, pid=pid, name=name, data={}, user=user)
+        path = preparing_problem_path / pid
+        path.mkdir(parents=True, exist_ok=True)
+        (path / "testcases").mkdir(parents=True, exist_ok=True)
+        (path / "file").mkdir(parents=True, exist_ok=True)
+        (path / "public_file").mkdir(parents=True, exist_ok=True)
+        info = objs.ProblemInfo(name=name, users=[user.username])
+        dat.datas = dat.new_datas = info
+        datas.add(dat)
     return pid
 
 
@@ -1165,12 +1166,13 @@ def action(form: ImmutableMultiDict[str, str]) -> Response:
     pid = secure_filename(form["pid"])
     func = actions.get(form["action"])
     important = hasattr(func, "important") and getattr(func, "important")
-    with Problem(pid, important) as dat:
-        tp = actions.call(form["action"], form, dat)
-        if type(tp) is str:
-            return redirect(f"/problemsetting/{pid}#{tp}")
-        else:
-            return tp
+    with datas.SessionContext():
+        with Problem(pid, important) as dat:
+            tp = actions.call(form["action"], form, dat)
+            if type(tp) is str:
+                return redirect(f"/problemsetting/{pid}#{tp}")
+            else:
+                return tp
 
 
 def preview(args: MultiDict[str, str], pdat: datas.Problem) -> Response:

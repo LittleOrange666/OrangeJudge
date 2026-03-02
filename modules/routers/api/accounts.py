@@ -203,9 +203,8 @@ class SettingsProfile(Resource):
         display_name = args["display_name"]
         if len(display_name) > 120 or len(display_name) < 1:
             server.custom_abort(400, "Display name must be between 1 and 120 characters.")
-        data: datas.User = user.data
-        data.display_name = display_name
-        user.save()
+        with login.SafeModify(user) as data:
+            data.display_name = display_name
         return api_response({"message": "Profile updated."})
 
 
@@ -226,8 +225,8 @@ class SettingsPassword(Resource):
         if len(new_password) < 6:
             server.custom_abort(400, "New password must be at least 6 characters long.")
 
-        data.password_sha256_hex = login.try_hash(new_password)
-        user.save()
+        with login.SafeModify(user) as _data:
+            _data.password_sha256_hex = login.try_hash(new_password)
         return api_response({"message": "Password changed."})
 
 
@@ -239,10 +238,9 @@ class GenKey(Resource):
     def post(self):
         """Generate a new API key. The old key will be invalidated."""
         user = get_api_user(base_request_parser.parse_args())
-        data: datas.User = user.data
-        key = login.gen_key()
-        data.api_key = login.try_hash(key)
-        user.save()
+        with login.SafeModify(user) as data:
+            key = login.gen_key()
+            data.api_key = login.try_hash(key)
         return api_response({"api_key": key})
 
 
@@ -268,10 +266,8 @@ class ForgetPassword(Resource):
             server.custom_abort(404, "User with this email not found.")
         if not use_code(email, verify):
             server.custom_abort(403, "Invalid verification code.")
-
-        data = user.data
-        data.password_sha256_hex = login.try_hash(password)
-        user.save()
+        with login.SafeModify(user) as data:
+            data.password_sha256_hex = login.try_hash(password)
         return api_response({"message": "Password has been reset."})
 
 

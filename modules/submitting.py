@@ -34,18 +34,21 @@ def test_submit(lang: str, code: str, inp: str, user: login.User | None = None) 
         server.custom_abort(404, "Language not supported")
     ext = executing.langs[lang].source_ext
     fn = constants.source_file_name + ext
-    dat = datas.Submission(source=fn, time=datetime.datetime.now(), user=user.data,
-                           problem=datas.first(datas.Problem, pid="test"), language=lang,
-                           data={"infile": "in.txt", "outfile": "out.txt"}, pid="test", simple_result="waiting",
-                           queue_position=0, simple_result_flag=objs.TaskResult.PENDING.name)
-    datas.add(dat)
-    datas.flush()
-    idx = str(dat.id)
-    tools.write(code, dat.path / fn)
-    tools.write(inp, dat.path / "in.txt")
-    dat.queue_position = tasks.enqueue(dat.id)
-    datas.add(dat)
-    return idx
+    user_id = user.data.id
+    problem_id = datas.first(datas.Problem, pid="test").id
+    with datas.SessionContext():
+        dat = datas.Submission(source=fn, time=datetime.datetime.now(), user_id=user_id,
+                               problem_id=problem_id, language=lang,
+                               data={"infile": "in.txt", "outfile": "out.txt"}, pid="test", simple_result="waiting",
+                               queue_position=0, simple_result_flag=objs.TaskResult.PENDING.name)
+        datas.add(dat)
+        datas.flush()
+        idx = str(dat.id)
+        tools.write(code, dat.path / fn)
+        tools.write(inp, dat.path / "in.txt")
+        dat.queue_position = tasks.enqueue(dat.id)
+        datas.add(dat)
+        return idx
 
 
 def submit(lang: str, pid: str, code: str, cid: str | None = None, user: login.User | None = None) -> str:
@@ -62,22 +65,25 @@ def submit(lang: str, pid: str, code: str, cid: str | None = None, user: login.U
         server.custom_abort(400, "Language not allowed for this problem")
     ext = executing.langs[lang].source_ext
     fn = constants.source_file_name + ext
-    dat = datas.Submission(source=fn, time=datetime.datetime.now(), user=user.data,
-                           problem=pdat, language=lang, data={}, pid=pid, simple_result="waiting",
-                           queue_position=0, simple_result_flag=objs.TaskResult.PENDING.name)
-    if cid is not None:
-        cdat: datas.Contest = datas.first_or_404(datas.Contest, cid=cid)
-        contests.check_access(cdat, user)
-        per_id = contests.check_period(cdat, user)
-        dat.contest = cdat
-        if per_id:
-            dat.period_id = per_id
-            if cdat.datas.pretest != objs.PretestType.no:
-                dat.just_pretest = True
-    datas.add(dat)
-    datas.flush()
-    idx = str(dat.id)
-    tools.write(code, dat.path / fn)
-    dat.queue_position = tasks.enqueue(dat.id)
-    datas.add(dat)
+    user_id = user.data.id
+    problem_id = pdat.id
+    with datas.SessionContext():
+        dat = datas.Submission(source=fn, time=datetime.datetime.now(), user_id=user_id,
+                               problem_id=problem_id, language=lang, data={}, pid=pid, simple_result="waiting",
+                               queue_position=0, simple_result_flag=objs.TaskResult.PENDING.name)
+        if cid is not None:
+            cdat: datas.Contest = datas.first_or_404(datas.Contest, cid=cid)
+            contests.check_access(cdat, user)
+            per_id = contests.check_period(cdat, user)
+            dat.contest = cdat
+            if per_id:
+                dat.period_id = per_id
+                if cdat.datas.pretest != objs.PretestType.no:
+                    dat.just_pretest = True
+        datas.add(dat)
+        datas.flush()
+        idx = str(dat.id)
+        tools.write(code, dat.path / fn)
+        dat.queue_position = tasks.enqueue(dat.id)
+        datas.add(dat)
     return idx

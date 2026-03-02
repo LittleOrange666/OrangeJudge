@@ -296,22 +296,23 @@ def preferences():
 @login_required
 def rejudge():
     idx = request.form["idx"]
-    dat = datas.get_or_404(datas.Submission, tools.to_int(idx))
-    if "cid" in request.form:
-        if dat.contest.cid != request.form["cid"]:
-            server.custom_abort(400, "提交不屬於指定的比賽")
-        cdat: datas.Contest = datas.first_or_404(datas.Contest.query, cid=request.form["cid"])
-        if not contests.check_super_access(cdat):
-            server.custom_abort(403, "無權限進行此操作")
-    else:
-        if dat.contest_id is not None:
-            server.custom_abort(400, "Rejudge比賽中的提交需要顯式指定比賽ID")
-        if not current_user.has(Permission.admin) and current_user.id != dat.problem.user.username:
-            server.custom_abort(403, "無權限進行此操作")
-    if not dat.completed:
-        server.custom_abort(400, "無法Rejudge尚未完成的提交")
-    tasks.rejudge(dat, "wait for rejudge")
-    datas.add(dat)
+    with datas.SessionContext():
+        dat = datas.get_or_404(datas.Submission, tools.to_int(idx))
+        if "cid" in request.form:
+            if dat.contest.cid != request.form["cid"]:
+                server.custom_abort(400, "提交不屬於指定的比賽")
+            cdat: datas.Contest = datas.first_or_404(datas.Contest.query, cid=request.form["cid"])
+            if not contests.check_super_access(cdat):
+                server.custom_abort(403, "無權限進行此操作")
+        else:
+            if dat.contest_id is not None:
+                server.custom_abort(400, "Rejudge比賽中的提交需要顯式指定比賽ID")
+            if not current_user.has(Permission.admin) and current_user.id != dat.problem.user.username:
+                server.custom_abort(403, "無權限進行此操作")
+        if not dat.completed:
+            server.custom_abort(400, "無法Rejudge尚未完成的提交")
+        tasks.rejudge(dat, "wait for rejudge")
+        datas.add(dat)
     return "OK", 200
 
 
@@ -321,31 +322,32 @@ def rejudge_all():
     if "pid" not in request.form or request.form["pid"] == "":
         return "僅允許Rejudge特定題目", 400
     pid = request.form["pid"]
-    if "cid" in request.form:
-        cdat: datas.Contest = datas.first_or_404(datas.Contest.query, cid=request.form["cid"])
-        if not contests.check_super_access(cdat):
-            server.custom_abort(403, "無權限進行此操作")
-        probs = cdat.datas.problems
-        if pid not in probs:
-            server.custom_abort(404, "題目不存在於此比賽中")
-        the_pid = probs[pid].pid
-        prob = datas.first_or_404(datas.Problem, pid=the_pid)
-        status = datas.filter_by(datas.Submission, problem_id=prob.id, contest_id=cdat.id, completed=True)
-    else:
-        if pid == "test":
-            return "不允許Rejudge測試題目", 400
-        prob = datas.first_or_404(datas.Problem, pid=pid)
-        if not login.has_permission(Permission.admin) and current_user.id != prob.user.username:
-            server.custom_abort(403, "無權限進行此操作")
-        status = datas.filter_by(datas.Submission, problem_id=prob.id, contest_id=None, completed=True)
-    if "result" in request.form and request.form["result"] in objs.TaskResult.__members__:
-        result = objs.TaskResult[request.form["result"]]
-        status = status.filter_by(simple_result_flag=result.name)
-    if "lang" in request.form and request.form["lang"] in executing.langs:
-        status = status.filter_by(language=request.form["lang"])
-    for a_submit in status:
-        tasks.rejudge(a_submit, "wait for rejudge")
-        datas.add(a_submit)
+    with datas.SessionContext():
+        if "cid" in request.form:
+            cdat: datas.Contest = datas.first_or_404(datas.Contest.query, cid=request.form["cid"])
+            if not contests.check_super_access(cdat):
+                server.custom_abort(403, "無權限進行此操作")
+            probs = cdat.datas.problems
+            if pid not in probs:
+                server.custom_abort(404, "題目不存在於此比賽中")
+            the_pid = probs[pid].pid
+            prob = datas.first_or_404(datas.Problem, pid=the_pid)
+            status = datas.filter_by(datas.Submission, problem_id=prob.id, contest_id=cdat.id, completed=True)
+        else:
+            if pid == "test":
+                return "不允許Rejudge測試題目", 400
+            prob = datas.first_or_404(datas.Problem, pid=pid)
+            if not login.has_permission(Permission.admin) and current_user.id != prob.user.username:
+                server.custom_abort(403, "無權限進行此操作")
+            status = datas.filter_by(datas.Submission, problem_id=prob.id, contest_id=None, completed=True)
+        if "result" in request.form and request.form["result"] in objs.TaskResult.__members__:
+            result = objs.TaskResult[request.form["result"]]
+            status = status.filter_by(simple_result_flag=result.name)
+        if "lang" in request.form and request.form["lang"] in executing.langs:
+            status = status.filter_by(language=request.form["lang"])
+        for a_submit in status:
+            tasks.rejudge(a_submit, "wait for rejudge")
+            datas.add(a_submit)
     return "OK", 200
 
 

@@ -166,36 +166,34 @@ def user_page(name):
 @app.route("/settings", methods=["GET", "POST"])
 @login_required
 def settings():
-    data: datas.User = current_user.data
+    _data: datas.User = current_user.data
     if request.method == "GET":
         perms = [(perm.name, perm.value) for perm in Permission if current_user.has(perm) and
                  perm not in (Permission.admin, Permission.root)]
-        return render_template("settings.html", data=data, perms=perms)
-    if request.form["action"] == "general_info":
-        display_name = request.form["DisplayName"]
-        if len(display_name) > 120 or len(display_name) < 1:
-            server.custom_abort(400, "顯示名稱長度應介於1到120個字元之間")
-        data.display_name = display_name
-        current_user.save()
-    elif request.form["action"] == "change_password":
-        old_password = request.form.get("old_password", "")
-        new_password = request.form.get("new_password", "")
-        if login.try_hash(old_password) != data.password_sha256_hex:
-            server.custom_abort(403, "舊密碼錯誤")
-        if len(new_password) < 6:
-            server.custom_abort(400, "密碼應至少6個字元")
-        data.password_sha256_hex = login.try_hash(new_password)
-        current_user.save()
+        return render_template("settings.html", data=_data, perms=perms)
+    with login.SafeModify(current_user) as data:
+        if request.form["action"] == "general_info":
+            display_name = request.form["DisplayName"]
+            if len(display_name) > 120 or len(display_name) < 1:
+                server.custom_abort(400, "顯示名稱長度應介於1到120個字元之間")
+            data.display_name = display_name
+        elif request.form["action"] == "change_password":
+            old_password = request.form.get("old_password", "")
+            new_password = request.form.get("new_password", "")
+            if login.try_hash(old_password) != data.password_sha256_hex:
+                server.custom_abort(403, "舊密碼錯誤")
+            if len(new_password) < 6:
+                server.custom_abort(400, "密碼應至少6個字元")
+            data.password_sha256_hex = login.try_hash(new_password)
     return "", 200
 
 
 @app.route("/gen_key", methods=["POST"])
 @login_required
 def gen_key():
-    data: datas.User = current_user.data
-    key = login.gen_key()
-    data.api_key = login.try_hash(key)
-    current_user.save()
+    with login.SafeModify(current_user) as data:
+        key = login.gen_key()
+        data.api_key = login.try_hash(key)
     return key, 200
 
 
@@ -215,7 +213,6 @@ def forget_password():
         server.custom_abort(404, "使用者不存在")
     if not use_code(email, verify):
         server.custom_abort(403, "驗證碼錯誤")
-    data = user.data
-    data.password_sha256_hex = login.try_hash(password)
-    user.save()
+    with login.SafeModify(current_user) as data:
+        data.password_sha256_hex = login.try_hash(password)
     return "", 200

@@ -31,34 +31,35 @@ ns = api.namespace("contest_manage", path="/contest/<string:cid>/manage",
 def do_action(cid: str, action_name: str, action_input):
     auth_args = action_input.parse_args()
     user = get_api_user(auth_args)
-    cdat: datas.Contest = datas.first(datas.Contest, cid=cid)
-    if cdat is None:
-        server.custom_abort(404, "Contest not found.")
-    if not contests.check_super_access(cdat, user):
-        server.custom_abort(403, "You do not have permission to perform this action on this contest.")
+    with datas.SessionContext():
+        cdat: datas.Contest = datas.first(datas.Contest, cid=cid)
+        if cdat is None:
+            server.custom_abort(404, "Contest not found.")
+        if not contests.check_super_access(cdat, user):
+            server.custom_abort(403, "You do not have permission to perform this action on this contest.")
 
-    action_func = contests.actions.get(action_name)
+        action_func = contests.actions.get(action_name)
 
-    if not action_func:
-        server.custom_abort(501, f"Action handler for '{action_name}' is not implemented.")
+        if not action_func:
+            server.custom_abort(501, f"Action handler for '{action_name}' is not implemented.")
 
-    dat = cdat.datas
+        dat = cdat.datas
 
-    result = action_func(request.form, cdat, dat)
-    cdat.datas = dat
-    datas.add(cdat)
-    if action_name == "change_settings":
-        for the_per in cdat.periods:
-            the_per: datas.Period
-            the_per.end_time = the_per.start_time + timedelta(minutes=dat.elapsed)
-        datas.add(*cdat.periods)
+        result = action_func(request.form, cdat, dat)
+        cdat.datas = dat
+        datas.add(cdat)
+        if action_name == "change_settings":
+            for the_per in cdat.periods:
+                the_per: datas.Period
+                the_per.end_time = the_per.start_time + timedelta(minutes=dat.elapsed)
+            datas.add(*cdat.periods)
 
-    if isinstance(result, str):
-        return api_response({"message": "OK", "view_hint": result})
-    elif isinstance(result, Response):
-        return result
-    elif result is None:
-        return api_response({"message": "OK"})
+        if isinstance(result, str):
+            return api_response({"message": "OK", "view_hint": result})
+        elif isinstance(result, Response):
+            return result
+        elif result is None:
+            return api_response({"message": "OK"})
 
     server.custom_abort(500, f"Action handler for '{action_name}' returned an unexpected result.")
 
