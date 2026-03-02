@@ -18,13 +18,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 import os
 
+from flask import Response, stream_with_context
 from flask_login import login_user, logout_user, current_user
 from flask_restx import Resource, fields
 from pygments import lexers
 
 from .base import get_api_user, api_response, api, marshal_with, request_parser, Args, Form, paging, pagination, \
     base_request_parser
-from ... import submitting, datas, objs, tools, executing, tasks, contests, server, constants, login, config
+from ... import submitting, datas, objs, tools, executing, tasks, contests, server, constants, login, config, pubs
 
 ns = api.namespace("general", path="/", description="General API endpoints")
 
@@ -145,7 +146,7 @@ class Submission(Resource):
         args = submission_get_input.parse_args()
         user = get_api_user(args)
         idx = args["submission_id"]
-        dat = datas.first(datas.Submission, id=idx)
+        dat = datas.get_by_id(datas.Submission, idx)
         if dat is None:
             server.custom_abort(404, "Submission not found.")
         if not user.has(objs.Permission.admin) and dat.user_id != user.data.id:
@@ -201,6 +202,28 @@ class Submission(Resource):
         ret["contest"] = contest
         ret["pos"] = tasks.get_queue_position(dat)
         return api_response(ret)
+
+
+@ns.route("/submission/wait")
+class SubmissionWait(Resource):
+    @ns.doc("wait_for_submission")
+    @ns.expect(submission_get_input)
+    def get(self):
+        """Wait for a submission to be completed."""
+        args = submission_get_input.parse_args()
+        user = get_api_user(args)
+        idx = args["submission_id"]
+        dat = datas.get_by_id(datas.Submission, idx)
+        if dat is None:
+            server.custom_abort(404, "Submission not found.")
+        if not user.has(objs.Permission.admin) and dat.user_id != user.data.id:
+            server.custom_abort(403, "You do not have permission to view this submission.")
+        res = pubs.end_sender() if dat.completed else pubs.submission_info_receiver(idx)
+        return Response(
+            stream_with_context(res),
+            mimetype='text/event-stream',
+            headers={'Cache-Control': 'no-cache', 'Connection': 'keep-alive'}
+        )
 
 
 @ns.route("/status")

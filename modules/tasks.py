@@ -28,7 +28,7 @@ from pathlib import Path
 
 from loguru import logger
 
-from . import executing, constants, tools, locks, datas, config, judge, objs
+from . import executing, constants, tools, locks, datas, config, judge, objs, pubs
 from .constants import log_path
 from .judge import SandboxUser
 from .objs import TaskResult
@@ -123,6 +123,7 @@ def run_test(dat_id: int) -> None:
         dat.simple_result_flag = result.split(":")[0]
         dat.completed = True
         datas.add(dat)
+        pubs.pub_submission_info(dat_id, pubs.PROGRESS_MSG)
 
 
 def run_problem(pid: str, dat_id: int) -> None:
@@ -243,6 +244,7 @@ def run_problem(pid: str, dat_id: int) -> None:
             dat.simple_result_flag = simple_result_flag
             dat.completed = completed
             datas.add(dat)
+            pubs.pub_submission_info(dat.id, pubs.PROGRESS_MSG)
 
     unsaved_count = 0
     save_period = config.judge.save_period
@@ -386,6 +388,7 @@ def runner(dat_id: int, pid: str):
                 run_test(dat_id)
             else:
                 run_problem(pid, dat_id)
+            pubs.pub_submission_info(dat_id, pubs.COMPLETED_MSG)
         except Exception as e:
             traceback.print_exception(e)
             with datas.SessionContext():
