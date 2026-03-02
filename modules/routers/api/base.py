@@ -148,7 +148,7 @@ def get_api_user(args: ParseResult, required: objs.Permission | None = None, req
             key = request.headers.get("api-key")
         if not key:
             if require_login:
-                server.custom_abort(403, "Missing API key")
+                server.custom_abort(403, "Login required")
             else:
                 key = "PLACEHOLDER_FOR_ANON_USER"
         data_user = datas.first(datas.User, api_key=login.try_hash(key))

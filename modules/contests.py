@@ -405,11 +405,13 @@ def get_standing(cid: str):
     info = cdat.datas
     for k, v in info.problems.items():
         rmp[v.pid] = k
+    display_names = {}
     for dat in cdat.submissions.filter_by(completed=True).all():
         dat: datas.Submission
         res = dat.results
         if dat.user_id not in mp:
-            mp[dat.user_id] = dat.user.display_name
+            mp[dat.user_id] = dat.user.username
+            display_names[dat.user.username] = dat.user.display_name
         scores = {k: v.gained_score for k, v in res.group_results.items()}
         ret.append({"user": mp[dat.user_id],
                     "pid": rmp[dat.pid],
@@ -424,6 +426,20 @@ def get_standing(cid: str):
         pers.append({"start_time": per.start_time.timestamp(),
                      "judging": per.judging,
                      "idx": per.id})
+    for username in info.participants:
+        if username not in display_names:
+            user = datas.first(datas.User, username=username)
+            if user is not None:
+                display_names[username] = user.display_name
+            else:
+                display_names[username] = username
+    for username in info.virtual_participants:
+        if username not in display_names:
+            user = datas.first(datas.User, username=username)
+            if user is not None:
+                display_names[username] = user.display_name
+            else:
+                display_names[username] = username
     return {"submissions": ret,
             "rule": info.type.name,
             "pids": list(info.problems.keys()),
@@ -431,7 +447,8 @@ def get_standing(cid: str):
             "pers": pers,
             "main_per": cdat.main_period_id,
             "participants": info.participants,
-            "virtual_participants": info.virtual_participants}
+            "virtual_participants": info.virtual_participants,
+            "display_names": display_names}
 
 
 def reject(dat: datas.Submission):

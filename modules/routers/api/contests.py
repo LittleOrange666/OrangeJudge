@@ -137,6 +137,7 @@ standing_output = ns.model("StandingOutput", {
     "main_per": fields.Integer(description="Main period ID"),
     "participants": fields.List(fields.String, description="List of participants"),
     "virtual_participants": fields.Raw(description="Virtual participants data"),
+    "display_names": fields.Raw(description="Mapping of user Names to display names"),
 })
 contest_problem_detail_model = ns.model("ContestProblemDetail", {
     "pid": fields.String(description="Problem ID within the contest"),
@@ -495,7 +496,7 @@ class ContestStanding(Resource):
     def get(self, cid: str):
         """Get contest standings (scoreboard)"""
         args = base_request_parser.parse_args()
-        user = get_api_user(args)
+        user = get_api_user(args, require_login=False)
         cdat: datas.Contest = datas.first(datas.Contest, cid=cid)
         if cdat is None:
             server.custom_abort(404, "Contest not found")
@@ -584,7 +585,7 @@ class ContestProblem(Resource):
     def get(self, cid: str, pid: str):
         """Get details of a specific problem in a contest"""
         args = base_request_parser.parse_args()
-        user = get_api_user(args)
+        user = get_api_user(args,require_login=False)
 
         cdat: datas.Contest = datas.first(datas.Contest, cid=cid)
         if cdat is None:
