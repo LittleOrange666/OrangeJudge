@@ -332,6 +332,10 @@ class ContestStatus(Resource):
         out = []
         can_edit = contests.check_super_access(dat, api_user)
 
+        dt = time.time() - info.start
+        dt = dt / 60 - info.elapsed
+        can_see = (info.standing.public and (dt <= -info.standing.start_freeze or dt >= info.standing.end_freeze))
+
         for obj in got_data:
             obj: datas.Submission
             problem_display_id = next((k for k, v in info.problems.items() if v.pid == obj.pid), "?")
@@ -339,7 +343,7 @@ class ContestStatus(Resource):
 
             can_see_details = api_user.is_authenticated and (
                     api_user.has(Permission.admin) or api_user.id == obj.user.username)
-            can_know_all = can_see_details or info.standing.public or can_edit
+            can_know_all = can_see_details or can_see or can_edit
 
             if can_know_all:
                 out.append({
