@@ -26,6 +26,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from pathlib import Path
 
+import yaml
 from loguru import logger
 
 from . import executing, constants, tools, locks, datas, config, judge, objs, pubs
@@ -140,6 +141,12 @@ def run_problem(pid: str, dat_id: int) -> None:
         protected = ((not problem_info.public_testcase or bool(dat.period_id))
                      and dat.user.username not in problem_info.users)
         language = dat.language
+        sent_source_other = env.send_rand_file(source, SandboxUser.judge.readable)
+        info_file = dat_path / "info.yml"
+        info_data = {"source": sent_source_other.inner.name, "language": dat.language, "problem": pdat.pid, "username": dat.user.username}
+        with open(info_file, "w") as f:
+            yaml.dump(info_data, f)
+        env.send_file(info_file, SandboxUser.judge.readable)
     for fn in problem_info.library:
         env.send_file(pdat.path / "file" / fn, env.executable)
     sent_source = env.send_file(source)
