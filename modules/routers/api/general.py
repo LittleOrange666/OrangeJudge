@@ -171,6 +171,11 @@ class Submission(Resource):
             ret["output"] = tools.read_default(dat.path / info.outfile)
             ret["error"] = tools.read_default(dat.path / constants.error_filename)
         else:
+            testcase_path = dat.path / "testcases"
+            problem_info = pdat.datas
+            super_access = user.has(objs.Permission.admin) or user.id in problem_info.users
+            protected = not problem_info.public_testcase or bool(dat.contest_id)
+            checker_protected = not problem_info.public_checker or bool(dat.contest_id)
             if dat.contest_id:
                 cdat: datas.Contest = dat.contest
                 contest = cdat.name
@@ -179,13 +184,21 @@ class Submission(Resource):
             group_results = {}
             result = {}
             detail = []
-            for res in result_data.results:
-                detail.append({
+            for i,res in enumerate(result_data.results):
+                tc_result = {
                     "result": res.result.name,
                     "time": res.time,
                     "mem": res.mem,
                     "score": res.score
-                })
+                }
+                if tc_result["result"] not in ("SKIP", "PASS") and (res.sample or super_access or not protected):
+                    tc_result["in_txt"] = tools.read_default(testcase_path / f"{i}.in")
+                    if res.has_output:
+                        tc_result["out_txt"] = tools.read_default(testcase_path / f"{i}.out")
+                    tc_result["ans_txt"] = tools.read_default(testcase_path / f"{i}.ans")
+                if tc_result["result"] not in ("SKIP",) and (res.sample or super_access or not checker_protected):
+                    tc_result["info"] = res.info
+                detail.append(tc_result)
             result["detail"] = detail
             if completed and not info.JE:
                 result["CE"] = result_data.CE
@@ -197,6 +210,10 @@ class Submission(Resource):
                                          "mem": v.mem} for k, v in gpr.items()}
                 result["total_score"] = result_data.total_score
                 result["group_result"] = group_results
+                cc_mode = problem_info.codechecker_mode
+                see_cc = cc_mode == objs.CodecheckerMode.public or cc_mode == objs.CodecheckerMode.private and super_access
+                if see_cc and not result_data.CE:
+                    result["cc"] = tools.read_default(dat.path / "codechecker_result.txt", default="INFO NOT FOUND")
             ret["result"] = result
         ret["cid"] = cid
         ret["contest"] = contest
