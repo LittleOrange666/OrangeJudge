@@ -77,6 +77,7 @@ def main():
         'bind': '%s:%s' % ('[::]', str(config.server.port)),
         'workers': config.server.workers,
         'timeout': config.server.timeout,
+        'control_socket': '/tmp/gunicorn.ctl'
     }
     StandaloneApplication(app, options).run()
 

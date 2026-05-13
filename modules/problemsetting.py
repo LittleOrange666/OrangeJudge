@@ -273,8 +273,9 @@ def create_problem(name: str, pid: str, user: datas.User) -> str:
         while datas.count(datas.Problem, pid=str(pidx)) > 0:
             pidx += 1
         pid = str(pidx)
+    user_id = user.id
     with datas.SessionContext():
-        dat = datas.Problem(id=problem_count + 1, pid=pid, name=name, data={}, user=user)
+        dat = datas.Problem(id=problem_count + 1, pid=pid, name=name, data={}, user_id=user_id)
         path = preparing_problem_path / pid
         path.mkdir(parents=True, exist_ok=True)
         (path / "testcases").mkdir(parents=True, exist_ok=True)
