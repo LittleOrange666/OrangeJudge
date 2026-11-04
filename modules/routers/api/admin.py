@@ -21,7 +21,7 @@ from flask_restx import Resource, fields
 
 from ...constants import log_path
 from .base import get_api_user, api_response, api, marshal_with, base_request_parser, request_parser, Form, paging, \
-    pagination, Args
+    pagination, Args, File
 from .. import admin
 from ... import objs, server, config, datas
 
@@ -61,8 +61,36 @@ get_user_output = ns.model("GetUserOutput", {
         "id": fields.Integer(description="User ID"),
         "username": fields.String(description="Username"),
         "display_name": fields.String(description="Display name"),
+        "email": fields.String(description="Email address"),
         "permissions": fields.List(fields.String, description="List of permissions"),
     })), description="List of users"),
+})
+
+update_user_input = request_parser(
+    Form("username", "Username of the user to update", str, required=True),
+    Form("display_name", "New display name", str, required=True),
+    Form("password", "New password (leave empty to keep the current one)", str, required=False, default=""),
+    Form("permissions", "Semicolon-separated permissions, only 'admin' and 'make_problems' are applied", str,
+         required=False, default="")
+)
+
+create_users_input = request_parser(
+    Form("users", "JSON list of [username, password, email?, display_name?]", str, required=True)
+)
+
+create_users_output = ns.model("CreateUsersOutput", {
+    "created": fields.Integer(description="Number of created users"),
+})
+
+parse_users_input = request_parser(
+    File("file", "A .csv or .xlsx file with columns username,password[,email][,display_name]", required=True)
+)
+
+parse_users_output = ns.model("ParseUsersOutput", {
+    "users": fields.List(fields.List(fields.String),
+                         description="Users that can be created: [username, password, email, display_name]"),
+    "existed": fields.List(fields.List(fields.String),
+                           description="Users skipped because username or email exists: [username, email]"),
 })
 
 
@@ -131,11 +159,49 @@ class AdminUsers(Resource):
                 "id": obj.id,
                 "username": obj.username,
                 "display_name": obj.display_name,
-                "permissions": obj.permissions.split(";")
+                "email": obj.email or "",
+                "permissions": [perm for perm in (obj.permissions or "").split(";") if perm]
             })
         return api_response({
             "show_pages": show_pages, "page_count": page_cnt, "page": page_idx, "data": out
         })
+
+    @ns.doc("update_user")
+    @ns.expect(update_user_input)
+    def put(self):
+        """Update a user's display name, password and permissions"""
+        args = update_user_input.parse_args()
+        user = get_api_user(args)
+        if not user.has(objs.Permission.root):
+            server.custom_abort(403, "Forbidden: Root access required")
+        admin.update_user()
+        return api_response({"message": "OK"})
+
+    @ns.doc("create_users")
+    @ns.expect(create_users_input)
+    @marshal_with(ns, create_users_output)
+    def post(self):
+        """Create users in batch"""
+        args = create_users_input.parse_args()
+        user = get_api_user(args)
+        if not user.has(objs.Permission.root):
+            server.custom_abort(403, "Forbidden: Root access required")
+        created = admin.create_users()
+        return api_response({"created": created})
+
+
+@ns.route("/users/parse")
+class AdminParseUsers(Resource):
+    @ns.doc("parse_users_file")
+    @ns.expect(parse_users_input)
+    @marshal_with(ns, parse_users_output)
+    def post(self):
+        """Parse a .csv/.xlsx file into a list of users to create (nothing is created)"""
+        args = parse_users_input.parse_args()
+        user = get_api_user(args)
+        if not user.has(objs.Permission.root):
+            server.custom_abort(403, "Forbidden: Root access required")
+        return api_response(admin.parse_user())
 
 @ns.route("/log/<log_id>")
 class AdminLog(Resource):

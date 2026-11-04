@@ -360,6 +360,7 @@ def generate_testcase(pid: str):
                 if res.result != "AC":
                     logger.info(f"solution {res.result}")
                     gen_group.status = f"生成失敗：官解{res.result}"
+                    break
                 env.get_file(out_file, out_path)
             else:
                 gen_out = env.call(file2_cmd + cmd.split(), user=SandboxUser.judge)
@@ -372,7 +373,7 @@ def generate_testcase(pid: str):
                     gen_group.status = "生成失敗：答案生成器RE"
                     log(gen_out.stderr)
                     break
-                tools.write(gen_out.stdout, in_file)
+                tools.write(gen_out.stdout, out_file)
             cur.append(objs.Testcase(in_file=name + ".in", out_file=name + ".out", sample=False, pretest=False,
                                      group=gen_group.group))
         else:

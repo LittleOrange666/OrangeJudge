@@ -162,12 +162,11 @@ contest_problem_detail_model = ns.model("ContestProblemDetail", {
 contest_list_input = request_parser(*paging())
 create_contest_input = request_parser(Form("contest_name", "Name of the new contest", required=True))
 contest_status_input = request_parser(
-    Form("user", type=str, required=False),
-    Form("pid", type=str, required=False),
-    Form("result", type=str, required=False),
-    Form("lang", type=str, required=False),
-    Args("page", type=int, default=1),
-    Args("page_size", type=int, default=constants.page_size)
+    Args("user", type=str, required=False, help="Filter by username"),
+    Args("pid", type=str, required=False, help="Filter by problem index in the contest (e.g. A)"),
+    Args("result", type=str, required=False, help="Filter by result (e.g., OK, WA, TLE)"),
+    Args("lang", type=str, required=False, help="Filter by programming language"),
+    *paging()
 )
 virtual_register_input = request_parser(
     Form("start_time", "Start time for virtual contest (YYYY-MM-DD HH:MM)", required=True))

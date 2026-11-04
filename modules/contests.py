@@ -120,10 +120,10 @@ def add_participants(form: ImmutableMultiDict[str, str], cdat: datas.Contest, da
         server.custom_abort(400, "Unsupported file type")
     try:
         in_memory_file = BytesIO(file.stream.read())
-        if ext == ".xlsx":
+        if ext == "xlsx":
             wb = load_workbook(in_memory_file, data_only=True)
             ws = wb.active
-            arr = [[str(cell.value) for cell in row] for row in ws.iter_rows()]
+            arr = [["" if cell.value is None else str(cell.value) for cell in row] for row in ws.iter_rows()]
         else:
             wrapper = TextIOWrapper(in_memory_file, encoding="utf-8")
             reader = csv.reader(wrapper)

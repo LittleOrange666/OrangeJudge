@@ -30,19 +30,31 @@ from flask_login import login_required, current_user
 from limits import parse
 from openpyxl import load_workbook
 
-from .. import tools, server, datas, login, config
+from .. import tools, server, datas, login, config, constants
 from ..objs import Permission
 
 app = server.app
 
 
+def _placeholder_email(username: str) -> str:
+    return uuid.uuid5(uuid.NAMESPACE_DNS, username).hex + "@placeholder.com"
+
+
 def update_user():
+    password = request.form.get("password", "")
+    if password and len(password) < 6:
+        server.custom_abort(400, "Password must be at least 6 characters long")
+    display_name = request.form["display_name"]
+    if len(display_name) < 1 or len(display_name) > 120:
+        server.custom_abort(400, "Display name length invalid")
     with datas.SessionContext():
-        user: datas.User = datas.first_or_404(datas.User, username=request.form["username"])
-        user.display_name = request.form["display_name"]
-        if len(request.form["password"]) > 1:
-            user.password_sha256_hex = login.try_hash(request.form["password"])
-        perms = user.permission_list()
+        user: datas.User = datas.first(datas.User, username=request.form["username"])
+        if user is None:
+            server.custom_abort(404, "User not found")
+        user.display_name = display_name
+        if password:
+            user.password_sha256_hex = login.try_hash(password)
+        perms = [perm for perm in user.permission_list() if perm]
         new_perms = request.form["permissions"].split(";")
         for perm_name in ("admin", "make_problems"):
             if perm_name in new_perms:
@@ -56,29 +68,35 @@ def update_user():
     return "OK", 200
 
 
-def parse_user():
+def parse_user() -> dict:
+    """
+    Parse an uploaded .csv/.xlsx file into a list of users to create.
+
+    Returns:
+        dict: {"users": [[username, password, email, display_name], ...], "existed": [[username, email], ...]}
+    """
     file = request.files.get("file")
     if not file or file.filename == "":
-        return "No file provided", 400
+        server.custom_abort(400, "No file provided")
     ext = os.path.splitext(file.filename)[1].lower()
     if ext not in (".xlsx", ".csv"):
-        return "Unsupported file type", 400
+        server.custom_abort(400, "Unsupported file type")
     try:
         in_memory_file = BytesIO(file.stream.read())
         if ext == ".xlsx":
             wb = load_workbook(in_memory_file, data_only=True)
             ws = wb.active
-            arr = [[str(cell.value) for cell in row] for row in ws.iter_rows()]
+            arr = [["" if cell.value is None else str(cell.value) for cell in row] for row in ws.iter_rows()]
         else:
-            wrapper = TextIOWrapper(in_memory_file, encoding="utf-8")
+            wrapper = TextIOWrapper(in_memory_file, encoding="utf-8-sig")
             reader = csv.reader(wrapper)
             arr = [[cell for cell in row] for row in reader]
     except Exception as e:
         traceback.print_exception(e)
-        return "Failed to read file", 400
+        server.custom_abort(400, "Failed to read file")
     if len(arr) < 1:
-        return "No data found", 400
-    title = [cell.lower() for cell in arr[0]]
+        server.custom_abort(400, "No data found")
+    title = [cell.strip().lower() for cell in arr[0]]
     i0 = 0
     i1 = 1
     i2 = 2
@@ -97,45 +115,63 @@ def parse_user():
         arr = arr[1:]
     out = []
     existed = []
+    seen = set()
     for row in arr:
         if len(row) < 2:
             continue
         username = row[i0].strip().lower() if len(row) > i0 else ""
         password = row[i1].strip() if len(row) > i1 else ""
         email = row[i2].strip() if 0 <= i2 < len(row) else ""
-        display_name = row[i3].strip() if 0 <= i3 < len(row) else username
-        if not username or not password:
+        display_name = row[i3].strip() if 0 <= i3 < len(row) else ""
+        if not display_name:
+            display_name = username
+        if not username or not password or username in seen:
             continue
+        seen.add(username)
         if datas.count(datas.User, username=username) > 0 or (email and datas.count(datas.User, email=email) > 0):
             existed.append([username, email])
             continue
         out.append([username, password, email, display_name])
-    if len(out) < 1:
-        return "No valid user data found", 400
-    return jsonify({"users": out, "existed": existed}), 200
+    if len(out) < 1 and len(existed) < 1:
+        server.custom_abort(400, "No valid user data found")
+    return {"users": out, "existed": existed}
 
 
-def create_users():
+def create_users() -> int:
+    """
+    Create users from the JSON list in form field "users".
+
+    Returns:
+        int: The number of created users.
+    """
     dat = request.form["users"]
     try:
         users = json.loads(dat)
     except json.JSONDecodeError:
-        return "Invalid JSON data", 400
+        server.custom_abort(400, "Invalid JSON data")
     if not isinstance(users, list) or len(users) < 1:
-        return "No valid user data found", 400
+        server.custom_abort(400, "No valid user data found")
+    created = 0
     for user in users:
-        if len(user) < 2:
+        if not isinstance(user, list) or len(user) < 2:
             continue
-        username = user[0].strip().lower()
-        password = user[1].strip()
-        email = user[2].strip() if len(user) > 2 else uuid.uuid5(uuid.NAMESPACE_DNS, username).hex + "@placeholder.com"
-        display_name = user[3].strip() if len(user) > 3 else username
+        username = str(user[0]).strip().lower()
+        password = str(user[1]).strip()
+        email = str(user[2]).strip() if len(user) > 2 else ""
+        if not email:
+            email = _placeholder_email(username)
+        display_name = str(user[3]).strip() if len(user) > 3 else ""
+        if not display_name:
+            display_name = username
         if not username or not password:
             continue
-        if datas.count(datas.User, username=username) > 0 or (email and datas.count(datas.User, email=email) > 0):
+        if constants.user_id_reg.match(username) is None:
+            continue
+        if datas.count(datas.User, username=username) > 0 or datas.count(datas.User, email=email) > 0:
             continue
         login.create_account(email, username, password, display_name)
-    return "OK", 200
+        created += 1
+    return created
 
 
 def is_valid_limit_string(limit_str: str) -> bool:
@@ -155,7 +191,7 @@ def update_config():
             return "JSON格式錯誤", 400
         ks = [o[0] for o in dat]
         mp = {o[0]: o[1] for o in dat}
-    except json.JSONDecodeError | TypeError | ValueError:
+    except (json.JSONDecodeError, TypeError, ValueError):
         return "JSON格式錯誤", 400
 
     for category in config_fields:
@@ -232,9 +268,10 @@ def admin():
         if request.form["action"] == "update_user":
             return update_user()
         if request.form["action"] == "parse_user":
-            return parse_user()
+            return jsonify(parse_user()), 200
         if request.form["action"] == "create_users":
-            return create_users()
+            create_users()
+            return "OK", 200
         if request.form["action"] == "update_config":
             return update_config()
         if request.form["action"] == "stop_server":
