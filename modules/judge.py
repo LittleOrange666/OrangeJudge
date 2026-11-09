@@ -99,6 +99,7 @@ class SeccompRule(Enum):
     general = "general"
     golang = "golang"
     node = "node"
+    runtime = "runtime"
     none = "none"
 
 
