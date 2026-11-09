@@ -79,7 +79,8 @@ def run(lang: executing.Language, file: Path, env: executing.Environment, stdin:
     SandboxUser.running.readable(in_file)
     SandboxUser.running.writeable(out_file)
     res = env.run(exec_cmd, 10 * 1000, 1000, in_file, out_file, err_file, user=SandboxUser.running,
-                  seccomp_rule=lang.seccomp_rule, save_seccomp_info=True)
+                  seccomp_rule=lang.seccomp_rule, save_seccomp_info=True,
+                  memory_limit_check_only=lang.memory_limit_check_only)
     logger.debug(res)
     if res.result == "JE":
         return "JE: " + res.error
@@ -331,7 +332,8 @@ def run_problem(pid: str, dat_id: int) -> None:
                 all_res = env.communicate_run(exec_cmd, int_exec, interact_num, tl, ml, in_path, out_path,
                                               user=SandboxUser.running,
                                               interact_user=SandboxUser.judge,
-                                              seccomp_rule=lang.seccomp_rule, interact_err_file=interr)
+                                              seccomp_rule=lang.seccomp_rule, interact_err_file=interr,
+                                              memory_limit_check_only=lang.memory_limit_check_only)
                 res = all_res.result
                 int_res = all_res.interact_result
                 if int_res.result == "JE":
@@ -349,7 +351,7 @@ def run_problem(pid: str, dat_id: int) -> None:
                     res.result = "TLE"
             else:
                 res = env.run(exec_cmd, tl, ml, in_path, out_path, user=SandboxUser.running,
-                              seccomp_rule=lang.seccomp_rule)
+                              seccomp_rule=lang.seccomp_rule, memory_limit_check_only=lang.memory_limit_check_only)
             exit_code = str(res.exit_code)
             if ret[0] is not TaskResult.OK:
                 pass  # verdict already decided by the interactor

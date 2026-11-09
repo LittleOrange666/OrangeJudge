@@ -198,7 +198,8 @@ def call(cmd: list[str], user: SandboxUser = SandboxUser.root, stdin: str = "",
 def run(cmd: list[str], tl: int = 1000, ml: int = 128, in_file: SandboxPath | None = None,
         out_file: SandboxPath | None = None,
         err_file: SandboxPath | None = None, seccomp_rule: SeccompRule | None = SeccompRule.general,
-        user: SandboxUser = SandboxUser.nobody, cwd: str | None = None, save_seccomp_info: bool = False) -> Result:
+        user: SandboxUser = SandboxUser.nobody, cwd: str | None = None, save_seccomp_info: bool = False,
+        memory_limit_check_only: bool = False) -> Result:
     if seccomp_rule is SeccompRule.none:
         seccomp_rule = None
     dat = {
@@ -211,7 +212,8 @@ def run(cmd: list[str], tl: int = 1000, ml: int = 128, in_file: SandboxPath | No
         "seccomp_rule_name": None if seccomp_rule is None else seccomp_rule.name,
         "uid": user.value,
         "cwd": cwd,
-        "cmds": collect_lazy_queue()
+        "cmds": collect_lazy_queue(),
+        "memory_limit_check_only": memory_limit_check_only
     }
     logger.debug(dat)
     data = send_request("judge", dat)
@@ -241,7 +243,7 @@ def interact_run(cmd: list[str], interact_cmd: list[str], tl: int = 1000, ml: in
                  err_file: SandboxPath | None = None, interact_err_file: SandboxPath | None = None,
                  seccomp_rule: SeccompRule | None = SeccompRule.general,
                  user: SandboxUser = SandboxUser.nobody, interact_user: SandboxUser = SandboxUser.nobody,
-                 cwd: str | None = None):
+                 cwd: str | None = None, memory_limit_check_only: bool = False):
     if seccomp_rule is SeccompRule.none:
         seccomp_rule = None
     dat = {
@@ -257,7 +259,8 @@ def interact_run(cmd: list[str], interact_cmd: list[str], tl: int = 1000, ml: in
         "uid": user.value,
         "interact_uid": interact_user.value,
         "cwd": cwd,
-        "cmds": collect_lazy_queue()
+        "cmds": collect_lazy_queue(),
+        "memory_limit_check_only": memory_limit_check_only
     }
     logger.debug(dat)
     data = send_request("interact_judge", dat)
@@ -271,7 +274,8 @@ def communicate_run(cmd: list[str], interact_cmd: list[str], num_processes: int,
                     err_file: SandboxPath | None = None, interact_err_file: SandboxPath | None = None,
                     seccomp_rule: SeccompRule | None = SeccompRule.general,
                     user: SandboxUser = SandboxUser.nobody, interact_user: SandboxUser = SandboxUser.nobody,
-                    interact_tl: int | None = None, cwd: str | None = None) -> CommunicateResult:
+                    interact_tl: int | None = None, cwd: str | None = None,
+                    memory_limit_check_only: bool = False) -> CommunicateResult:
     """
     Run a CMS "Communication" style judge with ``num_processes`` user processes.
 
@@ -296,7 +300,8 @@ def communicate_run(cmd: list[str], interact_cmd: list[str], num_processes: int,
         "interact_uid": interact_user.value,
         "interact_tl": interact_tl,
         "cwd": cwd,
-        "cmds": collect_lazy_queue()
+        "cmds": collect_lazy_queue(),
+        "memory_limit_check_only": memory_limit_check_only
     }
     logger.debug(dat)
     data = send_request("communicate_judge", dat)

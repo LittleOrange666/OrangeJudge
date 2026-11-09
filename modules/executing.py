@@ -237,24 +237,27 @@ class Environment:
     def run(self, cmd: list[str], tl: int = 1000, ml: int = 128, in_file: SandboxPath | None = None,
             out_file: SandboxPath | None = None,
             err_file: SandboxPath | None = None, seccomp_rule: judge.SeccompRule | None = judge.SeccompRule.general,
-            user: SandboxUser = SandboxUser.nobody, save_seccomp_info: bool = False) -> objs.Result:
-        return judge.run(cmd, tl, ml, in_file, out_file, err_file, seccomp_rule, user, str(self.cwd), save_seccomp_info)
+            user: SandboxUser = SandboxUser.nobody, save_seccomp_info: bool = False,
+            memory_limit_check_only: bool = False) -> objs.Result:
+        return judge.run(cmd, tl, ml, in_file, out_file, err_file, seccomp_rule, user, str(self.cwd), save_seccomp_info,
+                         memory_limit_check_only)
 
     def interact_run(self, cmd: list[str], interact_cmd: list[str], tl: int = 1000, ml: int = 128,
                      in_file: SandboxPath | None = None,
                      out_file: SandboxPath | None = None,
                      err_file: SandboxPath | None = None, interact_err_file: SandboxPath | None = None,
                      seccomp_rule: judge.SeccompRule | None = judge.SeccompRule.general,
-                     user: SandboxUser = SandboxUser.nobody, interact_user: SandboxUser = SandboxUser.nobody) \
-            -> objs.InteractResult:
+                     user: SandboxUser = SandboxUser.nobody, interact_user: SandboxUser = SandboxUser.nobody,
+                     memory_limit_check_only: bool = False) -> objs.InteractResult:
         return judge.interact_run(cmd, interact_cmd, tl, ml, in_file, out_file, err_file, interact_err_file,
-                                  seccomp_rule, user, interact_user, str(self.cwd))
+                                  seccomp_rule, user, interact_user, str(self.cwd), memory_limit_check_only)
 
     def communicate_run(self, cmd: list[str], interact_cmd: list[str], num_processes: int = 1, tl: int = 1000,
                         ml: int = 128, in_file: SandboxPath | None = None, out_file: SandboxPath | None = None,
                         err_file: SandboxPath | None = None, interact_err_file: SandboxPath | None = None,
                         seccomp_rule: judge.SeccompRule | None = judge.SeccompRule.general,
-                        user: SandboxUser = SandboxUser.nobody, interact_user: SandboxUser = SandboxUser.nobody)             -> objs.InteractResult:
+                        user: SandboxUser = SandboxUser.nobody, interact_user: SandboxUser = SandboxUser.nobody,
+                        memory_limit_check_only: bool = False) -> objs.InteractResult:
         """
         Run an interactive (CMS "Communication") judge with ``num_processes`` user processes.
 
@@ -264,10 +267,11 @@ class Environment:
         """
         if num_processes <= 1:
             return self.interact_run(cmd, interact_cmd, tl, ml, in_file, out_file, err_file, interact_err_file,
-                                     seccomp_rule, user, interact_user)
+                                     seccomp_rule, user, interact_user, memory_limit_check_only)
         res = judge.communicate_run(cmd, interact_cmd, num_processes, tl, ml, in_file, out_file, err_file,
                                     interact_err_file, seccomp_rule, user, interact_user,
-                                    interact_tl=tl * num_processes, cwd=str(self.cwd))
+                                    interact_tl=tl * num_processes, cwd=str(self.cwd),
+                                    memory_limit_check_only=memory_limit_check_only)
         return res.merged()
 
     def __del__(self):
@@ -308,6 +312,9 @@ class Language:
             self.seccomp_rule = judge.SeccompRule[self.data["seccomp_rule"]]
         else:
             self.seccomp_rule = judge.SeccompRule.general
+        # runtimes reserving lots of virtual memory (Go, Node.js, JVM) cannot run under RLIMIT_AS,
+        # for them only the peak RSS is compared against the memory limit
+        self.memory_limit_check_only: bool = bool(self.data.get("memory_limit_check_only", False))
         sample_comp_cmd = []
         if self.data["require_compile"]:
             sample_comp_cmd = self.data["compile_cmd"][:]
@@ -424,7 +431,7 @@ class Language:
         if ce_msg:
             logger.warning(f"Base resource usage for {self.branch} failed: CE")
         exec_cmd = self.get_execmd(exec_filename)
-        res = env.run(exec_cmd, seccomp_rule=self.seccomp_rule)
+        res = env.run(exec_cmd, seccomp_rule=self.seccomp_rule, memory_limit_check_only=self.memory_limit_check_only)
         if res.result != "AC":
             logger.warning(f"Base resource usage for {self.branch} failed: {res.result}")
         else:

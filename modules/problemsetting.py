@@ -352,13 +352,17 @@ def generate_testcase(pid: str):
             if gen_group.type is GenType.sol:
                 in_path = env.send_file(in_file)
                 out_path = env.path(out_file.name)
+                # run the solution with its language's sandbox settings, like a submission
+                sol_lang = problem.lang(gen_group.file2)
                 if problem.is_interact:
                     env.readable(in_path, user=SandboxUser.judge)
                     env.writeable(out_path, user=SandboxUser.judge)
                     res = env.communicate_run(file2_cmd, int_cmd, interact_num, tl, ml, in_path, out_path,
-                                              interact_user=SandboxUser.judge).result
+                                              interact_user=SandboxUser.judge, seccomp_rule=sol_lang.seccomp_rule,
+                                              memory_limit_check_only=sol_lang.memory_limit_check_only).result
                 else:
-                    res = env.run(file2_cmd, tl, ml, in_path, out_path)
+                    res = env.run(file2_cmd, tl, ml, in_path, out_path, seccomp_rule=sol_lang.seccomp_rule,
+                                  memory_limit_check_only=sol_lang.memory_limit_check_only)
                 if res.result != "AC":
                     logger.info(f"solution {res.result}")
                     gen_group.status = f"生成失敗：官解{res.result}"
