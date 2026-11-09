@@ -199,7 +199,9 @@ class PrivateFile(Resource):
     post_action_name2 = "create_file"
     post_action_input = request_parser(
         File("files", "Files to upload", required=False),
-        Form("filename", "Filename to create", str, required=False)
+        Form("filename", "Filename to create", str, required=False),
+        Form("type", "Language of the created file (detected from the extension if omitted)", str,
+             required=False)
     )
     delete_action_name = "remove_file"
     delete_action_input = request_parser(

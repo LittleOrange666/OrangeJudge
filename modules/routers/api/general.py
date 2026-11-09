@@ -89,6 +89,7 @@ judge_info_item = ns.model("JudgeInfoItem", {
     "compile": fields.String(description="Sample compile command"),
     "run": fields.String(description="Sample execution command"),
     "ext": fields.String(description="Source file extension"),
+    "ext_default": fields.Boolean(description="Whether this is the language new files with this extension get"),
 })
 judge_info_output = ns.model("JudgeInfoOutput", {
     "langs": fields.List(fields.Nested(judge_info_item), description="List of supported languages"),
@@ -411,7 +412,8 @@ class JudgeInfo(Resource):
         out = []
         for lang in executing.langs.values():
             out.append({"name": lang.branch, "compile": " ".join(lang.sample_compile_cmd),
-                        "run": " ".join(lang.sample_exec_cmd), "ext": lang.source_ext})
+                        "run": " ".join(lang.sample_exec_cmd), "ext": lang.source_ext,
+                        "ext_default": executing.lang_for_filename("file" + lang.source_ext) == lang.branch})
         return api_response({"langs": out})
 
 

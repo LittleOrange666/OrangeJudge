@@ -807,13 +807,7 @@ def upload_file(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Respo
         if (dat.path / "file" / fn).exists():
             server.custom_abort(409, f"File {fn} already exists")
         file.save(dat.path / "file" / fn)
-        ext = Path(fn).suffix
-        tp = constants.default_lang
-        for lang in executing.langs.values():
-            if ext == lang.source_ext:
-                tp = lang.data["default_branch"]
-                break
-        dat.files.append(objs.ProgramFile(name=fn, type=tp))
+        dat.files.append(objs.ProgramFile(name=fn, type=executing.lang_for_filename(fn)))
     return "files"
 
 
@@ -825,8 +819,11 @@ def create_file(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Respo
     filepath = dat.path / "file" / filename
     if filepath.exists():
         server.custom_abort(409, "File already exists")
+    tp = form.get("type") or executing.lang_for_filename(filename)
+    if tp not in executing.langs:
+        server.custom_abort(400, "Invalid file type")
     filepath.touch()
-    dat.files.append(objs.ProgramFile(name=filename, type=constants.default_lang))
+    dat.files.append(objs.ProgramFile(name=filename, type=tp))
     return "files"
 
 

@@ -446,6 +446,25 @@ for lang_file in lang_path.iterdir():
         langs[key] = Language(lang_name, key)
 
 
+def lang_for_filename(filename: str) -> str:
+    """
+    The language branch a problem file gets by default, chosen by its extension.
+
+    Only default branches are considered; when several languages share the extension (Python / PyPy)
+    ``constants.preferred_lang_order`` decides. Unknown extensions fall back to ``constants.default_lang``.
+    """
+    ext = Path(filename).suffix.lower()
+    candidates = [lang for lang in langs.values()
+                  if ext and lang.source_ext.lower() == ext and lang.branch == lang.data["default_branch"]]
+    if not candidates:
+        return constants.default_lang
+    if any(lang.branch == constants.default_lang for lang in candidates):
+        return constants.default_lang
+    order = constants.preferred_lang_order
+    candidates.sort(key=lambda lang: (order.index(lang.name) if lang.name in order else len(order), lang.name))
+    return candidates[0].branch
+
+
 def init():
     if config.judge.test_langs:
         env = Environment()

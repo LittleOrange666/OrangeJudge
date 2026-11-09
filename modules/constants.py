@@ -136,6 +136,9 @@ judge_path = Path("judge").absolute()
 
 default_lang = "C++17"
 
+# languages (json names in langs/) preferred, in this order, when several share a source extension (e.g. .py)
+preferred_lang_order = ("cpp", "c", "python", "java")
+
 error_filename = "stderr.txt"
 
 
