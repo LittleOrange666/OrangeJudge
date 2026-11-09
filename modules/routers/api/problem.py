@@ -241,7 +241,7 @@ class ProblemManage(Resource):
         if pdat is None:
             server.custom_abort(404, f"Problem {pid!r} not found.")
         dat = pdat.new_datas
-        if not user.has(objs.Permission.admin) and user.data not in dat.users:
+        if not user.has(objs.Permission.admin) and user.id not in dat.users:
             server.custom_abort(403, "You do not have permission to manage this problem.")
 
         bg_action = problemsetting.check_background_action(pid)
@@ -295,7 +295,7 @@ class ProblemPreview(Resource):
         if pdat is None:
             server.custom_abort(404, f"Problem {pid!r} not found.")
         dat = pdat.new_datas
-        if not user.has(objs.Permission.admin) and user.data not in dat.users:
+        if not user.has(objs.Permission.admin) and user.id not in dat.users:
             server.custom_abort(403, "You do not have permission to preview this problem.")
 
         if (problem_path / pid / "waiting").is_file():

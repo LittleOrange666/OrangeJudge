@@ -333,10 +333,17 @@ def run_problem(pid: str, dat_id: int) -> None:
                                               interact_user=SandboxUser.judge,
                                               seccomp_rule=lang.seccomp_rule, interact_err_file=interr)
                 res = all_res.result
-                if all_res.interact_result.result == "JE":
-                    ret = (TaskResult.JE, "Interactor: " + all_res.interact_result.error)
-                elif all_res.interact_result.exit_code != 0:
+                int_res = all_res.interact_result
+                if int_res.result == "JE":
+                    ret = (TaskResult.JE, "Interactor: " + int_res.error)
+                elif int_res.exit_code != 0:
+                    # the interactor's verdict wins: the user programs usually only fail (EOF / broken pipe)
+                    # because the interactor has already quit
                     ret = (TaskResult.WA, interr.full.read_text())
+                elif int_res.result == "RE" and int_res.signal == 13:
+                    ret = (TaskResult.WA, "Interactor: broken pipe (the program exited too early)")
+                elif int_res.result == "RE":
+                    ret = (TaskResult.JE, f"Interactor crashed (signal {int_res.signal})\n" + interr.full.read_text())
                 if interact_num > 1 and res.result == "AC" and res.cpu_time - lang.base_time * interact_num > tl:
                     # CMS: with N > 1 the time limit applies to the total CPU time of all user processes
                     res.result = "TLE"
@@ -344,7 +351,9 @@ def run_problem(pid: str, dat_id: int) -> None:
                 res = env.run(exec_cmd, tl, ml, in_path, out_path, user=SandboxUser.running,
                               seccomp_rule=lang.seccomp_rule)
             exit_code = str(res.exit_code)
-            if res.result == "JE":
+            if ret[0] is not TaskResult.OK:
+                pass  # verdict already decided by the interactor
+            elif res.result == "JE":
                 ret = (TaskResult.JE, res.error)
             elif res.result == "TLE":
                 ret = (TaskResult.TLE, "Execution time is too long")
@@ -359,7 +368,7 @@ def run_problem(pid: str, dat_id: int) -> None:
                     ret = (TaskResult.RE, constants.exit_codes[exit_code])
                 else:
                     ret = (TaskResult.RE, "Runtime Error")
-            elif ret[0] is TaskResult.OK:  # skip code below if interactor return with non-zero return code
+            else:
                 process_cnt = interact_num if problem_info.is_interact else 1
                 time_usage = max(0, math.ceil(res.cpu_time - lang.base_time * process_cnt))
                 memusage = math.ceil(max(0.0, res.memory - lang.base_memory) / 1024)

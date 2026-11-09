@@ -751,8 +751,8 @@ def remove_testcase(form: ImmutableMultiDict[str, str], dat: Problem) -> str | R
     if idx < 0 or idx >= len(dat.testcases):
         server.custom_abort(404, "Testcase not found")
     obj = dat.testcases.pop(idx)
-    (dat.path / "testcases" / obj.in_file).unlink()
-    (dat.path / "testcases" / obj.out_file).unlink()
+    (dat.path / "testcases" / obj.in_file).unlink(missing_ok=True)
+    (dat.path / "testcases" / obj.out_file).unlink(missing_ok=True)
     return "tests"
 
 
@@ -761,8 +761,8 @@ def remove_all_testcase(form: ImmutableMultiDict[str, str], dat: Problem) -> str
     if len(dat.testcases) == 0:
         server.custom_abort(409, "No testcases to remove")
     for obj in dat.testcases:
-        (dat.path / "testcases" / obj.in_file).unlink()
-        (dat.path / "testcases" / obj.out_file).unlink()
+        (dat.path / "testcases" / obj.in_file).unlink(missing_ok=True)
+        (dat.path / "testcases" / obj.out_file).unlink(missing_ok=True)
     dat.testcases.clear()
     return "tests"
 
@@ -996,6 +996,7 @@ def save_testcase(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Res
     for o in modify:
         if (len(o) < 4 or
                 type(o[1]) is not bool or
+                type(o[2]) is not bool or
                 type(o[0]) is not int or
                 not (len(testcases) > o[0] >= 0) or
                 o[3] not in dat.groups):
@@ -1035,6 +1036,9 @@ def remove_group(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Resp
     if name == "default":
         server.custom_abort(400, "Cannot remove default group")
     del dat.groups[name]
+    for group in dat.groups.values():
+        if name in group.dependency:
+            group.dependency.remove(name)
     for o in dat.testcases:
         if o.group == name:
             o.group = "default"
