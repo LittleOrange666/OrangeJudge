@@ -374,6 +374,20 @@
             </div>
             <br>
             <div class="container-fluid">
+                <h4>題目類型</h4>
+                <p>目前：{% if dat.output_only %}只提交輸出 (Output Only){% elif dat.is_interact %}互動 (Communication, N={{ dat.interact_num }}){% else %}一般 (Batch){% endif %}</p>
+                <form the_action="choose_problem_type" id="choose_problem_type">
+                    <select class="form-select" name="problem_type"
+                            data-value="{% if dat.output_only %}output_only{% elif dat.is_interact %}communication{% else %}batch{% endif %}">
+                        <option value="batch">一般 (Batch)</option>
+                        <option value="communication">互動 (Communication，需先選擇互動程式)</option>
+                        <option value="output_only">只提交輸出 (Output Only)</option>
+                    </select>
+                    <button class="btn btn-primary submitter" data-no-refresh="true">更換題目類型</button>
+                </form>
+            </div>
+            <br>
+            <div class="container-fluid">
                 <h4>互動</h4>
                 <p>目前：{{ dat.interactor_source }}</p>
                 <form the_action="choose_interactor" id="choose_interactor">
@@ -382,6 +396,9 @@
                                name="enable_interactor" data-checked="{{ dat.is_interact }}">
                         <label class="form-check-label" for="enable_interactor">啟用互動</label>
                     </div>
+                    <label for="interact_num">同時執行的使用者程式數量 (N)</label>
+                    <input class="form-control" type="number" min="1" max="64" id="interact_num" name="interact_num"
+                           value="{{ dat.interact_num }}">
                     <select class="form-select" name="my_interactor"
                             data-value="{{ dat.choose_interactor }}">
                         <option selected>選擇檔案</option>

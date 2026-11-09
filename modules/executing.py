@@ -250,6 +250,26 @@ class Environment:
         return judge.interact_run(cmd, interact_cmd, tl, ml, in_file, out_file, err_file, interact_err_file,
                                   seccomp_rule, user, interact_user, str(self.cwd))
 
+    def communicate_run(self, cmd: list[str], interact_cmd: list[str], num_processes: int = 1, tl: int = 1000,
+                        ml: int = 128, in_file: SandboxPath | None = None, out_file: SandboxPath | None = None,
+                        err_file: SandboxPath | None = None, interact_err_file: SandboxPath | None = None,
+                        seccomp_rule: judge.SeccompRule | None = judge.SeccompRule.general,
+                        user: SandboxUser = SandboxUser.nobody, interact_user: SandboxUser = SandboxUser.nobody)             -> objs.InteractResult:
+        """
+        Run an interactive (CMS "Communication") judge with ``num_processes`` user processes.
+
+        With one process this is the classic testlib interaction (the interactor talks to the user program through
+        its stdin/stdout). With more processes, see :func:`judge.communicate_run`; the results of all user
+        processes are merged (total CPU time, maximum memory).
+        """
+        if num_processes <= 1:
+            return self.interact_run(cmd, interact_cmd, tl, ml, in_file, out_file, err_file, interact_err_file,
+                                     seccomp_rule, user, interact_user)
+        res = judge.communicate_run(cmd, interact_cmd, num_processes, tl, ml, in_file, out_file, err_file,
+                                    interact_err_file, seccomp_rule, user, interact_user,
+                                    interact_tl=tl * num_processes, cwd=str(self.cwd))
+        return res.merged()
+
     def __del__(self):
         """
         Clean up the environment when the object is deleted.

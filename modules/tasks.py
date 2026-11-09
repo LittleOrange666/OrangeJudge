@@ -23,7 +23,6 @@ import threading
 import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import replace
 from pathlib import Path
 
 import yaml
@@ -131,13 +130,14 @@ def run_problem(pid: str, dat_id: int) -> None:
     with datas.SessionContext():
         dat = datas.get_by_id(datas.Submission, dat_id)
         pdat = datas.first(datas.Problem, pid=pid)
-        lang = executing.langs[dat.language]
+        lang = executing.langs.get(dat.language)
         env = executing.Environment()
         dat_path = dat.path
         source = dat_path / dat.source
         just_pretest: bool = dat.just_pretest
         p_path = pdat.path
         problem_info = pdat.datas
+        output_only = problem_info.output_only
         protected = ((not problem_info.public_testcase or bool(dat.period_id))
                      and dat.user.username not in problem_info.users)
         language = dat.language
@@ -150,7 +150,12 @@ def run_problem(pid: str, dat_id: int) -> None:
     for fn in problem_info.library:
         env.send_file(pdat.path / "file" / fn, env.executable)
     sent_source = env.send_file(source)
-    if problem_info.runner_enabled:
+    filename = sent_source
+    if output_only:
+        ce_msg = ""
+    elif lang is None:
+        ce_msg = f"Language {language!r} is not supported by this problem"
+    elif problem_info.runner_enabled:
         judge_runner = env.send_file(p_path / "file" / problem_info.runner_source.get(language))
         judge_runner = env.rename(judge_runner, constants.runner_source_file_name + lang.source_ext)
         filename, ce_msg = lang.compile(sent_source, env, judge_runner)
@@ -179,13 +184,14 @@ def run_problem(pid: str, dat_id: int) -> None:
     tl = int(problem_info.timelimit) * problem_info.language_multipliers.get(language, 1)
     ml = int(problem_info.memorylimit)
     int_exec = []
-    if problem_info.is_interact:
+    interact_num = max(1, int(problem_info.interact_num))
+    if problem_info.is_interact and not output_only:
         int_file = env.send_file(p_path / problem_info.interactor.name, SandboxUser.judge.executable)
         int_lang = executing.langs[problem_info.interactor.lang]
         int_exec = int_lang.get_execmd(int_file)
     codechecker_score = top_score
     codechecker_name = TaskResult.OK
-    if problem_info.codechecker_mode != objs.CodecheckerMode.disabled:
+    if problem_info.codechecker_mode != objs.CodecheckerMode.disabled and not output_only:
         cc_file = env.send_file(p_path / problem_info.codechecker.name, SandboxUser.judge.executable)
         cc_lang = executing.langs[problem_info.codechecker.lang]
         cc_exec = cc_lang.get_execmd(cc_file)
@@ -208,7 +214,8 @@ def run_problem(pid: str, dat_id: int) -> None:
     out_info.codechecker_msg = codechecker_msg
     checker = env.send_file(p_path / problem_info.checker.name, SandboxUser.judge.executable)
     checker_cmd = executing.langs[problem_info.checker.lang].get_execmd(checker)
-    exec_cmd = lang.get_execmd(filename)
+    exec_cmd = [] if output_only else lang.get_execmd(filename)
+    outputs_path = dat_path / "outputs"
     testcase_path = dat_path / "testcases"
     testcase_path.mkdir(parents=True, exist_ok=True)
     groups_ = problem_info.groups
@@ -219,14 +226,7 @@ def run_problem(pid: str, dat_id: int) -> None:
             score=v.score, rule=v.rule, dependency=v.dependency,
             gained_score=top_score if v.rule is objs.TestcaseRule.min else 0
         )
-    testcases = problem_info.testcases
-    testcases.extend([replace(o, gen=True) for o in problem_info.testcases_gen])
-    group_testcases = {k: [] for k in groups}
-    for obj in testcases:
-        group_testcases[obj.group].append(obj)
-    testcases.clear()
-    for k, v in group_testcases.items():
-        testcases.extend(v)
+    testcases = problem_info.ordered_testcases()
     results = [objs.TestcaseResult(completed=False, result=TaskResult.PENDING, info="Waiting for judge")
                for _ in range(len(testcases))]
 
@@ -252,6 +252,31 @@ def run_problem(pid: str, dat_id: int) -> None:
             dat.completed = completed
             datas.add(dat)
             pubs.pub_submission_info(dat.id, pubs.PROGRESS_MSG)
+
+    def check_output(in_file_: Path, ans_file_: Path, out_file_: Path) -> tuple[TaskResult, str, float]:
+        """Run the checker on (input, contestant output, answer) and return (result, message, score)."""
+        in_path_ = env.send_rand_file(in_file_)
+        out_path_ = env.send_rand_file(out_file_)
+        ans_path_ = env.send_rand_file(ans_file_)
+        env.readable(ans_path_, in_path_, out_path_, user=SandboxUser.judge)
+        checker_out = env.call(checker_cmd + [in_path_, out_path_, ans_path_], user=SandboxUser.judge)
+        env.protected(ans_path_, in_path_, out_path_)
+        if judge.is_tle(checker_out):
+            return TaskResult.FAIL, "Checker 執行時間過長", 0
+        score_ = 0
+        if checker_out.stderr.startswith("partially correct"):
+            score_ = checker_out.return_code
+            name_ = TaskResult.OK if score_ >= top_score else TaskResult.PARTIAL
+        else:
+            name_ = constants.checker_exit_codes.get(checker_out.return_code, TaskResult.FAIL)
+            if name_ is TaskResult.OK:
+                score_ = top_score
+            elif name_ is TaskResult.POINTS:
+                st = checker_out.stderr.split(" ")
+                if len(st) > 1 and st[1].replace(".", "", 1).isdigit():
+                    score_ = float(st[1])
+                name_ = TaskResult.OK if score_ >= top_score else TaskResult.PARTIAL
+        return name_, checker_out.stderr, max(score_, 0)
 
     unsaved_count = 0
     save_period = config.judge.save_period
@@ -285,6 +310,17 @@ def run_problem(pid: str, dat_id: int) -> None:
         if just_pretest and not testcase.pretest:
             ret = (TaskResult.OK, "因為只執行預測測試，所以跳過")
             score = top_score
+        elif output_only:
+            # CMS "OutputOnly": the contestant's output of testcase k is stored as outputs/output_<k>.txt
+            submitted = outputs_path / constants.output_only_output_name.format(i + 1)
+            if submitted.is_file():
+                tools.copy(submitted, out_file)
+                has_output = True
+                name, info, score = check_output(in_file, ans_file, out_file)
+                ret = (name, info)
+                tools.create_truncated(Path(out_file), Path(out_file))
+            else:
+                ret = (TaskResult.WA, "Output file not submitted")
         else:
             in_path = env.send_rand_file(in_file)
             out_path = env.send_rand_file(out_file)
@@ -292,13 +328,18 @@ def run_problem(pid: str, dat_id: int) -> None:
             SandboxUser.judge.writeable(out_path)
             if problem_info.is_interact:
                 interr = env.path("interr.txt")
-                all_res = env.interact_run(exec_cmd, int_exec, tl, ml, in_path, out_path,
-                                           user=SandboxUser.running,
-                                           interact_user=SandboxUser.judge,
-                                           seccomp_rule=lang.seccomp_rule, interact_err_file=interr)
+                all_res = env.communicate_run(exec_cmd, int_exec, interact_num, tl, ml, in_path, out_path,
+                                              user=SandboxUser.running,
+                                              interact_user=SandboxUser.judge,
+                                              seccomp_rule=lang.seccomp_rule, interact_err_file=interr)
                 res = all_res.result
-                if all_res.interact_result.exit_code != 0:
+                if all_res.interact_result.result == "JE":
+                    ret = (TaskResult.JE, "Interactor: " + all_res.interact_result.error)
+                elif all_res.interact_result.exit_code != 0:
                     ret = (TaskResult.WA, interr.full.read_text())
+                if interact_num > 1 and res.result == "AC" and res.cpu_time - lang.base_time * interact_num > tl:
+                    # CMS: with N > 1 the time limit applies to the total CPU time of all user processes
+                    res.result = "TLE"
             else:
                 res = env.run(exec_cmd, tl, ml, in_path, out_path, user=SandboxUser.running,
                               seccomp_rule=lang.seccomp_rule)
@@ -319,35 +360,16 @@ def run_problem(pid: str, dat_id: int) -> None:
                 else:
                     ret = (TaskResult.RE, "Runtime Error")
             elif ret[0] is TaskResult.OK:  # skip code below if interactor return with non-zero return code
-                time_usage = max(0, math.ceil(res.cpu_time - lang.base_time))
+                process_cnt = interact_num if problem_info.is_interact else 1
+                time_usage = max(0, math.ceil(res.cpu_time - lang.base_time * process_cnt))
                 memusage = math.ceil(max(0.0, res.memory - lang.base_memory) / 1024)
                 groups[gp].time = max(groups[gp].time, time_usage)
                 groups[gp].mem = max(groups[gp].mem, memusage)
                 has_output = True
-                ans_path = env.send_rand_file(ans_file)
-                full_checker_cmd = checker_cmd + [in_path, out_path, ans_path]
-                env.readable(ans_path, in_path, out_path, user=SandboxUser.judge)
-                checker_out = env.call(full_checker_cmd, user=SandboxUser.judge)
-                env.protected(ans_path, in_path, out_path)
                 env.get_file(out_file, out_path)
+                name, info, score = check_output(in_file, ans_file, out_file)
+                ret = (name, info)
                 tools.create_truncated(Path(out_file), Path(out_file))
-                if judge.is_tle(checker_out):
-                    ret = (TaskResult.FAIL, "Checker 執行時間過長")
-                else:
-                    if checker_out.stderr.startswith("partially correct"):
-                        score = checker_out.return_code
-                        name = "OK" if score >= top_score else "PARTIAL"
-                    else:
-                        name = constants.checker_exit_codes.get(checker_out.return_code, TaskResult.FAIL)
-                        if name is TaskResult.OK:
-                            score = top_score
-                        elif name is TaskResult.POINTS:
-                            st = checker_out.stderr.split(" ")
-                            if len(st) > 1 and st[1].replace(".", "", 1).isdigit():
-                                score = float(st[1])
-                            name = TaskResult.OK if score >= top_score else TaskResult.PARTIAL
-                    score = max(score, 0)
-                    ret = (name, checker_out.stderr)
         if codechecker_score < top_score:
             score = score * codechecker_score / top_score
             if codechecker_score == 0 and ret[0] is TaskResult.OK:

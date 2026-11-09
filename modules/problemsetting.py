@@ -24,6 +24,7 @@ import os
 import shutil
 import time
 import traceback
+import zipfile
 from graphlib import TopologicalSorter, CycleError
 from multiprocessing import Queue, Process
 from pathlib import Path
@@ -319,6 +320,7 @@ def generate_testcase(pid: str):
 
     if problem.is_interact:
         int_cmd = get_cmd(problem.interactor_source, "interactor")
+    interact_num = max(1, int(problem.interact_num))
     tl = int(problem.timelimit)
     ml = int(problem.memorylimit)
     log("clear folder")
@@ -353,8 +355,8 @@ def generate_testcase(pid: str):
                 if problem.is_interact:
                     env.readable(in_path, user=SandboxUser.judge)
                     env.writeable(out_path, user=SandboxUser.judge)
-                    res = env.interact_run(file2_cmd, int_cmd, tl, ml, in_path, out_path,
-                                           interact_user=SandboxUser.judge).result
+                    res = env.communicate_run(file2_cmd, int_cmd, interact_num, tl, ml, in_path, out_path,
+                                              interact_user=SandboxUser.judge).result
                 else:
                     res = env.run(file2_cmd, tl, ml, in_path, out_path)
                 if res.result != "AC":
@@ -383,6 +385,29 @@ def generate_testcase(pid: str):
     problem.testcases_gen = gen_list
 
 
+def make_inputs_zip(path: Path, dat: objs.ProblemInfo) -> Path:
+    """
+    Pack all testcase inputs of an output-only problem as input_<k>.txt (k is the 1-based codename).
+
+    Args:
+        path (Path): The folder of the problem.
+        dat (objs.ProblemInfo): The problem info.
+
+    Returns:
+        Path: The path of the created zip file.
+    """
+    target = path / "inputs.zip"
+    tmp_target = path / "inputs.zip.tmp"
+    with zipfile.ZipFile(tmp_target, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for k, testcase in enumerate(dat.ordered_testcases(), start=1):
+            folder = "testcases_gen" if testcase.gen else "testcases"
+            src = path / folder / testcase.in_file
+            if src.is_file():
+                zf.write(src, constants.output_only_input_name.format(k))
+    os.replace(tmp_target, target)
+    return target
+
+
 @background_actions.bind
 def creating_version(pid: str, description: str):
     log(f"creating version {description!r}")
@@ -392,7 +417,7 @@ def creating_version(pid: str, description: str):
     file = problem.compile_dat(problem.checker_source, "checker", env)
     env.get_file(problem.path / file.inner, file)
     problem.checker = objs.ExecPtr(name=str(file.inner), lang=problem.lang_of(problem.checker_source).branch)
-    if problem.is_interact:
+    if problem.is_interact and not problem.output_only:
         interactor = objs.ProgramPtr(type=objs.ProgramType.my, name=problem.interactor_source)
         problem.check_missing(interactor, "interactor")
         file = problem.compile_dat(interactor, "interactor", env)
@@ -406,6 +431,11 @@ def creating_version(pid: str, description: str):
         problem.codechecker = objs.ExecPtr(name=str(file.inner), lang=problem.lang(problem.codechecker_source).branch)
     if problem.gen_groups:
         generate_testcase(pid)
+    if problem.output_only:
+        log("packing inputs for output-only problem")
+        make_inputs_zip(problem.path, problem)
+    else:
+        (problem.path / "inputs.zip").unlink(missing_ok=True)
     problem.versions.append(objs.ProblemVersion(description=description, time=time.time()))
     target = problem_path / pid
     if target.is_dir():
@@ -857,12 +887,36 @@ def choose_interactor(form: ImmutableMultiDict[str, str], dat: Problem) -> str |
     tp = "my"
     name = secure_filename(form[tp + "_interactor"])
     use = form.get("enable_interactor", "off") == "on"
+    if form.get("interact_num"):
+        set_interact_num(form["interact_num"], dat)
     if not any(o.name == name for o in dat.files):
         dat.is_interact = False
         dat.interactor_source = "unknown"
     else:
         dat.interactor_source = name
         dat.is_interact = use
+        if use:
+            dat.output_only = False
+    return "judge"
+
+
+def set_interact_num(value: str | int, dat: Problem):
+    if not str(value).isdigit() or not 1 <= int(value) <= constants.max_interact_num:
+        server.custom_abort(400, f"Number of processes should be between 1 and {constants.max_interact_num}")
+    dat.interact_num = int(value)
+
+
+@actions.bind
+def choose_problem_type(form: ImmutableMultiDict[str, str], dat: Problem) -> str | Response:
+    tp = form["problem_type"]
+    if tp not in ("batch", "communication", "output_only"):
+        server.custom_abort(400, "Invalid problem type")
+    if form.get("interact_num"):
+        set_interact_num(form["interact_num"], dat)
+    if tp == "communication" and not any(o.name == dat.interactor_source for o in dat.files):
+        server.custom_abort(400, "Please choose an interactor first")
+    dat.is_interact = tp == "communication"
+    dat.output_only = tp == "output_only"
     return "judge"
 
 

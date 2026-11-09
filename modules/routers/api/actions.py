@@ -258,13 +258,30 @@ class ChooseInteractor(Resource):
     action_name = "choose_interactor"
     action_input = request_parser(
         Form("my_interactor", "Interactor filename", str, required=False),
-        Form("enable_interactor", "Enable interactor", str, required=False, choices=["on", "off"], default="off")
+        Form("enable_interactor", "Enable interactor", str, required=False, choices=["on", "off"], default="off"),
+        Form("interact_num", "Number of user processes communicating with the interactor (CMS Communication N)",
+             int, required=False)
     )
 
     @ns.doc("problem_" + action_name)
     @ns.expect(action_input)
     def put(self, pid: str):
         """Choose an interactor for the problem."""
+        return do_action(pid, self.action_name, self.action_input)
+
+
+@ns.route("/problem_type")
+class ChooseProblemType(Resource):
+    action_name = "choose_problem_type"
+    action_input = request_parser(
+        Form("problem_type", "Task type", str, required=True, choices=["batch", "communication", "output_only"]),
+        Form("interact_num", "Number of user processes for communication problems", int, required=False)
+    )
+
+    @ns.doc("problem_" + action_name)
+    @ns.expect(action_input)
+    def put(self, pid: str):
+        """Choose the task type of the problem (batch, communication or output-only)."""
         return do_action(pid, self.action_name, self.action_input)
 
 

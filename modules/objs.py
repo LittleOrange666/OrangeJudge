@@ -17,7 +17,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from dataclasses import dataclass, is_dataclass, field, asdict
+from dataclasses import dataclass, is_dataclass, field, asdict, replace
 from enum import Enum
 
 
@@ -192,6 +192,41 @@ class InteractResult(metaclass=DataMeta):
     """
     result: Result
     interact_result: Result
+
+
+@my_dataclass
+class CommunicateResult(metaclass=DataMeta):
+    """
+    A dataclass representing a communication (CMS style, N user processes) judge result.
+
+    Attributes:
+        results (list[Result]): The results of each user process.
+        interact_result (Result): The result of the manager (interactor) program.
+    """
+    results: list[Result]
+    interact_result: Result
+
+    def merged(self) -> InteractResult:
+        """
+        Merge the results of all user processes into a single Result.
+
+        Time is the total CPU time of all user processes (as in CMS), memory is the maximum, and the reported
+        result is the first non-AC result by severity.
+        """
+        results = self.results
+        worst = next((r for r in results if r.result == "JE"), None)
+        for tp in ("TLE", "MLE", "RE"):
+            if worst is None:
+                worst = next((r for r in results if r.result == tp), None)
+        if worst is None:
+            worst = next((r for r in results if r.result != "AC"), results[0])
+        merged = Result(cpu_time=sum(r.cpu_time for r in results),
+                        real_time=max(r.real_time for r in results),
+                        memory=max(r.memory for r in results),
+                        signal=worst.signal, exit_code=worst.exit_code, error=worst.error, result=worst.result,
+                        error_id=worst.error_id, result_id=worst.result_id, judger_log=worst.judger_log,
+                        seccomp_info=worst.seccomp_info)
+        return InteractResult(result=merged, interact_result=self.interact_result)
 
 
 @my_dataclass
@@ -669,7 +704,9 @@ class ProblemInfo(metaclass=DataMeta):
         files (list[ProgramFile]): The list of program files for the problem.
         checker_source (ProgramPtr): The source of the checker program.
         checker (ExecPtr): The executable of the checker program.
-        is_interact (bool): Indicates if the problem is interactive.
+        is_interact (bool): Indicates if the problem is interactive (CMS "Communication" task type).
+        interact_num (int): The number of user processes communicating with the interactor (CMS "Communication" N).
+        output_only (bool): Indicates if the problem is output-only (CMS "OutputOnly" task type).
         groups (dict[str, TestcaseGroup]): The groups of test cases for the problem.
         interactor_source (str): The source of the interactor program.
         interactor (ExecPtr): The executable of the interactor program.
@@ -700,6 +737,8 @@ class ProblemInfo(metaclass=DataMeta):
     checker_source: ProgramPtr = field(default_factory=lambda: ProgramPtr(ProgramType.default, "lcmp.cpp"))
     checker: ExecPtr = field(default_factory=ExecPtr)
     is_interact: bool = False
+    interact_num: int = 1
+    output_only: bool = False
     groups: dict[str, TestcaseGroup] = field(default_factory=lambda: {"default": TestcaseGroup()})
     interactor_source: str = "unknown"
     interactor: ExecPtr = field(default_factory=ExecPtr)
@@ -731,6 +770,21 @@ class ProblemInfo(metaclass=DataMeta):
             if key in self.__annotations__:
                 setattr(self, key, new_data[key])
         self.__post_init__()
+
+    def ordered_testcases(self) -> list[Testcase]:
+        """
+        Get all test cases (manual and generated) in judging order, i.e. grouped by test case group.
+
+        Generated test cases are marked with ``gen=True``. The 1-based position in this list is the codename used
+        by output-only problems (``input_<k>.txt`` / ``output_<k>.txt``).
+        """
+        keys = list(self.groups.keys())
+        if "default" not in keys:
+            keys.append("default")
+        group_testcases: dict[str, list[Testcase]] = {k: [] for k in keys}
+        for obj in self.testcases + [replace(o, gen=True) for o in self.testcases_gen]:
+            group_testcases[obj.group].append(obj)
+        return [o for v in group_testcases.values() for o in v]
 
 
 @my_dataclass

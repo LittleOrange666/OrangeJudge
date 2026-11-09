@@ -18,13 +18,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 import os
 
-from flask import Response, stream_with_context
+from flask import Response, stream_with_context, request
 from flask_login import login_user, logout_user, current_user
 from flask_restx import Resource, fields
 from pygments import lexers
 
-from .base import get_api_user, api_response, api, marshal_with, request_parser, Args, Form, paging, pagination, \
-    base_request_parser
+from .base import get_api_user, api_response, api, marshal_with, request_parser, Args, Form, File, paging, \
+    pagination, base_request_parser
 from ... import submitting, datas, objs, tools, executing, tasks, contests, server, constants, login, config, pubs
 
 ns = api.namespace("general", path="/", description="General API endpoints")
@@ -33,11 +33,13 @@ prepares = {k: lexers.get_lexer_by_name(k) for lexer in lexers.get_all_lexers() 
 
 # region Models
 submission_post_input = request_parser(
-    Form("lang", "Programming language used for submission"),
-    Form("code", "Source code to be submitted"),
+    Form("lang", "Programming language used for submission (not needed for output-only problems)", required=False),
+    Form("code", "Source code to be submitted (not needed for output-only problems)", required=False),
     Form("pid", "Problem ID for the submission"),
     Form("cid", "Contest ID if applicable", required=False),
-    Form("input", "Input for test submissions", required=False)
+    Form("input", "Input for test submissions", required=False),
+    File("outputs", "Output files for output-only problems: output_<k>.txt files or zip archives of them "
+                    "(can be given multiple times)", required=False)
 )
 submission_post_output = ns.model("SubmissionOutput", {
     "submission_id": fields.String(description="ID of the submission created")
@@ -125,10 +127,17 @@ class Submission(Resource):
         """Submit code for a problem or test."""
         args = submission_post_input.parse_args()
         user = get_api_user(args)
-        lang = args["lang"]
-        code = args["code"].replace("\n\n", "\n")
         pid = args["pid"]
         cid = args.get("cid")
+        pdat = datas.first(datas.Problem, pid=pid)
+        if pid != "test" and pdat is not None and pdat.datas.output_only:
+            idx = submitting.submit_output_only(pid, request.files.getlist("outputs"), cid, user)
+            return api_response({"submission_id": idx})
+        lang = args.get("lang")
+        code = args.get("code")
+        if not lang or code is None:
+            server.custom_abort(400, "Missing lang or code")
+        code = code.replace("\n\n", "\n")
         if pid == "test":
             inp = args["input"]
             if inp is None:

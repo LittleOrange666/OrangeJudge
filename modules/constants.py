@@ -102,6 +102,13 @@ danger_html_tags = ("script", "style")
 source_file_name = "Main"
 
 runner_source_file_name = "Runner"
+# CMS style OutputOnly task type
+output_only_language = "output_only"
+output_only_source = "outputs.txt"
+output_only_input_name = "input_{}.txt"
+output_only_output_name = "output_{}.txt"
+output_only_max_size = 64 * 1024 * 1024  # total uncompressed size of one submission (bytes)
+max_interact_num = 64
 
 data_path = Path("data").absolute()
 

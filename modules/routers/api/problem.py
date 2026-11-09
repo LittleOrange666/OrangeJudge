@@ -55,7 +55,10 @@ problem_detail_get_output = ns.model("ProblemDetailOutput", {
     })), description="List of sample testcases"),
     "default_code": fields.Raw(description="Default code for each language"),
     "time_limit": fields.Integer(description="Time limit for the problem in milliseconds"),
-    "memory_limit": fields.Integer(description="Memory limit for the problem in megabytes")
+    "memory_limit": fields.Integer(description="Memory limit for the problem in megabytes"),
+    "problem_type": fields.String(description="Task type: batch, communication or output_only"),
+    "interact_num": fields.Integer(description="Number of user processes for communication problems"),
+    "testcase_count": fields.Integer(description="Number of testcases (codenames 1..n) for output-only problems")
 })
 version_info_model = ns.model("VersionInfo", {
     "id": fields.String(description="Version id"),
@@ -147,6 +150,35 @@ class ProblemIndex(Resource):
                              })
 
 
+def problem_type_of(dat: objs.ProblemInfo) -> str:
+    if dat.output_only:
+        return "output_only"
+    if dat.is_interact:
+        return "communication"
+    return "batch"
+
+
+def check_problem_access(pid: str, cid: str | None, user) -> datas.Problem:
+    """Check whether the user can access public resources (public files, inputs) of a problem."""
+    pdat = datas.first(datas.Problem, pid=pid)
+    if pdat is None:
+        server.custom_abort(404, "Problem not found.")
+    if cid:
+        cdat = datas.first(datas.Contest, cid=cid)
+        if cdat is None:
+            server.custom_abort(404, "Contest not found.")
+        if not any(obj.pid == pid for obj in cdat.datas.problems.values()):
+            server.custom_abort(404, "Problem not found in contest.")
+        contests.check_access(cdat, user)
+    elif not pdat.is_public:
+        dat = pdat.datas
+        if not user.is_authenticated:
+            server.custom_abort(403, "You has no permission to access this file.")
+        if not user.has(objs.Permission.admin) and user.id not in dat.users:
+            server.custom_abort(403, "You has no permission to access this file.")
+    return pdat
+
+
 @ns.route("/<string:pid>")
 class ProblemDetail(Resource):
     @ns.doc("get_problem")
@@ -187,7 +219,10 @@ class ProblemDetail(Resource):
             "samples": [{"input": o.in_txt, "output": o.out_txt} for o in samples],
             "default_code": default_code,
             "time_limit": dat.timelimit,
-            "memory_limit": dat.memorylimit
+            "memory_limit": dat.memorylimit,
+            "problem_type": problem_type_of(dat),
+            "interact_num": dat.interact_num if dat.is_interact else 1,
+            "testcase_count": len(dat.ordered_testcases()) if dat.output_only else 0
         }
         return api_response(res)
 
@@ -295,30 +330,28 @@ class ProblemFile(Resource):
         user = get_api_user(args, require_login=False)
         idx = secure_filename(pid)
         filename = secure_filename(filename)
-
-        if args.get("cid"):
-            cdat = datas.first(datas.Contest, cid=args["cid"])
-            if cdat is None:
-                server.custom_abort(404, "Contest not found.")
-            found_problem = False
-            for obj in cdat.datas.problems.values():
-                if obj.pid == idx:
-                    found_problem = True
-                    break
-            if not found_problem:
-                server.custom_abort(404, "Problem not found in contest.")
-            contests.check_access(cdat, user)
-        else:
-            pdat = datas.first(datas.Problem, pid=idx)
-            if pdat is None:
-                server.custom_abort(404, "Problem not found.")
-            dat = pdat.datas
-            if not pdat.is_public:
-                if not user.is_authenticated:
-                    server.custom_abort(403, "You has no permission to access this file.")
-                if not user.has(objs.Permission.admin) and user.id not in dat.users:
-                    server.custom_abort(403, "You has no permission to access this file.")
+        check_problem_access(idx, args.get("cid"), user)
         target = constants.problem_path / idx / "public_file" / filename
         if not target.is_file():
             server.custom_abort(404, "File not found.")
+        return server.sending_file(target)
+
+
+@ns.route("/<string:pid>/inputs")
+class ProblemInputs(Resource):
+    @ns.doc("get_problem_inputs")
+    @ns.expect(problem_file_input)
+    @server.limiter.limit(config.server.file_limit)
+    def get(self, pid: str):
+        """Download all testcase inputs of an output-only problem as a zip of input_<k>.txt files."""
+        args = problem_file_input.parse_args()
+        user = get_api_user(args, require_login=False)
+        idx = secure_filename(pid)
+        pdat = check_problem_access(idx, args.get("cid"), user)
+        dat = pdat.datas
+        if not dat.output_only:
+            server.custom_abort(400, "This problem is not an output-only problem.")
+        target = problem_path / idx / "inputs.zip"
+        if not target.is_file():
+            problemsetting.make_inputs_zip(problem_path / idx, dat)
         return server.sending_file(target)

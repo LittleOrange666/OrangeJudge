@@ -27,7 +27,6 @@
 + 標準化計時
 + latex/md題敘 (只支持Polygon import 且後續修改困難)
 + Two-steps
-+ Output-Only
 + Custom summary
 + nginx?
 

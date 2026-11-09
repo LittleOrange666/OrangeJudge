@@ -31,7 +31,7 @@ import requests
 from loguru import logger
 
 from . import constants, server
-from .objs import InteractResult, CallResult, Result
+from .objs import InteractResult, CallResult, Result, CommunicateResult
 
 
 class SandboxPath:
@@ -263,6 +263,45 @@ def interact_run(cmd: list[str], interact_cmd: list[str], tl: int = 1000, ml: in
     data = send_request("interact_judge", dat)
     logger.debug(data)
     return InteractResult(**data)
+
+
+def communicate_run(cmd: list[str], interact_cmd: list[str], num_processes: int, tl: int = 1000, ml: int = 128,
+                    in_file: SandboxPath | None = None,
+                    out_file: SandboxPath | None = None,
+                    err_file: SandboxPath | None = None, interact_err_file: SandboxPath | None = None,
+                    seccomp_rule: SeccompRule | None = SeccompRule.general,
+                    user: SandboxUser = SandboxUser.nobody, interact_user: SandboxUser = SandboxUser.nobody,
+                    interact_tl: int | None = None, cwd: str | None = None) -> CommunicateResult:
+    """
+    Run a CMS "Communication" style judge with ``num_processes`` user processes.
+
+    The interactor is called as ``interact_cmd in_file out_file from_0 to_0 ... from_{N-1} to_{N-1}``
+    (stdin/stdout are /dev/null) and has to open each pair in the order from_i, to_i.
+    User process i is called as ``cmd i`` with its stdin/stdout connected to to_i/from_i.
+    """
+    if seccomp_rule is SeccompRule.none:
+        seccomp_rule = None
+    dat = {
+        "cmd": list(map(str, cmd)),
+        "interact_cmd": list(map(str, interact_cmd)),
+        "num_processes": num_processes,
+        "tl": tl,
+        "ml": ml,
+        "in_file": "/dev/null" if in_file is None else str(in_file),
+        "out_file": "/dev/null" if out_file is None else str(out_file),
+        "err_file": "/dev/null" if err_file is None else str(err_file),
+        "interact_err_file": "/dev/null" if interact_err_file is None else str(interact_err_file),
+        "seccomp_rule_name": None if seccomp_rule is None else seccomp_rule.name,
+        "uid": user.value,
+        "interact_uid": interact_user.value,
+        "interact_tl": interact_tl,
+        "cwd": cwd,
+        "cmds": collect_lazy_queue()
+    }
+    logger.debug(dat)
+    data = send_request("communicate_judge", dat)
+    logger.debug(data)
+    return CommunicateResult(**data)
 
 
 def init():
